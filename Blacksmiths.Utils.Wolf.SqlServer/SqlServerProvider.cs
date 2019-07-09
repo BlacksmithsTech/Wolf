@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text;
 using System.Data.SqlClient;
+using System.Data;
 
 namespace Blacksmiths.Utils.Wolf.SqlServer
 {
@@ -72,6 +73,33 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		public DbDataAdapter GetDataAdapter(DbCommand selectCommand)
 		{
 			return new SqlDataAdapter((SqlCommand)selectCommand);
+		}
+
+		public DbDataAdapter GetDataAdapter(DataTable sourceTable, DbConnection connection, DbTransaction transaction = null)
+		{
+			if (null == sourceTable || 0 == sourceTable.Columns.Count)
+				return null;
+
+			var selectCommand = new StringBuilder();
+			selectCommand.Append("SELECT ");
+			for(int i = 0; i < sourceTable.Columns.Count; i++)
+			{
+				selectCommand.Append(sourceTable.Columns[i].ColumnName);
+				if (i + 1 < sourceTable.Columns.Count)
+					selectCommand.Append(", ");
+			}
+			selectCommand.Append($" FROM {sourceTable.TableName}");
+
+			var cmd = connection.CreateCommand();
+			cmd.CommandText = selectCommand.ToString();
+			cmd.Transaction = transaction;
+
+			return new SqlDataAdapter((SqlCommand)cmd);
+		}
+
+		public DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
+		{
+			return new SqlCommandBuilder((SqlDataAdapter)adapter);
 		}
 	}
 }

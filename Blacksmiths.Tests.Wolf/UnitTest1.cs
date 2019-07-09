@@ -33,5 +33,33 @@ namespace Blacksmiths.Tests.Wolf
 						.ToStoredProcedure()
 						.GetParameterValue<int>("Calculation"), 5);
 		}
+
+		class Test
+		{
+			public int ID;
+
+			public Test(int id)
+			{
+				this.ID = id;
+			}
+		}
+
+		[TestMethod]
+		public void GetSchema_Fluent()
+		{
+			var Connection = Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
+			var model = new Test(3);
+			var rows = new Test[] { new Test(1), new Test(2) };
+			var ds = Connection.WithModel(rows).ToDataSet();
+		}
+
+		[TestMethod]
+		public void Commit_Fluent()
+		{
+			var Connection = Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
+			var model = new Test(3);
+			var rows = new Test[] { new Test(1), new Test(2) };
+			var ds = Connection.WithModel(rows).Commit();
+		}
 	}
 }

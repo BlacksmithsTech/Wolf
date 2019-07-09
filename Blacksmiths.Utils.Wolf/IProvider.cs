@@ -13,6 +13,8 @@ namespace Blacksmiths.Utils.Wolf
 		IConnectionProvider GetConnectionProvider();
 		IStoredProcedureProvider GetStoredProcedureProvider();
 		System.Data.Common.DbDataAdapter GetDataAdapter(System.Data.Common.DbCommand selectCommand);
+		System.Data.Common.DbDataAdapter GetDataAdapter(System.Data.DataTable sourceTable, System.Data.Common.DbConnection connection, System.Data.Common.DbTransaction transaction);
+		System.Data.Common.DbCommandBuilder GetCommandBuilder(System.Data.Common.DbDataAdapter adapter);
 	}
 
 	public interface IConnectionProvider

@@ -19,8 +19,6 @@ namespace Blacksmiths.Utils.Wolf
 		DataSet ToDataSet(DataSet ds);
 	}
 
-	
-
 	/// <summary>
 	/// Binds wolf command results to it's associated wolf request
 	/// </summary>

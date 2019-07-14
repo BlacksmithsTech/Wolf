@@ -23,7 +23,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		}
 	}
 
-	public abstract class ResultModel
+	public class ResultModel
 	{
 		private DataSet _data;
 
@@ -71,7 +71,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 					{
 						Member = fi,
 						CollectionType = fi.FieldType.GetElementType(),
-						Collection = (IEnumerable<object>)fi.GetValue(this)
+						Collection = ((IEnumerable<object>)fi.GetValue(this)).Where(o => null != o)
 					})
 					.ToArray();
 			return this._modelMembers;

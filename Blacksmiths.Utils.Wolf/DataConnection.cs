@@ -56,19 +56,18 @@ namespace Blacksmiths.Utils.Wolf
 
 		public IFluentModelAction WithModel(Model.ResultModel resultModel)
 		{
-			if(null == resultModel)
-				throw new ArgumentNullException($"{nameof(resultModel)} cannot be null");
+			if (null == resultModel)
+				resultModel = new Model.ResultModel();
+
 			return new ModelProcessor(resultModel, this);
 		}
 
 		public IFluentAdHocModelAction WithModel<T>(params T[] modelObjects) where T : class
 		{
 			if (null == modelObjects)
-				throw new ArgumentNullException($"{nameof(modelObjects)} cannot be null");
-			if (0 == modelObjects.Length)
-				throw new ArgumentException($"{nameof(modelObjects)} cannot be of empty length");
+				modelObjects = new T[0];
 			if (typeof(T) == typeof(Model.ResultModel))
-				throw new ArgumentException("Model.ResultModel can't be used with WithModel<T>");
+				throw new ArgumentException("Model.ResultModel can't be used with WithModel<T>");//TODO: Why not? - Model processor could handle arrays of models perhaps?
 
 			var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);
 			return new AdHocModelProcessor(SimpleModel, this);
@@ -120,7 +119,8 @@ namespace Blacksmiths.Utils.Wolf
 			var ds = processor.ToDataSet().GetChanges();
 			CommitResult ret = new CommitResult();
 
-			//TODO: optimise for when there's nothing to do
+			if (null == ds)
+				return ret;
 
 			// ** Connect to the database
 			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())

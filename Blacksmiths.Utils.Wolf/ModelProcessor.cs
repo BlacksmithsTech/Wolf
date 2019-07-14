@@ -19,6 +19,9 @@ namespace Blacksmiths.Utils.Wolf
 		CommitResult Commit();
 	}
 
+	/// <summary>
+	/// Represents a model that was created ad-hoc from objects with no change tracking
+	/// </summary>
 	public interface IFluentAdHocModelAction : IFluentModelAction
 	{
 		IFluentAdHocModelAction AsUpdate();
@@ -31,11 +34,11 @@ namespace Blacksmiths.Utils.Wolf
 
 	public class ModelProcessor : IFluentModelAction
 	{
-		public delegate void PreCommitAction(DataTable table);
+		public delegate void DataTableProcess(DataTable table);
 
 		public Model.ResultModel Model { get; private set; }
 		private DataConnection _connection;
-		protected List<PreCommitAction> PreCommitActions { get; } = new List<PreCommitAction>();
+		protected List<DataTableProcess> PreCommitActions { get; } = new List<DataTableProcess>();
 
 		public ModelProcessor(Model.ResultModel model, DataConnection connection)
 		{
@@ -67,14 +70,6 @@ namespace Blacksmiths.Utils.Wolf
 
 	public class AdHocModelProcessor : ModelProcessor, IFluentAdHocModelAction
 	{
-		public enum CommitMethod
-		{
-			Insert,
-			Update,
-			Delete,
-		}
-		public CommitMethod ApplyChangesMethod { get; set; } = CommitMethod.Insert;
-
 		public AdHocModelProcessor(Model.ResultModel model, DataConnection connection)
 			: base(model,connection) { }
 
@@ -107,6 +102,9 @@ namespace Blacksmiths.Utils.Wolf
 						break;
 
 					case DataRowState.Modified:
+						if (null == row.Table.PrimaryKey || 0 == row.Table.PrimaryKey.Length)
+							throw new InvalidOperationException("To force the changes as updates, a primary key is required.");
+
 						if (row.RowState == DataRowState.Deleted)
 							row.RejectChanges();
 						else if (row.RowState == DataRowState.Added)

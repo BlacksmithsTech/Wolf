@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Data;
+using System.Data.Common;
+using System.Linq;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -17,6 +19,11 @@ namespace Blacksmiths.Utils.Wolf
 		CommitResult Commit();
 	}
 
+	public interface IFluentAdHocModelAction : IFluentModelAction
+	{
+		IFluentAdHocModelAction AsUpdate();
+	}
+
 	public class CommitResult
 	{
 		public int AffectedRowCount { get; internal set; }
@@ -24,23 +31,102 @@ namespace Blacksmiths.Utils.Wolf
 
 	public class ModelProcessor : IFluentModelAction
 	{
-		private Model.ResultModel _model;
+		public delegate void PreCommitAction(DataTable table);
+
+		public Model.ResultModel Model { get; private set; }
 		private DataConnection _connection;
+		protected List<PreCommitAction> PreCommitActions { get; } = new List<PreCommitAction>();
 
 		public ModelProcessor(Model.ResultModel model, DataConnection connection)
 		{
-			this._model = model;
+			this.Model = model;
 			this._connection = connection;
 		}
 
-		public CommitResult Commit()
+		public virtual CommitResult Commit()
 		{
-			return this._connection.Commit(this._model);
+			return this._connection.Commit(this);
 		}
 
-		public DataSet ToDataSet()
+		public virtual DataSet ToDataSet()
 		{
-			return this._model.GetCopiedDataSet();
+			return this.Model.GetCopiedDataSet();
+		}
+
+		internal virtual DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
+		{
+			return this._connection.Provider.GetCommandBuilder(adapter);
+		}
+
+		internal void RaisePreCommitActions(DataTable table)
+		{
+			foreach (var action in this.PreCommitActions)
+				action(table);
+		}
+	}
+
+	public class AdHocModelProcessor : ModelProcessor, IFluentAdHocModelAction
+	{
+		public enum CommitMethod
+		{
+			Insert,
+			Update,
+			Delete,
+		}
+		public CommitMethod ApplyChangesMethod { get; set; } = CommitMethod.Insert;
+
+		public AdHocModelProcessor(Model.ResultModel model, DataConnection connection)
+			: base(model,connection) { }
+
+		public IFluentAdHocModelAction AsUpdate()
+		{
+			this.PreCommitActions.Add((table) =>
+			{
+				foreach (DataRow row in table.Rows)
+					this.AdjustRowState(row, DataRowState.Modified);
+			});
+			return this;
+		}
+
+		internal override DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
+		{
+			// ** Ad hoc models have no tracking history. Commits won't use any concurrency checking and will simply overwrite database values using the PK.
+			var cb = base.GetCommandBuilder(adapter);
+			cb.ConflictOption = ConflictOption.OverwriteChanges;
+			return cb;
+		}
+
+		private void AdjustRowState(DataRow row, DataRowState requiredState)
+		{
+			if(row.RowState != requiredState)
+			{
+				switch (requiredState)
+				{
+					case DataRowState.Added:
+						row.SetAdded();
+						break;
+
+					case DataRowState.Modified:
+						if (row.RowState == DataRowState.Deleted)
+							row.RejectChanges();
+						else if (row.RowState == DataRowState.Added)
+							row.AcceptChanges();
+
+						foreach(DataColumn column in row.Table.Columns)
+							if(!row.Table.PrimaryKey.Contains(column))
+							{
+								var ov = row[column];
+								row[column] = DBNull.Value;
+								row.AcceptChanges();
+								row[column] = ov;
+							}
+						break;
+
+					case DataRowState.Deleted:
+						row.Delete();
+						break;
+				}
+			}
 		}
 	}
 }

@@ -245,7 +245,23 @@ namespace Blacksmiths.Utils.Wolf.Model
 		private string GetTableNameForType(Type t)
 		{
 			//TODO: Flexibility here, e.g. use attribution
+
+			// ** No other table name declared, use the type name.
+			if (TypeLink.CheckIfAnonymousType(t))
+				throw new ArgumentException($"The type '{t}' couldn't participate in the database model because it is anonymous.");
 			return t.Name;
+		}
+
+		private static bool CheckIfAnonymousType(Type type)
+		{
+			if (type == null)
+				throw new ArgumentNullException("type");
+
+			// HACK: The only way to detect anonymous types right now.
+			return Attribute.IsDefined(type, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)
+				&& type.Name.Contains("AnonymousType")
+				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+				&& type.Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
 	}
 

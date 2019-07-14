@@ -54,22 +54,24 @@ namespace Blacksmiths.Utils.Wolf
 			return new DataRequest(this);
 		}
 
-		public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class
+		public IFluentModelAction WithModel(Model.ResultModel resultModel)
+		{
+			if(null == resultModel)
+				throw new ArgumentNullException($"{nameof(resultModel)} cannot be null");
+			return new ModelProcessor(resultModel, this);
+		}
+
+		public IFluentAdHocModelAction WithModel<T>(params T[] modelObjects) where T : class
 		{
 			if (null == modelObjects)
 				throw new ArgumentNullException($"{nameof(modelObjects)} cannot be null");
 			if (0 == modelObjects.Length)
 				throw new ArgumentException($"{nameof(modelObjects)} cannot be of empty length");
-
-			if (modelObjects[0] is Model.ResultModel resultModel)
-			{
-				if (1 != modelObjects.Length)
-					throw new ArgumentException("When providing an existing ResultModel, only one object may be provided");
-				return new ModelProcessor(resultModel, this);
-			}
+			if (typeof(T) == typeof(Model.ResultModel))
+				throw new ArgumentException("Model.ResultModel can't be used with WithModel<T>");
 
 			var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);
-			return new ModelProcessor(SimpleModel, this);
+			return new AdHocModelProcessor(SimpleModel, this);
 		}
 
 		// *************************************************
@@ -110,12 +112,12 @@ namespace Blacksmiths.Utils.Wolf
 		// Engine room - Commit
 		// *************************************************
 
-		internal CommitResult Commit(Model.ResultModel model)
+		internal CommitResult Commit(ModelProcessor processor)
 		{
-			if (null == model)
-				throw new ArgumentNullException($"{nameof(model)} may not be null");
+			if (null == processor)
+				throw new ArgumentNullException($"{nameof(processor)} may not be null");
 
-			var ds = model.GetDataSet().GetChanges();
+			var ds = processor.ToDataSet().GetChanges();
 			CommitResult ret = new CommitResult();
 
 			//TODO: optimise for when there's nothing to do
@@ -133,11 +135,23 @@ namespace Blacksmiths.Utils.Wolf
 						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
 
 						//TODO: DbCommandBuilder is paid for by an additional meta query to the DB. Probably can generate these commands by hand.
-						var dbBuilder = this.Provider.GetCommandBuilder(dbAdapter);
+						var dbBuilder = processor.GetCommandBuilder(dbAdapter);
 						dbAdapter.InsertCommand = this.PrepCommand(dbBuilder.GetInsertCommand(), dbTransaction);
 						dbAdapter.UpdateCommand = this.PrepCommand(dbBuilder.GetUpdateCommand(), dbTransaction);
 						dbAdapter.DeleteCommand = this.PrepCommand(dbBuilder.GetDeleteCommand(), dbTransaction);
 
+						this.SyncSchemaInfo(table, dbBuilder);
+
+						// ** Run processor actions
+						processor.RaisePreCommitActions(table);
+
+						// ** Prepare the DataAdapter
+						this.CreateTableMappings(dbAdapter.TableMappings.Add(table.TableName, table.TableName), table);
+						dbAdapter.MissingMappingAction = MissingMappingAction.Error;
+						dbAdapter.MissingSchemaAction = MissingSchemaAction.Error;
+						dbAdapter.ContinueUpdateOnError = false;
+						
+						// ** Perform the DB change
 						ret.AffectedRowCount += dbAdapter.Update(table);
 					}
 
@@ -157,6 +171,34 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			cmd.Transaction = trans;
 			return cmd;
+		}
+
+		private void SyncSchemaInfo(DataTable table, System.Data.Common.DbCommandBuilder dbBuilder)
+		{
+			if (null == table.PrimaryKey || 0 == table.PrimaryKey.Length)
+			{
+				// ** dbCommand builder knows about the table schema. If the source datatable doesn't know any PK info, sync it up so the adapter can work out how to do the commit
+				var schemaDt = (DataTable)typeof(System.Data.Common.DbCommandBuilder).GetField("_dbSchemaTable", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(dbBuilder);
+
+				const string ColumnName = "ColumnName";
+				const string IsKey = "IsKey";
+				var PKcols = new List<DataColumn>();
+
+				foreach(DataRow row in schemaDt.Rows)
+				{
+					var col = table.Columns[(string)row[ColumnName]];
+					if ((bool)row[IsKey])
+						PKcols.Add(col);
+				}
+
+				table.PrimaryKey = PKcols.ToArray();
+			}
+		}
+
+		private void CreateTableMappings(System.Data.Common.DataTableMapping mapping, DataTable table)
+		{
+			foreach (DataColumn column in table.Columns)
+				mapping.ColumnMappings.Add(column.ColumnName, column.ColumnName);
 		}
 
 		private IEnumerable<DataTable> OrderTablesForCommit(DataSet ds)

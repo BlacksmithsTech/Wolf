@@ -39,7 +39,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		{
 			if (null == connectionString)
 				throw new ArgumentNullException("connectionString may not be null");
-			this.ConnectionString = connectionString;
+			this.ConnectionString = this.PrepareConnectionString(connectionString);
 		}
 
 		/// <summary>
@@ -50,6 +50,50 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		public static DataConnection NewSqlServerConnection(string connectionString)
 		{
 			return new DataConnection(new SqlServerProvider(connectionString));
+		}
+
+		// *************************************************
+		// Utility
+		// *************************************************
+
+		private string PrepareConnectionString(string cs)
+		{
+			var csb = new SqlConnectionStringBuilder(cs);
+			if (string.IsNullOrWhiteSpace(csb.ApplicationName) || csb.ApplicationName.Equals(new SqlConnectionStringBuilder().ApplicationName))
+			{
+				var WolfAssembly = System.Reflection.Assembly.GetAssembly(typeof(IProvider));
+				var ProgramAssembly = System.Reflection.Assembly.GetEntryAssembly();
+				csb.ApplicationName = $"{this.GetProductName(WolfAssembly)} {this.GetProductVersion(WolfAssembly)} ({this.GetProductName(ProgramAssembly)} {this.GetProductVersion(ProgramAssembly)})";
+			}
+			return csb.ToString();
+		}
+
+		private string GetProductName(System.Reflection.Assembly a)
+		{
+			string ProductName = null;
+
+			try
+			{
+				ProductName = System.Diagnostics.FileVersionInfo.GetVersionInfo(a.Location).ProductName;
+			}
+			finally
+			{
+				if (string.IsNullOrWhiteSpace(ProductName))
+					ProductName = a.FullName;
+			}
+
+			return ProductName;
+		}
+
+		private string GetProductVersion(System.Reflection.Assembly a)
+		{
+			var v = a.GetName().Version;
+			if (0 == v.Build && 0 == v.Revision)
+				return $"{v.Major}.{v.Minor}";
+			else if (0 == v.Revision)
+				return $"{v.Major}.{v.Minor}.{v.Build}";
+			else
+				return v.ToString();
 		}
 
 		// *************************************************
@@ -84,11 +128,11 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			selectCommand.Append("SELECT ");
 			for(int i = 0; i < sourceTable.Columns.Count; i++)
 			{
-				selectCommand.Append(sourceTable.Columns[i].ColumnName);
+				selectCommand.Append($"[{sourceTable.Columns[i].ColumnName}]");
 				if (i + 1 < sourceTable.Columns.Count)
 					selectCommand.Append(", ");
 			}
-			selectCommand.Append($" FROM {sourceTable.TableName}");
+			selectCommand.Append($" FROM [{sourceTable.TableName}]");
 
 			var cmd = connection.CreateCommand();
 			cmd.CommandText = selectCommand.ToString();

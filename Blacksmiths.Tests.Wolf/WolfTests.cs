@@ -37,10 +37,12 @@ namespace Blacksmiths.Tests.Wolf
 		class Test
 		{
 			public int ID;
+			public string Name;
 
-			public Test(int id)
+			public Test(int id, string name)
 			{
 				this.ID = id;
+				this.Name = name;
 			}
 		}
 
@@ -48,8 +50,7 @@ namespace Blacksmiths.Tests.Wolf
 		public void GetSchema_Fluent()
 		{
 			var Connection = Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
-			var model = new Test(3);
-			var rows = new Test[] { new Test(1), new Test(2) };
+			var rows = new Test[] { new Test(1,"Alice"), new Test(2, "Bob") };
 			var ds = Connection.WithModel(rows).ToDataSet();
 		}
 
@@ -57,9 +58,19 @@ namespace Blacksmiths.Tests.Wolf
 		public void Commit_Fluent()
 		{
 			var Connection = Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
-			var model = new Test(3);
-			var rows = new Test[] { new Test(1), new Test(2) };
-			var ds = Connection.WithModel(rows).Commit();
+			var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
+			//var rows = new Test[] { new Test(3, "Charlie") };
+			var ds = Connection.WithModel(rows).AsUpdate().Commit();
+		}
+
+		[TestMethod]
+		public void Commit_Anon_Fluent()
+		{
+			var Connection = Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
+			var ds = Connection.WithModel(new[] {
+				new { ID = 1, Name = "Alexander Ali" },
+			})
+				.Commit();
 		}
 	}
 }

@@ -1,8 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Product>Wolf</Product>
+    <Authors>Blacksmiths Technology Ltd,Alexander Ali</Authors>
+    <Company>Blacksmiths Technology Ltd</Company>
+    <Description>Wolf is a database-first lightweight data access layer which prioritises ease of use and productivity in the middle tier. It provides basic object-relational mapping features and a fluent interface.</Description>
+    <Copyright>(C) 2019 Blacksmiths Technology Ltd</Copyright>
+    <PackageProjectUrl>https://github.com/BlacksmithsTech/Wolf</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>Database,O/RM,ADO.NET</PackageTags>
+	  
   </PropertyGroup>
 
 </Project>

@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using Blacksmiths.Tests.Wolf.Models;
 using System.Diagnostics;
+using Blacksmiths.Utils.Wolf;
 
 namespace Blacksmiths.Tests.Wolf
 {
@@ -13,12 +14,28 @@ namespace Blacksmiths.Tests.Wolf
 		private Utils.Wolf.DataConnection Connection = Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
 
 		[TestMethod]
-		public void Request_Fetch1()
+		public void Request_Fetch_LooseSproc()
 		{
 			var Result = Connection.NewRequest()
 				.Add(
 					new Utils.Wolf.StoredProcedure("uspGetManagerEmployees")
 						.AddParameter("BusinessEntityID", 2)
+				)
+				.Execute()
+				.ToDataSet();
+
+			Assert.IsTrue(1 == Result.Tables.Count);
+			Assert.IsTrue(Result.Tables[0].Rows.Count > 0);
+		}
+
+		[TestMethod]
+		public void Request_Fetch_StrongSproc()
+		{
+			var Result = Connection.NewRequest()
+				.Add(
+					new Sprocs.uspGetManagerEmployees() {
+						BusinessEntityID = 2
+					}
 				)
 				.Execute()
 				.ToDataSet();
@@ -44,7 +61,7 @@ namespace Blacksmiths.Tests.Wolf
 		
 
 		[TestMethod]
-		public void Request_SpOnly()
+		public void Request_LooseSp()
 		{
 			Assert.AreEqual(5, new Utils.Wolf.StoredProcedure("uspAdd")
 						.AddParameter("Value1", 2)
@@ -53,6 +70,30 @@ namespace Blacksmiths.Tests.Wolf
 						.Execute(Connection)
 						.ToStoredProcedure()
 						.GetParameterValue<int>("Calculation"));
+		}
+
+		[TestMethod]
+		public void Request_StrongSp()
+		{
+			Assert.AreEqual(5, new Sprocs.uspAdd()
+			{
+				Value1 = 2,
+				Value2 = 3,
+			}.Execute(Connection)
+			.ToStoredProcedure()
+			.Calculation);
+		}
+
+		[TestMethod]
+		public void Request_StrongSpViaRequest()
+		{
+			var sp = new Sprocs.uspAdd()
+			{
+				Value1 = 5,
+				Value2 = 6,
+			};
+			Connection.NewRequest().Add(sp).Execute();
+			Assert.AreEqual(11, sp.Calculation);
 		}
 
 		[TestMethod]
@@ -89,7 +130,7 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
-		public void Commit_Fluent()
+		public void Commit_SimpleModel()
 		{
 			var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
 			var ds = Connection.WithModel(rows).AsUpdate().Commit();
@@ -99,6 +140,29 @@ namespace Blacksmiths.Tests.Wolf
 		public void Commit_Empty()
 		{
 			Assert.AreEqual(0, Connection.WithModel(new Test[0]).Commit().AffectedRowCount);
+		}
+
+		[TestMethod]
+		public void Commit_DataSet()
+		{
+			var ds = new Schema.TestData();
+			ds.Test.AddTestRow(1, "Alice");
+			ds.AcceptChanges();
+			ds.Test[0].Name = "Alex";
+
+			Assert.AreEqual(1, Connection.WithModel(ds).Commit().AffectedRowCount);
+		}
+
+		public class TestModel : Utils.Wolf.Model.ResultModel
+		{
+
+		}
+
+		[TestMethod]
+		public void Commit_Empty_Model()
+		{
+			var model = new TestModel();
+			Assert.AreEqual(0, Connection.WithModel(model).Commit().AffectedRowCount);
 		}
 
 		[TestMethod]

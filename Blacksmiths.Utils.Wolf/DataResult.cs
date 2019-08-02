@@ -51,36 +51,17 @@ namespace Blacksmiths.Utils.Wolf
 		}
 	}
 
-	public interface IFluentResultSp : IFluentResult
+	public interface IFluentResultSp<T> : IFluentResult where T : StoredProcedure
 	{
-		StoredProcedure ToStoredProcedure();
+		T ToStoredProcedure();
 	}
 
-	public class DataResultSp : IFluentResultSp
+	public class DataResultSp<T> : DataResult, IFluentResultSp<T> where T : StoredProcedure
 	{
-		private DataResult _result;
-
-		public DataResultSp(DataResult result)
+		public T ToStoredProcedure()
 		{
-			if (null == result)
-				throw new ArgumentNullException("result may not be null");
-			this._result = result;
-		}
-
-		public DataSet ToDataSet()
-		{
-			return this._result.ToDataSet();
-		}
-
-		public DataSet ToDataSet(DataSet ds)
-		{
-			return this._result.ToDataSet(ds);
-		}
-
-		public StoredProcedure ToStoredProcedure()
-		{
-			if (1 == this._result.Commands.Length)
-				return this._result.Commands[0].WolfRequestItem as StoredProcedure;
+			if (1 == this.Commands.Length)
+				return this.Commands[0].WolfRequestItem as T;
 			else
 				return null;
 		}

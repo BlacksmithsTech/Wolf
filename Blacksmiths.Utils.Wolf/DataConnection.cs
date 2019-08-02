@@ -11,10 +11,17 @@ using System.Data;
 
 namespace Blacksmiths.Utils.Wolf
 {
+	public interface IDataConnection
+	{
+		DataRequest NewRequest();
+		IFluentModelAction WithModel(Model.ResultModel model);
+		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class;
+	}
+
 	/// <summary>
-	/// An ASP.NET Core scope capable database connection
+	/// Represents a connection to a database
 	/// </summary>
-	public sealed class DataConnection
+	public sealed class DataConnection : IDataConnection
 	{
 		// *************************************************
 		// Properties
@@ -41,6 +48,14 @@ namespace Blacksmiths.Utils.Wolf
 			this.Provider = provider;
 		}
 
+		public static IDataConnection FromOptions(Utility.WolfOptions options)
+		{
+			var dc = options.NewDataConnection();
+			if (null == dc)
+				throw new InvalidOperationException("The provided options did not yield a data connection object");
+			return dc;
+		}
+
 		// *************************************************
 		// Methods
 		// *************************************************
@@ -54,35 +69,54 @@ namespace Blacksmiths.Utils.Wolf
 			return new DataRequest(this);
 		}
 
-		public IFluentModelAction WithModel(Model.ResultModel resultModel)
+		public IFluentModelAction WithModel(Model.ResultModel model)
 		{
-			if (null == resultModel)
-				resultModel = new Model.ResultModel();
-
-			return new ModelProcessor(resultModel, this);
+			return this.WithModel<Model.ResultModel>(model);
 		}
 
-		public IFluentAdHocModelAction WithModel<T>(params T[] modelObjects) where T : class
+		public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class
 		{
 			if (null == modelObjects)
 				modelObjects = new T[0];
-			if (typeof(T) == typeof(Model.ResultModel))
-				throw new ArgumentException("Model.ResultModel can't be used with WithModel<T>");//TODO: Why not? - Model processor could handle arrays of models perhaps?
 
-			var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);
-			return new AdHocModelProcessor(SimpleModel, this);
+			modelObjects = modelObjects.Where(o => null != o).ToArray();
+
+			if (typeof(Model.ResultModel).IsAssignableFrom(typeof(T)))
+			{
+				if (1 == modelObjects.Length && modelObjects[0] is Model.ResultModel model)
+					return new ModelProcessor(model, this);
+				else if (modelObjects.Length > 1)
+					throw new ArgumentException("When using a strongly typed model, only 1 strongly typed model must be supplied");
+				else
+					return new ModelProcessor(new Model.ResultModel(), this);
+			}
+			else if (typeof(DataSet).IsAssignableFrom(typeof(T)))
+			{
+				if (1 == modelObjects.Length && modelObjects[0] is DataSet ds)
+					return new ModelProcessor(new Model.ResultModel(ds), this);
+				else if (modelObjects.Length > 1)
+					throw new ArgumentException("When using a DataSet as a model, only 1 DataSet must be supplied");
+				else
+					return new ModelProcessor(new Model.ResultModel(), this);
+			}
+			else
+			{
+				// ** Loose objects. Create a model to represent them and then use an ad-hoc processor to switch to an overwrite persistance behaviour
+				var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);
+				return new AdHocModelProcessor(SimpleModel, this);
+			}
 		}
 
 		// *************************************************
 		// Engine room - Fetch Request
 		// *************************************************
 
-		internal DataResult Fetch(DataRequest request)
+		internal DataResult Fetch(DataRequest request, DataResult Result = null)
 		{
 			if (null == request || 0 == request.Count)
 				return null;
 
-			var Result = new DataResult();
+			Result = Result ?? new DataResult();
 			Result.Request = request;
 
 			// ** Connect to the database
@@ -130,7 +164,7 @@ namespace Blacksmiths.Utils.Wolf
 
 				try
 				{
-					foreach(var table in this.OrderTablesForCommit(ds))
+					foreach (var table in this.OrderTablesForCommit(ds))
 					{
 						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
 
@@ -150,7 +184,7 @@ namespace Blacksmiths.Utils.Wolf
 						dbAdapter.MissingMappingAction = MissingMappingAction.Error;
 						dbAdapter.MissingSchemaAction = MissingSchemaAction.Error;
 						dbAdapter.ContinueUpdateOnError = false;
-						
+
 						// ** Perform the DB change
 						ret.AffectedRowCount += dbAdapter.Update(table);
 					}
@@ -184,7 +218,7 @@ namespace Blacksmiths.Utils.Wolf
 				const string IsKey = "IsKey";
 				var PKcols = new List<DataColumn>();
 
-				foreach(DataRow row in schemaDt.Rows)
+				foreach (DataRow row in schemaDt.Rows)
 				{
 					var col = table.Columns[(string)row[ColumnName]];
 					if ((bool)row[IsKey])

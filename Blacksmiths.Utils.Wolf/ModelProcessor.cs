@@ -17,14 +17,8 @@ namespace Blacksmiths.Utils.Wolf
 	{
 		DataSet ToDataSet();
 		CommitResult Commit();
-	}
+		IFluentModelAction AsUpdate();
 
-	/// <summary>
-	/// Represents a model that was created ad-hoc from objects with no change tracking
-	/// </summary>
-	public interface IFluentAdHocModelAction : IFluentModelAction
-	{
-		IFluentAdHocModelAction AsUpdate();
 	}
 
 	public class CommitResult
@@ -56,6 +50,16 @@ namespace Blacksmiths.Utils.Wolf
 			return this.Model.GetCopiedDataSet();
 		}
 
+		public IFluentModelAction AsUpdate()
+		{
+			this.PreCommitActions.Add((table) =>
+			{
+				foreach (DataRow row in table.Rows)
+					this.AdjustRowState(row, DataRowState.Modified);
+			});
+			return this;
+		}
+
 		internal virtual DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
 		{
 			return this._connection.Provider.GetCommandBuilder(adapter);
@@ -66,34 +70,10 @@ namespace Blacksmiths.Utils.Wolf
 			foreach (var action in this.PreCommitActions)
 				action(table);
 		}
-	}
-
-	public class AdHocModelProcessor : ModelProcessor, IFluentAdHocModelAction
-	{
-		public AdHocModelProcessor(Model.ResultModel model, DataConnection connection)
-			: base(model,connection) { }
-
-		public IFluentAdHocModelAction AsUpdate()
-		{
-			this.PreCommitActions.Add((table) =>
-			{
-				foreach (DataRow row in table.Rows)
-					this.AdjustRowState(row, DataRowState.Modified);
-			});
-			return this;
-		}
-
-		internal override DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
-		{
-			// ** Ad hoc models have no tracking history. Commits won't use any concurrency checking and will simply overwrite database values using the PK.
-			var cb = base.GetCommandBuilder(adapter);
-			cb.ConflictOption = ConflictOption.OverwriteChanges;
-			return cb;
-		}
 
 		private void AdjustRowState(DataRow row, DataRowState requiredState)
 		{
-			if(row.RowState != requiredState)
+			if (row.RowState != requiredState)
 			{
 				switch (requiredState)
 				{
@@ -110,8 +90,8 @@ namespace Blacksmiths.Utils.Wolf
 						else if (row.RowState == DataRowState.Added)
 							row.AcceptChanges();
 
-						foreach(DataColumn column in row.Table.Columns)
-							if(!row.Table.PrimaryKey.Contains(column))
+						foreach (DataColumn column in row.Table.Columns)
+							if (!row.Table.PrimaryKey.Contains(column))
 							{
 								var ov = row[column];
 								row[column] = DBNull.Value;
@@ -125,6 +105,20 @@ namespace Blacksmiths.Utils.Wolf
 						break;
 				}
 			}
+		}
+	}
+
+	public class AdHocModelProcessor : ModelProcessor
+	{
+		public AdHocModelProcessor(Model.ResultModel model, DataConnection connection)
+			: base(model,connection) { }
+
+		internal override DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
+		{
+			// ** Ad hoc models have no tracking history. Commits won't use any concurrency checking and will simply overwrite database values using the PK.
+			var cb = base.GetCommandBuilder(adapter);
+			cb.ConflictOption = ConflictOption.OverwriteChanges;
+			return cb;
 		}
 	}
 }

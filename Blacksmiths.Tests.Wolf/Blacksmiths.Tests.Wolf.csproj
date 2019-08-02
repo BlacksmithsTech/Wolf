@@ -16,11 +16,27 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.0.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="1.4.0" />
     <PackageReference Include="MSTest.TestFramework" Version="1.4.0" />
+    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Blacksmiths.Utils.Wolf.SqlServer\Blacksmiths.Utils.Wolf.SqlServer.csproj" />
     <ProjectReference Include="..\Blacksmiths.Utils.Wolf\Blacksmiths.Utils.Wolf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Schema\TestData.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>TestData.xsd</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Schema\TestData.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>TestData.Designer.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 
 </Project>

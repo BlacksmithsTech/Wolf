@@ -50,6 +50,11 @@ namespace Blacksmiths.Utils.Wolf
 			return this.Connection.Fetch(this);
 		}
 
+		internal IFluentResult Execute(DataResult result)
+		{
+			return this.Connection.Fetch(this, result);
+		}
+
 		// *************************************************
 		// Utility
 		// *************************************************

@@ -7,34 +7,96 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public class StoredProcedure : IDataRequestItem, IEnumerable<StoredProcedure.Parameter>
+	public class StoredProcedure : IDataRequestItem, IEnumerable<StoredProcedure.SpParameter>
 	{
 		// *************************************************
 		// Inner objects
 		// *************************************************
 
-		public class Parameter
+		public class SpParameter
 		{
-			public string Name { get; private set; }
+			private object _value;
 
-			public object Value { get; set; }
+			/// <summary>
+			/// The name of the parameter, as declared on the database
+			/// </summary>
+			public string Name { get; set; }
 
-			public System.Data.ParameterDirection Direction { get; private set; }
+			/// <summary>
+			/// Gets or sets the value of the parameter
+			/// </summary>
+			public virtual object Value
+			{
+				get { return this._value; }
+				set { this._value = value; }
+			}
 
-			public Parameter(string name, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input, object value = null)
+			public System.Data.ParameterDirection Direction { get; set; }
+
+			public int Length { get; set; } = -1;
+
+			/// <summary>
+			/// Optional. Gets or sets the data type of the parameter. If one is not supplied, a type is inferred from the value where one has been provided. If you expect to handle nulls, this property should be set.
+			/// </summary>
+			public DbType? ValueType { get; set; }
+
+			public SpParameter(string name, ParameterDirection direction = ParameterDirection.Input, object value = null)
 			{
 				this.Name = name;
-				this.Value = value;
+				this._value = value;
 				this.Direction = direction;
+			}
+
+			protected void InferValueType(Type t)
+			{
+				var typeMap = new Dictionary<Type, DbType>();
+				typeMap[typeof(byte)] = DbType.Byte;
+				typeMap[typeof(sbyte)] = DbType.SByte;
+				typeMap[typeof(short)] = DbType.Int16;
+				typeMap[typeof(ushort)] = DbType.UInt16;
+				typeMap[typeof(int)] = DbType.Int32;
+				typeMap[typeof(uint)] = DbType.UInt32;
+				typeMap[typeof(long)] = DbType.Int64;
+				typeMap[typeof(ulong)] = DbType.UInt64;
+				typeMap[typeof(float)] = DbType.Single;
+				typeMap[typeof(double)] = DbType.Double;
+				typeMap[typeof(decimal)] = DbType.Decimal;
+				typeMap[typeof(bool)] = DbType.Boolean;
+				typeMap[typeof(string)] = DbType.String;
+				typeMap[typeof(char)] = DbType.StringFixedLength;
+				typeMap[typeof(Guid)] = DbType.Guid;
+				typeMap[typeof(DateTime)] = DbType.DateTime;
+				typeMap[typeof(DateTimeOffset)] = DbType.DateTimeOffset;
+				typeMap[typeof(byte[])] = DbType.Binary;
+				typeMap[typeof(byte?)] = DbType.Byte;
+				typeMap[typeof(sbyte?)] = DbType.SByte;
+				typeMap[typeof(short?)] = DbType.Int16;
+				typeMap[typeof(ushort?)] = DbType.UInt16;
+				typeMap[typeof(int?)] = DbType.Int32;
+				typeMap[typeof(uint?)] = DbType.UInt32;
+				typeMap[typeof(long?)] = DbType.Int64;
+				typeMap[typeof(ulong?)] = DbType.UInt64;
+				typeMap[typeof(float?)] = DbType.Single;
+				typeMap[typeof(double?)] = DbType.Double;
+				typeMap[typeof(decimal?)] = DbType.Decimal;
+				typeMap[typeof(bool?)] = DbType.Boolean;
+				typeMap[typeof(char?)] = DbType.StringFixedLength;
+				typeMap[typeof(Guid?)] = DbType.Guid;
+				typeMap[typeof(DateTime?)] = DbType.DateTime;
+				typeMap[typeof(DateTimeOffset?)] = DbType.DateTimeOffset;
+
+				if (typeMap.ContainsKey(t))
+					this.ValueType = typeMap[t];
 			}
 		}
 
-		public class Parameter<T> : Parameter
+		public class SpParameter<T> : SpParameter
 		{
 			public new T Value
 			{
@@ -42,15 +104,46 @@ namespace Blacksmiths.Utils.Wolf
 				set { base.Value = value; }
 			}
 
-			public Parameter(string name, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input, T value = default)
-				: base(name, direction, value) { }
+			public SpParameter(string name, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input, T value = default)
+				: base(name, direction, value)
+			{
+				this.InferValueType(typeof(T));
+			}
+		}
+
+		public class BoundSpParameter : SpParameter
+		{
+			private object _instance;
+			private System.Reflection.PropertyInfo _property;
+
+			public override object Value
+			{
+				get { return this._property.GetValue(this._instance); }
+				set { this._property.SetValue(this._instance, value); }
+			}
+
+			public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
+				: base(name)
+			{
+				this._instance = instance;
+				this._property = property;
+				this.InferValueType(this._property.PropertyType);
+			}
+		}
+
+		internal class CodeGenSpParameter : SpParameter
+		{
+			internal string ValueTypeName { get; set; }
+
+			internal CodeGenSpParameter(string name)
+				: base(name) { }
 		}
 
 		// *************************************************
 		// Fields
 		// *************************************************
 
-		private List<Parameter> _dbParameters;
+		private List<SpParameter> _dbParameters;
 		private string _procedureName;
 
 		// *************************************************
@@ -60,6 +153,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Gets or sets the stored procedure name
 		/// </summary>
+		[Attribution.Ignore]
 		public string ProcedureName
 		{
 			get
@@ -82,18 +176,24 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Gets the collection of parameters to be sent to the database
 		/// </summary>
-		internal List<Parameter> DbParameters
+		internal List<SpParameter> DbParameters
 		{
 			get
 			{
 				if(null == this._dbParameters)
 				{
-					this._dbParameters = new List<Parameter>();
+					this._dbParameters = new List<SpParameter>();
 					this.Reflect();
 				}
 				return this._dbParameters;
 			}
 		}
+
+		/// <summary>
+		/// Gets or sets the current return value of the stored procedure
+		/// </summary>
+		[Attribution.Parameter(Direction = System.Data.ParameterDirection.ReturnValue)]
+		public int? ReturnValue { get; set; }
 
 		// *************************************************
 		// Indexer
@@ -104,7 +204,8 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		/// <param name="parameterName">Name of the parameter</param>
 		/// <returns>The database parameter</returns>
-		public Parameter this[string parameterName]
+		[Attribution.Ignore]
+		public SpParameter this[string parameterName]
 		{
 			get
 			{
@@ -146,14 +247,14 @@ namespace Blacksmiths.Utils.Wolf
 		/// <param name="p">Name of parameter</param>
 		public StoredProcedure AddParameter<T>(string name, T value = default, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input)
 		{
-			return this.AddParameter(new Parameter<T>(name, direction, value));
+			return this.AddParameter(new SpParameter<T>(name, direction, value));
 		}
 
 		/// <summary>
 		/// Adds a parameter to the stored procedure
 		/// </summary>
 		/// <param name="p">Parameter to add</param>
-		public StoredProcedure AddParameter(Parameter p)
+		public StoredProcedure AddParameter(SpParameter p)
 		{
 			if (null == p)
 				throw new ArgumentNullException("DbParameter may not be null");
@@ -189,15 +290,7 @@ namespace Blacksmiths.Utils.Wolf
 			this.DbParameters.Remove(p);
 		}
 
-		/// <summary>
-		/// Convienience method to execute this stored procedure
-		/// </summary>
-		/// <param name="connection"></param>
-		/// <returns></returns>
-		public IFluentResultSp Execute(DataConnection connection)
-		{
-			return new DataResultSp((DataResult)connection.NewRequest().Add(this).Execute());
-		}
+		
 
 		// *************************************************
 		// Contract (IDataRequestItem)
@@ -212,7 +305,7 @@ namespace Blacksmiths.Utils.Wolf
 		// Contract (IEnumerable)
 		// *************************************************
 
-		public IEnumerator<Parameter> GetEnumerator()
+		public IEnumerator<SpParameter> GetEnumerator()
 		{
 			return this.DbParameters.GetEnumerator();
 		}
@@ -233,8 +326,47 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			var thisType = this.GetType();
 
+			var ProcAttrib = thisType.GetCustomAttributes(typeof(Attribution.Procedure), true).Cast<Attribution.Procedure>().FirstOrDefault();
+			if(null != ProcAttrib)
+			{
+				this._procedureName = ProcAttrib.Name;
+			}
+
 			if (null == this._procedureName)
-				this._procedureName = thisType.Name;
+				this._procedureName = $"[{thisType.Name}]";
+
+			if (null == this._dbParameters)
+				foreach (var member in thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+				{
+					if (member.GetCustomAttributes(typeof(Attribution.Ignore), true).Length > 0)
+						continue;
+
+					var ParamName = member.Name;
+					var ParamType = member.PropertyType;
+					var ParamDirection = System.Data.ParameterDirection.Input;
+					int? ParamLength = null;
+
+					var ParamAttrib = member.GetCustomAttributes(typeof(Attribution.Parameter), true).Cast<Attribution.Parameter>().FirstOrDefault();
+					if (null != ParamAttrib)
+					{
+						ParamName = ParamAttrib.Name ?? ParamName;
+						ParamLength = ParamAttrib.Length;
+						ParamDirection = ParamAttrib.Direction;
+					}
+
+					var p = new BoundSpParameter(ParamName, this, member);
+					p.Direction = ParamDirection;
+					p.Length = ParamLength.GetValueOrDefault(-1);
+					this.AddParameter(p);
+				}
+		}
+	}
+
+	public static class StoredProcedureExtentions
+	{
+		public static IFluentResultSp<T> Execute<T>(this T sp, IDataConnection connection) where T : StoredProcedure
+		{
+			return (IFluentResultSp<T>)connection.NewRequest().Add(sp).Execute(new DataResultSp<T>());
 		}
 	}
 }

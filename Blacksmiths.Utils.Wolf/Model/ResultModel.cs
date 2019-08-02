@@ -40,7 +40,6 @@ namespace Blacksmiths.Utils.Wolf.Model
 		/// </summary>
 		public ResultModel()
 		{
-			this._data = new DataSet();
 		}
 
 		/// <summary>
@@ -54,6 +53,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		internal void TrackChanges()
 		{
+			if (null == this._data)
+				this._data = new DataSet();
+
 			// ** Model-first unboxing routine.
 			this._data.EnforceConstraints = false;
 			foreach (var ml in this.GetModelMembers())
@@ -84,11 +86,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 			var UnhandledModels = new List<object>(collection);
 
 			// ** Updates and deletes
-			foreach(DataRow row in tl.Table.Rows)
+			foreach (DataRow row in tl.Table.Rows)
 			{
 				var ModelObject = tl.FindObject(row, collection);
 
-				if(null != ModelObject)
+				if (null != ModelObject)
 				{
 					// ** Update the row and tally off the object.
 					this.UnboxObject(ModelObject, tl, row);
@@ -102,7 +104,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 
 			// ** Inserts
-			foreach(var ModelObject in UnhandledModels)
+			foreach (var ModelObject in UnhandledModels)
 			{
 				var row = tl.Table.NewRow();
 				this.UnboxObject(ModelObject, tl, row);
@@ -112,11 +114,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private void UnboxObject(object o, TypeLink tl, DataRow r)
 		{
-			foreach(var ml in tl.Members.Where(m => null != m.Column))
+			foreach (var ml in tl.Members.Where(m => null != m.Column))
 			{
 				object value = null;
 
-				if(ml.Member is FieldInfo field)
+				if (ml.Member is FieldInfo field)
 				{
 					value = field.GetValue(o);
 				}
@@ -131,7 +133,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 				this._typeLinks = new List<TypeLink>();
 			var link = this._typeLinks.FirstOrDefault(tl => t.Equals(tl.Type));
 
-			if(null == link)
+			if (null == link)
 			{
 				link = new TypeLink(t);
 				if (ds.Tables.Contains(link.TableName))
@@ -142,6 +144,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 				//TODO: Work out the most effective way of relating objects to rows and assign that as a delegate method
 				link.FindRow = link.AlwaysNewRow;
 				link.FindObject = link.FindObject_FullEquality;
+
+				this._typeLinks.Add(link);
 			}
 
 			return link;
@@ -151,7 +155,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			var dt = new DataTable(tl.TableName);
 
-			foreach(var member in tl.Members)
+			foreach (var member in tl.Members)
 			{
 				if (member.Member is FieldInfo field)
 				{
@@ -223,7 +227,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 						value = field.GetValue(o);
 					}
 
-					if(!r[ml.Column].Equals(value))
+					if (!r[ml.Column].Equals(value))
 					{
 						Equal = false;
 						break;

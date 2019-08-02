@@ -29,14 +29,19 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			};
 		}
 
-		public Utility.WolfParameterBinding ToDbParameter(StoredProcedure.Parameter p, DbCommand command)
+		public Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.SpParameter p, DbCommand command)
 		{
 			var dbp = command.CreateParameter();
 			dbp.ParameterName = p.Name;
 			dbp.Value = null != p.Value ? p.Value : DBNull.Value;
 			dbp.Direction = p.Direction;
+			dbp.Size = p.Length;
+			if (p.ValueType.HasValue)
+				dbp.DbType = p.ValueType.Value;
+			else if (null == p.Value)
+				throw new InvalidOperationException($"A database value type of parameter '{p.Name}' was not defined and a type could not be automatically determined.");
 
-			return new Utility.WolfParameterBinding()
+			return new Utility.WolfParameterDbBinding()
 			{
 				DbParameter = dbp,
 				WolfParameter = p

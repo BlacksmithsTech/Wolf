@@ -20,7 +20,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	{
 		public DbCommand DbCommand { get; set; }
 		public IDataRequestItem WolfRequestItem { get; set; }
-		public WolfParameterBinding[] Parameters { get; set; }
+		public WolfParameterDbBinding[] Parameters { get; set; }
 		public DataSet ResultData { get; set; }
 
 		/// <summary>
@@ -38,10 +38,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	/// <summary>
 	/// Binds an ADO.NET data parameter to its associated wolf parameter
 	/// </summary>
-	public sealed class WolfParameterBinding
+	public sealed class WolfParameterDbBinding
 	{
 		public DbParameter DbParameter { get; set; }
-		public StoredProcedure.Parameter WolfParameter { get; set; }
+		public StoredProcedure.SpParameter WolfParameter { get; set; }
 
 		/// <summary>
 		/// Updates the Wolf parameter value with the ADO.NET value

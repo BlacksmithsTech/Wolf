@@ -11,9 +11,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			var m = Regex.Match(Name, @"^(?:\[(?<schema>[^\n\r\[\]]+)]\.)*\[(?<name>[^\n\r\[\]]+)]$");
 			if (m.Success)
-				return (m.Groups["schema"].Value, m.Groups["name"].Value ?? Name);
+				return (m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? Name);
 			else
-				return (null, Name);
+				return (string.Empty, Name);
 		}
 	}
 }

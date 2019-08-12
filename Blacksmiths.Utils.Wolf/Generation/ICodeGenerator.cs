@@ -7,6 +7,6 @@ namespace Blacksmiths.Utils.Wolf.Generation
 	public interface ICodeGenerator
 	{
 		Action<string> Log { get; set; }
-		string GenerateCode(GenerationOptions options);
+		EntityCollection[] GenerateCode(GenerationOptions options);
 	}
 }

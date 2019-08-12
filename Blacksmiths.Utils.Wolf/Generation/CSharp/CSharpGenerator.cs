@@ -28,84 +28,197 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			{ "System.UInt16", "ushort?" },
 			{ "System.String", "string" },
 			{ "System.DateTime", "DateTime?" },
+			{ "System.Guid", "Guid?" },
 		};
 
 		public Action<string> Log { get; set; }
 
-		public string GenerateCode(GenerationOptions options)
+		public EntityCollection[] GenerateCode(GenerationOptions options)
 		{
 			if (null == options)
 				throw new ArgumentNullException(nameof(options));
 			if (null == options.ConnectionOptions)
 				throw new ArgumentException("Connection options must be specified");
 
+			var Ret = new List<EntityCollection>();
+
+			this.Sprocs = new EntityCollection()
+			{
+				Path = "Procs.cs",
+				Generate = () => this.GenerateCode(options, options.StoredProcedures.Namespace, this.Sprocs)
+			};
+
+			this.Models = new EntityCollection()
+			{
+				Path = "Models.cs",
+				Generate = () => this.GenerateCode(options, options.Models.Namespace, this.Models)
+			};
+
+			// ** Aquire entities
 			const string ADO_SCHEMA = "SPECIFIC_SCHEMA";
 			const string ADO_TYPE = "ROUTINE_TYPE";
 			const string ADO_NAME = "SPECIFIC_NAME";
-			bool Break = false;
 
 			var dc = (DataConnection)DataConnection.FromOptions(options.ConnectionOptions);
+
+			using (var connection = dc.Provider.GetConnectionProvider().ToDbConnection())
+			{
+				connection.Open();
+
+				var procedures = connection.GetSchema("Procedures");
+				var types = connection.GetSchema("DataTypes");
+
+				var filteredProcedures = procedures.Rows.Cast<DataRow>()
+						.Where(r => r[ADO_TYPE].Equals("PROCEDURE"));
+
+				foreach (var spRow in filteredProcedures)
+				{
+					try
+					{
+						var sp = this.CreateSp(connection, types, (string)spRow[ADO_SCHEMA], (string)spRow[ADO_NAME], !options.DefaultSchema.Equals((string)spRow[ADO_SCHEMA]));
+
+						if (options.StoredProcedures.Enabled)
+						{
+							this.AddEntity(Ret, new Entity()
+							{
+								Name = (string)spRow[ADO_NAME],
+								Schema = (string)spRow[ADO_SCHEMA],
+								Type = EntityType.StoredProcedure,
+								Generate = () => this.GenerateCode(sp)
+							});
+						}
+
+						if (options.Models.Enabled)
+						{
+							var ModelDef = this.CreateModelDef(dc.Provider, connection, sp);
+							if (null != ModelDef)
+								this.AddEntity(Ret, new Entity()
+								{
+									Name = (string)spRow[ADO_NAME],
+									Schema = (string)spRow[ADO_SCHEMA],
+									Type = EntityType.Model,
+									Generate = () => this.GenerateCode(ModelDef)
+								});
+						}
+					}
+					catch(DbException dbex)
+					{
+						this.WriteLog($"ERROR: Whilst generating code for '{spRow[ADO_SCHEMA]}.{spRow[ADO_NAME]}' an error was raised from the database: {dbex.Message}");
+					}
+				}
+			}
+
+			return Ret.ToArray();
+		}
+
+		private EntityCollection Sprocs;
+		private EntityCollection Models;
+
+		private void AddEntity(List<EntityCollection> collections, Entity entity)
+		{
+			// ** single file for models and sprocs
+			if (entity.Type == EntityType.StoredProcedure && null != this.Sprocs)
+			{
+				this.Sprocs.Add(entity);
+				if (!collections.Contains(this.Sprocs))
+					collections.Add(this.Sprocs);
+			}
+			else if(entity.Type == EntityType.Model && null != this.Models)
+			{
+				this.Models.Add(entity);
+				if (!collections.Contains(this.Models))
+					collections.Add(this.Models);
+			}
+		}
+
+		private string GenerateCode(GenerationOptions options, string Namespace, EntityCollection entities)
+		{
+			bool Break = false;
 			var sb = new IndentableStringBuilder();
 
 			sb.AppendLine("using System;");
 			sb.AppendLine("using Blacksmiths.Utils.Wolf;");
 			sb.AppendLine("using Blacksmiths.Utils.Wolf.Attribution;");
 			sb.AppendLine();
-			sb.AppendLine($"namespace {EncodeNamespace(options.Namespace)}");
+			sb.AppendLine($"namespace {EncodeNamespace(Namespace)}");
 			sb.AppendLine("{");
 			sb.Indent();
-			using (var connection = dc.Provider.GetConnectionProvider().ToDbConnection())
+
+			foreach (var schema in entities
+				.Select(r => r.Schema)
+				.Distinct()
+				.OrderBy(schema => schema.Equals(options.DefaultSchema))
+				.ThenBy(schema => schema))
 			{
-				connection.Open();
-				var procedures = connection.GetSchema("Procedures");
-				var types = connection.GetSchema("DataTypes");
+				var filteredEntities = entities
+					.Where(r => r.Schema.Equals(schema))
+					.OrderBy(r => r.Name);
 
-				foreach (var schema in procedures.Rows.Cast<DataRow>()
-					.Select(r => (string)r[ADO_SCHEMA])
-					.Distinct()
-					.OrderBy(schema => schema.Equals(options.DefaultSchema))
-					.ThenBy(schema => schema))
+				bool RequiresNs = !schema.Equals(options.DefaultSchema);
+				if (RequiresNs)
 				{
-					var schemaProcedures = procedures.Rows.Cast<DataRow>()
-						.Where(r => r[ADO_SCHEMA].Equals(schema)
-							&& r[ADO_TYPE].Equals("PROCEDURE"))
-						.OrderBy(r => (string)r[ADO_NAME]);
-
-					bool RequiresNs = !schema.Equals(options.DefaultSchema);
-					if (RequiresNs)
+					if (Break)
 					{
-						if (Break)
-						{
-							sb.AppendLine();
-							Break = false;
-						}
-
-						sb.AppendLine($"namespace {EncodeNamespace(schema)}");
-						sb.AppendLine("{");
-						sb.Indent();
+						sb.AppendLine();
+						Break = false;
 					}
 
-					foreach (var spRow in schemaProcedures)
-					{
-						if (Break)
-							sb.AppendLine();
+					sb.AppendLine($"namespace {EncodeNamespace(schema)}");
+					sb.AppendLine("{");
+					sb.Indent();
+				}
 
-						var sp = this.CreateSp(connection, types, (string)spRow[ADO_SCHEMA], (string)spRow[ADO_NAME], RequiresNs);
-						sb.Append(this.GenerateCode(sp));
-						Break = true;
-					}
+				foreach (var entity in filteredEntities)
+				{
+					if (Break)
+						sb.AppendLine();
 
-					if (RequiresNs)
-					{
-						sb.Outdent();
-						sb.AppendLine("}");
-					}
+					sb.Append(entity.Generate());
+					Break = true;
+				}
+
+				if (RequiresNs)
+				{
+					sb.Outdent();
+					sb.AppendLine("}");
 				}
 			}
+
 			sb.Outdent();
 			sb.AppendLine("}");
 
 			return sb.ToString();
+		}
+
+		public ModelDef CreateModelDef(IProvider provider, DbConnection connection, StoredProcedure sp)
+		{
+			ModelDef Ret = null;
+			var Cmd = sp.GetDbCommand(provider, connection);
+			using (var Reader = Cmd.DbCommand.ExecuteReader(CommandBehavior.SchemaOnly))
+			{
+				var Schema = Reader.GetSchemaTable();
+				if(null != Schema)
+				{
+					Ret = new ModelDef();
+					Ret.Name = sp.ProcedureName;
+
+					const string ADO_COL_NAME = "ColumnName";
+					const string ADO_COL_ORDINAL = "ColumnOrdinal";
+					const string ADO_COL_TYPE = "DataType";
+					const string ADO_COL_SIZE = "ColumnSize";
+					const string ADO_ALLOW_NULL = "AllowDBNull";
+
+					foreach (var FieldRow in Schema.Rows.Cast<DataRow>().OrderBy(r => (int)r[ADO_COL_ORDINAL]))
+						Ret.Add(new ModelField()
+						{
+							Name = (string)FieldRow[ADO_COL_NAME],
+							TypeName = ((Type)FieldRow[ADO_COL_TYPE]).FullName,
+							AllowNulls = (bool)FieldRow[ADO_ALLOW_NULL],
+							Length = (int)FieldRow[ADO_COL_SIZE]
+						});
+				}
+			}
+			return Ret;
 		}
 
 		public StoredProcedure CreateSp(DbConnection connection, DataTable types, string SchemaName, string ProcName, bool RequiresNs)
@@ -120,10 +233,16 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				var Param = new StoredProcedure.CodeGenSpParameter(ParamName.Trim('@'));
 
 				var TypeRow = types.Rows.Cast<DataRow>().FirstOrDefault(r => r["TypeName"].Equals(Row["DATA_TYPE"]));
+
 				if (null != TypeRow)
+				{
 					Param.ValueTypeName = (string)TypeRow["DataType"];
+				}
 				else
+				{
 					this.WriteLog($"WARNING: Data type for {Ret.ProcedureName}{ParamName} could not be determined. Will assume string during generation");
+					Param.ValueTypeName = "System.String";
+				}
 
 				switch ((string)Row["PARAMETER_MODE"])
 				{
@@ -163,7 +282,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			{
 				var ParamName = EncodeSymbol(Param.Name);
 
-				var ValueTypeName = Param.ValueTypeName ?? "System.String";
+				var ValueTypeName = Param.ValueTypeName;
 				var ParamType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
 
 				string AttrName = null;
@@ -182,6 +301,50 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					sb.AppendLine($@"[Parameter({AttrParams})]");
 
 				sb.AppendLine($"public {ParamType} {ParamName} {{ get; set; }}");
+			}
+			sb.Outdent();
+			sb.AppendLine("}");
+
+			return sb.ToString();
+		}
+
+		private string GenerateCode(ModelDef md)
+		{
+			var sb = new IndentableStringBuilder();
+			var MdlName = Utility.StringHelpers.GetQualifiedSpName(md.Name);
+
+			var ClassName = EncodeSymbol(MdlName.Name);
+			if (!MdlName.Name.Equals(ClassName) || !string.IsNullOrEmpty(MdlName.Schema))
+				sb.AppendLine($@"[Procedure(Name = ""{md.Name}"")]");
+			sb.AppendLine($"public class {ClassName}");
+			sb.AppendLine("{");
+			sb.Indent();
+			foreach (var Field in md)
+			{
+				var FieldName = EncodeSymbol(Field.Name);
+
+				var ValueTypeName = Field.TypeName;
+				var ParamType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
+
+				string AttrName = null;
+				string AttrLength = null;
+				string AttrNullable = null;
+
+				if (!Field.Name.Equals(FieldName))
+					AttrName = $@"From = ""{Field.Name}""";
+				if (Field.Length > -1 && ValueTypeName.Equals("System.String", StringComparison.CurrentCultureIgnoreCase))
+					AttrLength = $@"Length = {Field.Length}";
+				if (!Field.AllowNulls)
+					AttrNullable = "Nullable = false";
+
+				var AttrParamsSource = String.Join(", ", new[] { AttrName }.Where(a => null != a));
+				if (!string.IsNullOrEmpty(AttrParamsSource))
+					sb.AppendLine($@"[Source({AttrParamsSource})]");
+				var AttrParamsConstraints = String.Join(", ", new[] { AttrLength,AttrNullable }.Where(a => null != a));
+				if (!string.IsNullOrEmpty(AttrParamsConstraints))
+					sb.AppendLine($@"[Constraint({AttrParamsConstraints})]");
+
+				sb.AppendLine($"public {ParamType} {FieldName} {{ get; set; }}");
 			}
 			sb.Outdent();
 			sb.AppendLine("}");

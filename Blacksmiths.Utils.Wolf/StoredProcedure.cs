@@ -58,7 +58,7 @@ namespace Blacksmiths.Utils.Wolf
 			{
 				var typeMap = new Dictionary<Type, DbType>();
 				typeMap[typeof(byte)] = DbType.Byte;
-				typeMap[typeof(sbyte)] = DbType.SByte;
+				typeMap[typeof(sbyte)] = DbType.Int16;//SByte won't re-map
 				typeMap[typeof(short)] = DbType.Int16;
 				typeMap[typeof(ushort)] = DbType.UInt16;
 				typeMap[typeof(int)] = DbType.Int32;
@@ -134,7 +134,17 @@ namespace Blacksmiths.Utils.Wolf
 
 		internal class CodeGenSpParameter : SpParameter
 		{
-			internal string ValueTypeName { get; set; }
+			private string _ValueTypeName;
+
+			internal string ValueTypeName
+			{
+				get { return this._ValueTypeName; }
+				set
+				{
+					this._ValueTypeName = value;
+					this.InferValueType(Type.GetType(this._ValueTypeName));
+				}
+			}
 
 			internal CodeGenSpParameter(string name)
 				: base(name) { }

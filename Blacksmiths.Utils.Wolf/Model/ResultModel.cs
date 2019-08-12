@@ -198,10 +198,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == link)
 			{
 				link = new TypeLink(ml);
-				foreach(var source in ml.GetSources())
-					if(ds.Tables.Contains(source))
+				foreach(var source in ml.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
+					if(ds.Tables.Contains(source.Name, source.Schema))
 					{
-						link.Table = ds.Tables[source];
+						link.Table = ds.Tables[source.Name, source.Schema];
 						break;
 					}
 
@@ -231,7 +231,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private DataTable CreateTableForType(TypeLink tl, DataSet ds)
 		{
-			var dt = new DataTable(tl.DefaultTableName);
+			var tn = Utility.StringHelpers.GetQualifiedSpName(tl.DefaultTableName);
+			var dt = new DataTable(tn.Name, tn.Schema);
 
 			foreach (var member in tl.Members)
 				if (!dt.Columns.Contains(member.Member.Name))

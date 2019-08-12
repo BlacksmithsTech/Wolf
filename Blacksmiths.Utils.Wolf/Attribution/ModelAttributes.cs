@@ -17,4 +17,14 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		/// </summary>
 		public string From { get; set; }
 	}
+
+	/// <summary>
+	/// Defines database constraints for the given property or field
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+	public class Constraint : Attribute
+	{
+		public bool Nullable { get; set; } = true;
+		public int Length { get; set; } = -1;
+	}
 }

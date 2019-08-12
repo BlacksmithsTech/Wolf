@@ -20,6 +20,8 @@ namespace Blacksmiths.Tests.Wolf
 			Options.ConnectionOptions = ConnectionOptions;
 
 			var Result = new Blacksmiths.Utils.Wolf.Generation.CSharp.CSharpGenerator().GenerateCode(Options);
+			var SprocCode = Result[0].Generate();
+			var ModelCode = Result[1].Generate();
 		}
 	}
 }

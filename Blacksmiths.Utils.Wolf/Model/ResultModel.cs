@@ -61,7 +61,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			this._data.EnforceConstraints = false;
 			foreach (var ml in this.GetModelMembers())
-				this.UnboxEnumerable(ml.CollectionType, ml.ToEnumerable(this), this._data);
+				this.UnboxEnumerable(ml, this._data);
 			this._data.EnforceConstraints = true;
 		}
 
@@ -74,7 +74,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			this._data.EnforceConstraints = false;
 			foreach (var ml in this.GetModelMembers())
-				Utility.ReflectionHelper.SetValue(ml.Member, this, this.BoxEnumerable(ml.CollectionType, ml.ToCollection(this), this._data));
+				Utility.ReflectionHelper.SetValue(ml.Member, this, this.BoxEnumerable(ml, this._data));
 			this._data.EnforceConstraints = true;
 		}
 
@@ -82,21 +82,22 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			if (null == this._modelMembers)
 				this._modelMembers = this.GetType()
-					.GetFields(BindingFlags.Instance | BindingFlags.Public)
-					.Where(fi => fi.FieldType.IsArray)
-					.Select(fi => new ModelLink()
+					.GetMembers(BindingFlags.Instance | BindingFlags.Public)
+					.Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
+					.Where(m => typeof(System.Collections.IList).IsAssignableFrom(Utility.ReflectionHelper.GetMemberType(m)))
+					.Select(m => new ModelLink()
 					{
-						Member = fi,
-						CollectionType = fi.FieldType.GetElementType()
+						Member = m,
+						CollectionType = Utility.ReflectionHelper.GetCollectionType(m)
 					})
 					.ToArray();
 			return this._modelMembers;
 		}
 
-		private void UnboxEnumerable(Type t, IEnumerable<object> collection, DataSet ds)
+		private void UnboxEnumerable(ModelLink ml, DataSet ds)
 		{
-			var tl = this.GetTableForType(t, ds);
-
+			var tl = this.GetTableForType(ml, ds);
+			var collection = ml.ToCollection(this).Cast<object>();
 			var UnhandledModels = new List<object>(collection);
 
 			// ** Updates and deletes
@@ -134,17 +135,18 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 		}
 
-		private ICollection<object> BoxEnumerable(Type t, ICollection<object> collection, DataSet ds)
+		private System.Collections.IList BoxEnumerable(ModelLink ml, DataSet ds)
 		{
-			var tl = this.GetTableForType(t, ds);
-
-			var Result = collection.IsReadOnly ? new List<object>(collection) : collection;
-			var UnhandledModels = new List<object>(collection);
+			var tl = this.GetTableForType(ml, ds);
+			var collection = ml.ToCollection(this);
+			var castedCollection = collection.Cast<object>();
+			var Result = collection.IsFixedSize ? new List<object>(castedCollection) : collection;
+			var UnhandledModels = new List<object>(castedCollection);
 
 			// ** Updates and inserts
 			foreach (DataRow row in tl.Table.Rows)
 			{
-				var ModelObject = tl.FindObject(row, collection);
+				var ModelObject = tl.FindObject(row, castedCollection);
 
 				if (null != ModelObject)
 				{
@@ -155,7 +157,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 				else
 				{
 					// ** No Model Object, this row is to be inserted
-					Result.Add(this.BoxObject(Activator.CreateInstance(t), tl, row));//TODO: sensible errors for objects which can't be activated simply
+					Result.Add(this.BoxObject(Activator.CreateInstance(ml.CollectionType), tl, row));//TODO: sensible errors for objects which can't be activated simply
 				}
 			}
 
@@ -169,9 +171,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 			else
 			{
-				var a = Array.CreateInstance(t, Result.Count);
-				Array.Copy(Result.ToArray(), a, Result.Count);
-				return (ICollection<object>)a;
+				var a = Array.CreateInstance(ml.CollectionType, Result.Count);
+				Array.Copy(Result.Cast<object>().ToArray(), a, Result.Count);
+				return (System.Collections.IList)a;
 			}
 		}
 
@@ -187,18 +189,23 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return o;
 		}
 
-		private TypeLink GetTableForType(Type t, DataSet ds)
+		private TypeLink GetTableForType(ModelLink ml, DataSet ds)
 		{
 			if (null == this._typeLinks)
 				this._typeLinks = new List<TypeLink>();
-			var link = this._typeLinks.FirstOrDefault(tl => t.Equals(tl.Type));
+			var link = this._typeLinks.FirstOrDefault(tl => ml.CollectionType.Equals(tl.Type));
 
 			if (null == link)
 			{
-				link = new TypeLink(t);
-				if (ds.Tables.Contains(link.TableName))
-					link.Table = ds.Tables[link.TableName];
-				else
+				link = new TypeLink(ml);
+				foreach(var source in ml.GetSources())
+					if(ds.Tables.Contains(source))
+					{
+						link.Table = ds.Tables[source];
+						break;
+					}
+
+				if (null == link.Table)
 					link.Table = this.CreateTableForType(link, ds);
 
 				this.LinkColumns(link, link.Table);
@@ -224,7 +231,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private DataTable CreateTableForType(TypeLink tl, DataSet ds)
 		{
-			var dt = new DataTable(tl.TableName);
+			var dt = new DataTable(tl.DefaultTableName);
 
 			foreach (var member in tl.Members)
 				if (!dt.Columns.Contains(member.Member.Name))
@@ -248,20 +255,55 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 	internal sealed class ModelLink
 	{
+		private string[] _Sources;
+
 		internal MemberInfo Member;
 		internal Type CollectionType;
 
-		internal ICollection<object> ToCollection(object source)
+		internal System.Collections.IList ToCollection(object source)
 		{
-			return (ICollection<object>)Utility.ReflectionHelper.GetValue(Member, source);
+			return (System.Collections.IList)Utility.ReflectionHelper.GetValue(Member, source);
 		}
 
 		internal IEnumerable<object> ToEnumerable(object source)
 		{
-			return this.ToCollection(source).Where(o => null != o);
+			return this.ToCollection(source).Cast<object>().Where(o => null != o);
 		}
 
-		
+		internal string[] GetSources()
+		{
+			if(null == this._Sources)
+			{
+				// Asc order sensitive.
+				var Ret = this.Member.GetCustomAttributes<Attribution.Source>()
+					.Concat(this.CollectionType.GetCustomAttributes<Attribution.Source>())
+					.Select(a => a.From)
+					.ToList();
+
+				// When no sources have been defined programatically or via decoration, the type name is used
+				if (0 == Ret.Count)
+				{
+					if (ModelLink.CheckIfAnonymousType(this.CollectionType))
+						throw new ArgumentException($"The type '{this.CollectionType}' couldn't participate in the database model because it is anonymous and defines no sources.");
+					Ret.Add(this.CollectionType.Name);
+				}
+
+				this._Sources = Ret.ToArray();
+			}
+			return this._Sources;
+		}
+
+		private static bool CheckIfAnonymousType(Type type)
+		{
+			if (type == null)
+				throw new ArgumentNullException("type");
+
+			// HACK: The only way to detect anonymous types right now.
+			return Attribute.IsDefined(type, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)
+				&& type.Name.Contains("AnonymousType")
+				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
+				&& type.Attributes.HasFlag(TypeAttributes.NotPublic);
+		}
 	}
 
 	internal sealed class TypeLink
@@ -269,18 +311,24 @@ namespace Blacksmiths.Utils.Wolf.Model
 		internal delegate DataRow RowFinder(object o);
 		internal delegate object ObjectFinder(DataRow r, IEnumerable<object> collection);
 
+		internal ModelLink ModelLink;
 		internal Type Type;
-		internal string TableName;
+		internal string DefaultTableName;
 		internal MemberLink[] Members;
 		internal DataTable Table;
 		internal RowFinder FindRow;
 		internal ObjectFinder FindObject;
 
-		internal TypeLink(Type t)
+		internal TypeLink(ModelLink ml)
 		{
-			this.Type = t;
-			this.TableName = this.GetTableNameForType(this.Type);
-			this.Members = this.Type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).Select(mi => new MemberLink(mi)).ToArray();
+			this.ModelLink = ml;
+			this.Type = ml.CollectionType;
+			this.DefaultTableName = this.GetDefaultTableNameForType(ml);
+			this.Members = this.Type
+				.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+				.Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
+				.Select(m => new MemberLink(m))
+				.ToArray();
 		}
 
 		/// <summary>
@@ -290,20 +338,16 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			return this.Members.Where(m => null != m.Column);
 		}
-
+		
 		internal object FindObject_FullEquality(DataRow r, IEnumerable<object> collection)
 		{
 			foreach (var o in collection)
 			{
 				bool Equal = true;
 
-				foreach (var ml in this.Members.Where(m => null != m.Column))
+				foreach (var ml in this.GetLinkedMembers())
 				{
-					object value = null;
-					if (ml.Member is FieldInfo field)
-					{
-						value = field.GetValue(o);
-					}
+					object value = Utility.ReflectionHelper.GetValue(ml.Member, o);
 
 					if (!r[ml.Column].Equals(value))
 					{
@@ -324,26 +368,22 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return Table.NewRow();
 		}
 
-		private string GetTableNameForType(Type t)
+		private string GetDefaultTableNameForType(ModelLink ml)
 		{
-			//TODO: Flexibility here, e.g. use attribution
+			var t = ml.CollectionType;
 
-			// ** No other table name declared, use the type name.
-			if (TypeLink.CheckIfAnonymousType(t))
-				throw new ArgumentException($"The type '{t}' couldn't participate in the database model because it is anonymous.");
-			return t.Name;
-		}
+			// ** Try to obtain a default source
+			var Sources = ml.GetSources();
 
-		private static bool CheckIfAnonymousType(Type type)
-		{
-			if (type == null)
-				throw new ArgumentNullException("type");
+			if (1 == Sources.Length)
+				return Sources[0]; // Single source, assume this is the table name
 
-			// HACK: The only way to detect anonymous types right now.
-			return Attribute.IsDefined(type, typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)
-				&& type.Name.Contains("AnonymousType")
-				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
-				&& type.Attributes.HasFlag(TypeAttributes.NotPublic);
+			//TODO: Default via further attribution?
+
+			if (Sources.Length > 1)
+				throw new InvalidOperationException($"The model member '{ml.Member.Name}' ({Utility.ReflectionHelper.GetMemberType(ml.Member)}) specifies multiple sources. A target table to commit changes into can't be determined.");
+			else
+				throw new InvalidOperationException($"A target table for the model member '{ml.Member.Name}' ({Utility.ReflectionHelper.GetMemberType(ml.Member)}) couldn't be determined.");
 		}
 	}
 

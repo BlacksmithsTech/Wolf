@@ -55,9 +55,11 @@ namespace Blacksmiths.Tests.Wolf
 					}
 				)
 				.Execute()
-				.ToSimpleModel<Models.uspGetManagerEmployees>().Results;
+				.ToSimpleModel<Models.uspGetManagerEmployeesManuallyWritten>().Results;
 
-			Assert.IsTrue(Result.Length > 0);
+			//Assert.IsTrue(Result.Length > 0);
+			Assert.IsNotNull(Result[0].ManagerFirstName); //property test
+			Assert.IsNotNull(Result[0].ManagerLastName); //field test
 		}
 
 		[TestMethod]

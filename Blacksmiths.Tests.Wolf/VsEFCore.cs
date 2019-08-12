@@ -53,7 +53,7 @@ namespace Blacksmiths.Tests.Wolf
 						.AddParameter("BusinessEntityID", 2)
 				)
 				.Execute()
-				.ToSimpleModel<Models.uspGetManagerEmployees>();
+				.ToSimpleModel<Models.uspGetManagerEmployeesManuallyWritten>();
 			}, "Wolf", 10);
 
 			this.AssertFasterThanEntityFramework(efAvg, wolfAvg);

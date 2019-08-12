@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Blacksmiths.Utils.Wolf.Attribution;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -20,14 +21,15 @@ namespace Blacksmiths.Tests.Wolf.Models
 		}
 	}
 
-	class uspGetManagerEmployees
+	[Source(From = "uspGetManagerEmployees")]
+	class uspGetManagerEmployeesManuallyWritten
 	{
-		public int RecursionLevel;
-		public string OrganizationNode;
-		public string ManagerFirstName;
+		public int RecursionLevel { get; set; }
+		public string OrganizationNode { get; set; }
+		public string ManagerFirstName { get; set; }
 		public string ManagerLastName;
-		public int BusinessEntityId;
-		public string FirstName;
-		public string LastName;
+		public int BusinessEntityId { get; set; }
+		public string FirstName { get; set; }
+		public string LastName { get; set; }
 	}
 }

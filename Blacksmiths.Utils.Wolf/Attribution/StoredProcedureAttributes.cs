@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Blacksmiths.Utils.Wolf.Attribution
 {
-	[AttributeUsage(AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class Parameter : Attribute
 	{
 		/// <summary>
@@ -23,12 +23,12 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		public System.Data.ParameterDirection Direction { get; set; }
 	}
 
-	[AttributeUsage(AttributeTargets.Property)]
+	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class Ignore : Attribute
 	{
 	}
 
-	[AttributeUsage(AttributeTargets.Class)]
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	public sealed class Procedure : Attribute
 	{
 		/// <summary>

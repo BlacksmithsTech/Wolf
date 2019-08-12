@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using Blacksmiths.Utils.Wolf.Utility;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -194,6 +195,11 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		[Attribution.Parameter(Direction = System.Data.ParameterDirection.ReturnValue)]
 		public int? ReturnValue { get; set; }
+
+		string IDataRequestItem.TableName
+		{
+			get { return this.ProcedureName; }
+		}
 
 		// *************************************************
 		// Indexer

@@ -15,13 +15,8 @@ namespace Blacksmiths.Tests.Wolf
 		private Utils.Wolf.DataConnection wolfConnection = Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(SqlServerTests.ConnectionString);
 
 		[TestMethod]
-		public void Request_NotSlower()
+		public void Request_NotSlower_NoTracking()
 		{
-			var efAvg = Utility.Perf.Measure(() =>
-			{
-				efContext.Query<EF.Models.uspGetManagerEmployees>().AsNoTracking().FromSql("uspGetManagerEmployees @p0", 2).ToList();
-			}, "Entity Framework", 10);
-
 			var wolfAvg = Utility.Perf.Measure(() =>
 			{
 				wolfConnection.NewRequest()
@@ -34,18 +29,45 @@ namespace Blacksmiths.Tests.Wolf
 
 			}, "Wolf", 10);
 
+			var efAvg = Utility.Perf.Measure(() =>
+			{
+				efContext.Query<EF.Models.uspGetManagerEmployees>().AsNoTracking().FromSql("uspGetManagerEmployees @p0", 2).ToList();
+			}, "Entity Framework", 10);
+
+			this.AssertFasterThanEntityFramework(efAvg, wolfAvg);
+		}
+
+		[TestMethod]
+		public void Request_NotSlower_WithTracking()
+		{
+			var efAvg = Utility.Perf.Measure(() =>
+			{
+				efContext.Query<EF.Models.uspGetManagerEmployees>().FromSql("uspGetManagerEmployees @p0", 2).ToList();
+			}, "Entity Framework", 10);
+
+			var wolfAvg = Utility.Perf.Measure(() =>
+			{
+				wolfConnection.NewRequest()
+				.Add(
+					new Utils.Wolf.StoredProcedure("uspGetManagerEmployees")
+						.AddParameter("BusinessEntityID", 2)
+				)
+				.Execute()
+				.ToSimpleModel<Models.uspGetManagerEmployees>();
+			}, "Wolf", 10);
+
 			this.AssertFasterThanEntityFramework(efAvg, wolfAvg);
 		}
 
 		private void AssertFasterThanEntityFramework(long efAvg, long wolfAvg)
 		{
-			Assert.IsTrue(wolfAvg <= efAvg);
 			if (wolfAvg < efAvg)
 				Trace.WriteLine($"Wolf was {efAvg - wolfAvg}ms faster on average");
 			else if (wolfAvg == efAvg)
 				Trace.WriteLine("Identical performance");
 			else
 				Trace.WriteLine($"Wolf was {wolfAvg - efAvg}ms slower on average");
+			Assert.IsTrue(wolfAvg <= efAvg);
 		}
 	}
 }

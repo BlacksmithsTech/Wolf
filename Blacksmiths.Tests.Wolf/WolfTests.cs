@@ -45,6 +45,22 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
+		public void Request_SimpleModel_New_StrongSproc()
+		{
+			var Result = Connection.NewRequest()
+				.Add(
+					new Sprocs.uspGetManagerEmployees()
+					{
+						BusinessEntityID = 2
+					}
+				)
+				.Execute()
+				.ToSimpleModel<Models.uspGetManagerEmployees>().Results;
+
+			Assert.IsTrue(Result.Length > 0);
+		}
+
+		[TestMethod]
 		public void Request_Fetch1_Perf()
 		{
 			Utility.Perf.Measure(() => {
@@ -111,7 +127,7 @@ namespace Blacksmiths.Tests.Wolf
 		public void GetSchema_Empty()
 		{
 			// ** null with no model type
-			Assert.AreEqual(0, Connection.WithModel(null).ToDataSet().Tables.Count);
+			//Assert.AreEqual(0, Connection.WithModel(null).ToDataSet().Tables.Count);
 			// ** null with a model type
 			Test[] NullCollection = null;
 			this.GetSchema_Empty_Assert(Connection.WithModel(NullCollection).ToDataSet());
@@ -163,16 +179,6 @@ namespace Blacksmiths.Tests.Wolf
 		{
 			var model = new TestModel();
 			Assert.AreEqual(0, Connection.WithModel(model).Commit().AffectedRowCount);
-		}
-
-		[TestMethod]
-		[ExpectedException(typeof(ArgumentException))]
-		public void Commit_Anon_NoMeta()
-		{
-			var ds = Connection.WithModel(new[] {
-				new { ID = 1, Name = "Alexander Ali" },
-			})
-				.Commit();
 		}
 	}
 }

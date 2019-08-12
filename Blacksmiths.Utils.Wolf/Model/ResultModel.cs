@@ -30,7 +30,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		private List<TypeLink> _typeLinks;
 		private ModelLink[] _modelMembers;
 
-		public static SimpleResultModel<T> CreateSimpleResultModel<T>(params T[] model) where T : class
+		public static SimpleResultModel<T> CreateSimpleResultModel<T>(params T[] model) where T : class, new()
 		{
 			return new SimpleResultModel<T>(model);
 		}
@@ -51,15 +51,30 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this._data = source;
 		}
 
+		/// <summary>
+		/// Causes the underlying change tracking provided by a DataSet to be updated from the model
+		/// </summary>
 		internal void TrackChanges()
 		{
 			if (null == this._data)
 				this._data = new DataSet();
 
-			// ** Model-first unboxing routine.
 			this._data.EnforceConstraints = false;
 			foreach (var ml in this.GetModelMembers())
-				this.UnboxEnumerable(ml.CollectionType, ml.Collection, this._data);
+				this.UnboxEnumerable(ml.CollectionType, ml.ToEnumerable(this), this._data);
+			this._data.EnforceConstraints = true;
+		}
+
+		internal void DataBind(DataSet ds)
+		{
+			if (null == this._data)
+				this._data = new DataSet();
+
+			this._data.Merge(ds);
+
+			this._data.EnforceConstraints = false;
+			foreach (var ml in this.GetModelMembers())
+				Utility.ReflectionHelper.SetValue(ml.Member, this, this.BoxEnumerable(ml.CollectionType, ml.ToCollection(this), this._data));
 			this._data.EnforceConstraints = true;
 		}
 
@@ -72,8 +87,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 					.Select(fi => new ModelLink()
 					{
 						Member = fi,
-						CollectionType = fi.FieldType.GetElementType(),
-						Collection = ((IEnumerable<object>)fi.GetValue(this)).Where(o => null != o)
+						CollectionType = fi.FieldType.GetElementType()
 					})
 					.ToArray();
 			return this._modelMembers;
@@ -114,17 +128,63 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private void UnboxObject(object o, TypeLink tl, DataRow r)
 		{
-			foreach (var ml in tl.Members.Where(m => null != m.Column))
+			foreach (var ml in tl.GetLinkedMembers())
 			{
-				object value = null;
-
-				if (ml.Member is FieldInfo field)
-				{
-					value = field.GetValue(o);
-				}
-
-				r[ml.Column] = value;
+				r[ml.Column] = Utility.ReflectionHelper.GetValue(ml.Member, o);
 			}
+		}
+
+		private ICollection<object> BoxEnumerable(Type t, ICollection<object> collection, DataSet ds)
+		{
+			var tl = this.GetTableForType(t, ds);
+
+			var Result = collection.IsReadOnly ? new List<object>(collection) : collection;
+			var UnhandledModels = new List<object>(collection);
+
+			// ** Updates and inserts
+			foreach (DataRow row in tl.Table.Rows)
+			{
+				var ModelObject = tl.FindObject(row, collection);
+
+				if (null != ModelObject)
+				{
+					// ** Update the row and tally off the object.
+					//this.UnboxObject(ModelObject, tl, row);
+					UnhandledModels.Remove(ModelObject);
+				}
+				else
+				{
+					// ** No Model Object, this row is to be inserted
+					Result.Add(this.BoxObject(Activator.CreateInstance(t), tl, row));//TODO: sensible errors for objects which can't be activated simply
+				}
+			}
+
+			// ** Deletes
+			foreach (var ModelObject in UnhandledModels)
+				Result.Remove(ModelObject);
+
+			if(Result == collection)
+			{
+				return Result;
+			}
+			else
+			{
+				var a = Array.CreateInstance(t, Result.Count);
+				Array.Copy(Result.ToArray(), a, Result.Count);
+				return (ICollection<object>)a;
+			}
+		}
+
+		private object BoxObject(object o, TypeLink tl, DataRow r)
+		{
+			//TODO: inner nested types
+
+			foreach (var ml in tl.GetLinkedMembers())
+				if (r.IsNull(ml.Column))
+					Utility.ReflectionHelper.SetValue(ml.Member, o, null);//TODO: check if null is possible for the member.
+				else
+					Utility.ReflectionHelper.SetValue(ml.Member, o, r[ml.Column]);
+			return o;
 		}
 
 		private TypeLink GetTableForType(Type t, DataSet ds)
@@ -141,6 +201,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 				else
 					link.Table = this.CreateTableForType(link, ds);
 
+				this.LinkColumns(link, link.Table);
+
 				//TODO: Work out the most effective way of relating objects to rows and assign that as a delegate method
 				link.FindRow = link.AlwaysNewRow;
 				link.FindObject = link.FindObject_FullEquality;
@@ -151,25 +213,22 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return link;
 		}
 
+		private void LinkColumns(TypeLink tl, DataTable dt)
+		{
+			foreach (var member in tl.Members)
+			{
+				if (null == member.Column)
+					member.Column = dt.Columns[member.Member.Name];
+			}
+		}
+
 		private DataTable CreateTableForType(TypeLink tl, DataSet ds)
 		{
 			var dt = new DataTable(tl.TableName);
 
 			foreach (var member in tl.Members)
-			{
-				if (member.Member is FieldInfo field)
-				{
-					member.Column = dt.Columns[field.Name];
-
-					if (null == member.Column)
-					{
-						//TODO: keys
-						//TODO: nullables
-						//TODO: nested types
-						member.Column = dt.Columns.Add(field.Name, field.FieldType);
-					}
-				}
-			}
+				if (!dt.Columns.Contains(member.Member.Name))
+					dt.Columns.Add(member.Member.Name, Utility.ReflectionHelper.GetMemberType(member.Member));
 
 			ds.Tables.Add(dt);
 			return dt;
@@ -191,7 +250,18 @@ namespace Blacksmiths.Utils.Wolf.Model
 	{
 		internal MemberInfo Member;
 		internal Type CollectionType;
-		internal IEnumerable<object> Collection;
+
+		internal ICollection<object> ToCollection(object source)
+		{
+			return (ICollection<object>)Utility.ReflectionHelper.GetValue(Member, source);
+		}
+
+		internal IEnumerable<object> ToEnumerable(object source)
+		{
+			return this.ToCollection(source).Where(o => null != o);
+		}
+
+		
 	}
 
 	internal sealed class TypeLink
@@ -211,6 +281,14 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this.Type = t;
 			this.TableName = this.GetTableNameForType(this.Type);
 			this.Members = this.Type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).Select(mi => new MemberLink(mi)).ToArray();
+		}
+
+		/// <summary>
+		/// Gets members that have been successfully tracked/linked against a datatable column
+		/// </summary>
+		internal IEnumerable<MemberLink> GetLinkedMembers()
+		{
+			return this.Members.Where(m => null != m.Column);
 		}
 
 		internal object FindObject_FullEquality(DataRow r, IEnumerable<object> collection)

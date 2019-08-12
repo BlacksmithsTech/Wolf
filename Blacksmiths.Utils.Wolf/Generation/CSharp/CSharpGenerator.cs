@@ -148,19 +148,11 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			return Ret;
 		}
 
-		private (string Schema, string Name) GetQualifiedSpName(string Name)
-		{
-			var m = Regex.Match(Name, @"^(?:\[(?<schema>[^\n\r\[\]]+)]\.)*\[(?<name>[^\n\r\[\]]+)]$");
-			if (m.Success)
-				return (m.Groups["schema"].Value, m.Groups["name"].Value ?? Name);
-			else
-				return (null, Name);
-		}
 		private string GenerateCode(StoredProcedure sp)
 		{
 			var sb = new IndentableStringBuilder();
 
-			var SpName = this.GetQualifiedSpName(sp.ProcedureName);
+			var SpName = Utility.StringHelpers.GetQualifiedSpName(sp.ProcedureName);
 			var ClassName = EncodeSymbol(SpName.Name);
 			if (!SpName.Name.Equals(ClassName) || !string.IsNullOrEmpty(SpName.Schema))
 				sb.AppendLine($@"[Procedure(Name = ""{sp.ProcedureName}"")]");

@@ -28,6 +28,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		/// </summary>
 		public void Bind()
 		{
+			if (null != this.ResultData)
+				for (int i = 0; i < this.ResultData.Tables.Count; i++)
+				{
+					var QualifiedName = Utility.StringHelpers.GetQualifiedSpName(this.WolfRequestItem.TableName);
+					if (!string.IsNullOrEmpty(QualifiedName.Schema))
+						this.ResultData.Tables[i].Namespace = QualifiedName.Schema;
+					if (!string.IsNullOrEmpty(QualifiedName.Name))
+						this.ResultData.Tables[i].TableName = 0 == i ? QualifiedName.Name : $"{QualifiedName.Name}{i}";
+				}
+
 			if (null != this.Parameters)
 				foreach (var p in this.Parameters)
 					if (null != p)

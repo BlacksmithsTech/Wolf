@@ -30,6 +30,8 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IDataRequestItem
 	{
+		string TableName { get; }
+
 		Utility.WolfCommandBinding GetDbCommand(IProvider provider, System.Data.Common.DbConnection connection);
 	}
 }

@@ -14,8 +14,8 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IDataConnection
 	{
 		DataRequest NewRequest();
-		IFluentModelAction WithModel(Model.ResultModel model);
-		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class;
+		//IFluentModelAction WithModel(Model.ResultModel model);
+		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new();
 	}
 
 	/// <summary>
@@ -69,12 +69,7 @@ namespace Blacksmiths.Utils.Wolf
 			return new DataRequest(this);
 		}
 
-		public IFluentModelAction WithModel(Model.ResultModel model)
-		{
-			return this.WithModel<Model.ResultModel>(model);
-		}
-
-		public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class
+		public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new()
 		{
 			if (null == modelObjects)
 				modelObjects = new T[0];

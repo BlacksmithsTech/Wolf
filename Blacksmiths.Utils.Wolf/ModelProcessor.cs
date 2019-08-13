@@ -16,6 +16,7 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IFluentModelAction
 	{
 		DataSet ToDataSet();
+		void MergeInto(DataSet ds);
 		CommitResult Commit();
 		IFluentModelAction AsUpdate();
 
@@ -47,7 +48,14 @@ namespace Blacksmiths.Utils.Wolf
 
 		public virtual DataSet ToDataSet()
 		{
-			return this.Model.GetCopiedDataSet();
+			var ds = new DataSet();
+			this.MergeInto(ds);
+			return ds;
+		}
+
+		public virtual void MergeInto(DataSet ds)
+		{
+			ds.Merge(this.Model.GetDataSet());
 		}
 
 		public IFluentModelAction AsUpdate()

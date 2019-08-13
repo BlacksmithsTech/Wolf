@@ -156,6 +156,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		private List<SpParameter> _dbParameters;
 		private string _procedureName;
+		private string _targetTableName;
 
 		// *************************************************
 		// Properties
@@ -208,7 +209,8 @@ namespace Blacksmiths.Utils.Wolf
 
 		string IDataRequestItem.TableName
 		{
-			get { return this.ProcedureName; }
+			get { return this._targetTableName ?? this.ProcedureName; }
+			set { this._targetTableName = value; }
 		}
 
 		// *************************************************

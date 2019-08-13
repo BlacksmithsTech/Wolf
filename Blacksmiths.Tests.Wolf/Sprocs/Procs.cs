@@ -80,6 +80,10 @@ namespace Blacksmiths.Tests.Wolf.Sprocs
 		public DateTime? CheckDate { get; set; }
 	}
 
+	public class uspGetDepartments : StoredProcedure
+	{
+	}
+
 	public class uspGetEmployeeManagers : StoredProcedure
 	{
 		public int? BusinessEntityID { get; set; }
@@ -88,6 +92,10 @@ namespace Blacksmiths.Tests.Wolf.Sprocs
 	public class uspGetManagerEmployees : StoredProcedure
 	{
 		public int? BusinessEntityID { get; set; }
+	}
+
+	public class uspGetPeople : StoredProcedure
+	{
 	}
 
 	public class uspGetWhereUsedProductID : StoredProcedure

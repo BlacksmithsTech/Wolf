@@ -22,11 +22,18 @@ namespace Blacksmiths.Utils.Wolf
 		DataSet ToDataSet();
 
 		/// <summary>
+		/// Creates a new strongly typed DataSet with the results of the request within it
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <returns></returns>
+		T ToDataSet<T>() where T : DataSet, new();
+
+		/// <summary>
 		/// Merges the results of the request into the provided DataSet
 		/// </summary>
 		/// <param name="ds">DataSet to merge the results into</param>
 		/// <returns></returns>
-		DataSet ToDataSet(DataSet ds);
+		T ToDataSet<T>(T ds) where T : DataSet;
 
 		/// <summary>
 		/// Creates a new model object of the given type and populates it from the request data
@@ -57,7 +64,14 @@ namespace Blacksmiths.Utils.Wolf
 			return this.ToDataSet(new DataSet());
 		}
 
-		public DataSet ToDataSet(DataSet ds)
+		public T ToDataSet<T>() where T : DataSet, new()
+		{
+			var ds = new T();
+			this.ToDataSet(ds);
+			return ds;
+		}
+
+		public T ToDataSet<T>(T ds) where T : DataSet
 		{
 			if (null == ds)
 				throw new ArgumentNullException("DataSet cannot be null");

@@ -31,7 +31,15 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	{
 		private IConfiguration _configuration;
 
+		/// <summary>
+		/// Gets or sets the SQL Server connection string to use for the connection to the database.
+		/// </summary>
 		public string ConnectionString { get; set; }
+
+		/// <summary>
+		/// Gets or sets the case-sensitive name of a configuration connection string found in the "ConnectionStrings" section to use for the connection to the database. Only used if "ConnectionString" is not set.
+		/// </summary>
+		public string ConnectionStringName { get; set; }
 
 		public WolfOptionsSqlServer(IConfiguration config)
 		{
@@ -44,7 +52,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			{
 				// ** Automatically aquire connection string
 				var ConnectionStrings = this._configuration.GetSection("ConnectionStrings").GetChildren();
-				if (1 == ConnectionStrings.Count())
+				if (!string.IsNullOrEmpty(this.ConnectionStringName))
+					this.ConnectionString = ConnectionStrings.FirstOrDefault(cs => cs.Key.Equals(this.ConnectionStringName))?.Value;
+				else if (1 == ConnectionStrings.Count())
 					this.ConnectionString = ConnectionStrings.FirstOrDefault()?.Value;
 			}
 

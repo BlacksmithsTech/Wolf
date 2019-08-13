@@ -14,7 +14,7 @@ namespace Blacksmiths.Tests.Wolf
 		private Utils.Wolf.DataConnection Connection = Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
 
 		[TestMethod]
-		public void Request_Fetch_LooseSproc()
+		public void Request_Fetch_LooseSproc_LooseDs()
 		{
 			var Result = Connection.NewRequest()
 				.Add(
@@ -29,7 +29,7 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
-		public void Request_Fetch_StrongSproc()
+		public void Request_Fetch_StrongSproc_LooseDs()
 		{
 			var Result = Connection.NewRequest()
 				.Add(
@@ -42,6 +42,19 @@ namespace Blacksmiths.Tests.Wolf
 
 			Assert.IsTrue(1 == Result.Tables.Count);
 			Assert.IsTrue(Result.Tables[0].Rows.Count > 0);
+		}
+
+		[TestMethod]
+		public void Request_Fetch_StrongSproc_StrongDs()
+		{
+			var ds = new Schema.HumanResources();
+			var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetDepartments(), ds.Department)
+				.Execute()
+				.ToDataSet(ds);
+
+			Assert.IsTrue(1 == Result.Tables.Count);
+			Assert.IsTrue(Result.Department.Count > 0);
 		}
 
 		[TestMethod]
@@ -115,7 +128,7 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
-		public void GetSchema()
+		public void GetSchema_LooseTyping()
 		{
 			var rows = new Test[] { new Test(1,"Alice"), new Test(2, "Bob") };
 			var ds = Connection.WithModel(rows).ToDataSet();
@@ -123,6 +136,18 @@ namespace Blacksmiths.Tests.Wolf
 			Assert.AreEqual(1, ds.Tables.Count);
 			Assert.IsTrue(null != ds.Tables["Test"]);
 			Assert.AreEqual("Alice", ds.Tables["Test"].Rows[0]["Name"]);
+		}
+
+		[TestMethod]
+		public void GetSchema_StrongTyping()
+		{
+			var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
+			var ds = new Schema.TestData();
+			Connection.WithModel(rows).MergeInto(ds);
+
+			Assert.AreEqual(1, ds.Tables.Count);
+			Assert.IsTrue(null != ds.Test);
+			Assert.AreEqual("Alice", ds.Test[0].Name);
 		}
 
 		[TestMethod]

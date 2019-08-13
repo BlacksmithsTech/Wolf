@@ -359,7 +359,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 
 		private string EncodeSymbol(string value)
 		{
-			return Regex.Replace(value.Trim(), @"[ .]", "_", RegexOptions.IgnoreCase);
+			return Regex.Replace(value.Trim(), @"[ .-]", "_", RegexOptions.IgnoreCase);
 		}
 
 		private void WriteLog(string log)

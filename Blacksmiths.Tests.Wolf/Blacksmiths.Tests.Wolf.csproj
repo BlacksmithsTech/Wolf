@@ -25,6 +25,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="Schema\HumanResources.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>HumanResources.xsd</DependentUpon>
+    </Compile>
     <Compile Update="Schema\TestData.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -33,6 +38,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Schema\HumanResources.xsd">
+      <Generator>MSDataSetGenerator</Generator>
+      <LastGenOutput>HumanResources.Designer.cs</LastGenOutput>
+    </None>
     <None Update="Schema\TestData.xsd">
       <Generator>MSDataSetGenerator</Generator>
       <LastGenOutput>TestData.Designer.cs</LastGenOutput>

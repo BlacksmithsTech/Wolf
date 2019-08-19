@@ -1,3 +1,9 @@
+/*
+ * Wolf
+ * A .NET Standard data access layer component
+ *
+ * (C) 2019 Blacksmiths Technology Ltd
+ */
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Data;

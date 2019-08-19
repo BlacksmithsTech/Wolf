@@ -1,4 +1,10 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿/*
+ * Wolf
+ * A .NET Standard data access layer component
+ *
+ * (C) 2019 Blacksmiths Technology Ltd
+ */
+using Microsoft.Extensions.Configuration;
 using System;
 using Blacksmiths.Utils.Wolf.Generation;
 using System.Linq;

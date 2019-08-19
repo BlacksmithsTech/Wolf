@@ -260,6 +260,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			return this.GetDataSet().Copy();
 		}
+
+		internal void AcceptChanges()
+		{
+			this._data.AcceptChanges();
+		}
 	}
 
 	internal sealed class ModelLink

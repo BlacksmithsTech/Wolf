@@ -202,6 +202,7 @@ namespace Blacksmiths.Tests.Wolf
 			ds.Test[0].Name = "Sample updated value";
 
 			Assert.AreEqual(1, Connection.WithModel(ds).AsUpdate().Commit().AffectedRowCount);
+			Assert.IsNull(ds.GetChanges());
 		}
 
 		public class TestModel : Utils.Wolf.Model.ResultModel

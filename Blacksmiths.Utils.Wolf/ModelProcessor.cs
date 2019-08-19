@@ -32,8 +32,6 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		/// <returns>Commit result information</returns>
 		CommitResult Commit();
-
-
 		IFluentModelAction AsUpdate();
 		IFluentModelAction AsDelete();
 	}
@@ -62,7 +60,9 @@ namespace Blacksmiths.Utils.Wolf
 
 		public virtual CommitResult Commit()
 		{
-			return this._connection.Commit(this);
+			var Result = this._connection.Commit(this);
+			this.Model.AcceptChanges();
+			return Result;
 		}
 
 		public virtual DataSet ToDataSet()

@@ -17,7 +17,10 @@ namespace Microsoft.Extensions.DependencyInjection
 				var sqlOptions = new WolfOptionsSqlServer(provider.GetRequiredService<IConfiguration>());
 				if (null != options)
 					options(sqlOptions);
-				return DataConnection.FromOptions(sqlOptions);
+
+				sqlOptions.AutoConfigureFromConfiguration();
+
+				return DataConnection.FromOptions(sqlOptions.Options);
 			});
 
 			return services;
@@ -27,28 +30,59 @@ namespace Microsoft.Extensions.DependencyInjection
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
-	public sealed class WolfOptionsSqlServer : WolfOptions
+	public sealed class SqlServerProviderFactory : IDataConnectionFactory
+	{
+		public IDataConnection NewDataConnection(WolfConnectionOptions options)
+		{
+			var cs = options.GetValue(WolfOptionsSqlServer.Key_ConnectionString);
+			if (string.IsNullOrWhiteSpace(cs))
+				throw new ArgumentException("A connection string must be specified to open a data connection to Microsoft SQL Server");
+			return SqlServer.SqlServerProvider.NewSqlServerConnection(cs);
+		}
+	}
+
+	public sealed class WolfOptionsSqlServer
 	{
 		private IConfiguration _configuration;
+		private WolfConnectionOptions _options = new WolfConnectionOptions();
+
+		internal const string Key_ConnectionString = "ConnectionString";
+		internal const string Key_ConnectionStringName = "ConnectionStringName";
+
+		public WolfConnectionOptions Options { get { return this._options; } }
 
 		/// <summary>
 		/// Gets or sets the SQL Server connection string to use for the connection to the database.
 		/// </summary>
-		public string ConnectionString { get; set; }
+		public string ConnectionString
+		{
+			get { return this._options.GetValue(Key_ConnectionString); }
+			set { this._options[Key_ConnectionString] = value; }
+		}
 
 		/// <summary>
 		/// Gets or sets the case-sensitive name of a configuration connection string found in the "ConnectionStrings" section to use for the connection to the database. Only used if "ConnectionString" is not set.
 		/// </summary>
-		public string ConnectionStringName { get; set; }
+		public string ConnectionStringName
+		{
+			get { return this._options.GetValue(Key_ConnectionStringName); }
+			set { this._options[Key_ConnectionStringName] = value; }
+		}
+
+		public WolfOptionsSqlServer()
+		{
+			this._options.Provider = typeof(SqlServerProviderFactory).AssemblyQualifiedName;
+		}
 
 		public WolfOptionsSqlServer(IConfiguration config)
+			: this()
 		{
 			this._configuration = config;
 		}
 
-		public override IDataConnection NewDataConnection()
+		public void AutoConfigureFromConfiguration()
 		{
-			if(string.IsNullOrEmpty(this.ConnectionString))
+			if(string.IsNullOrEmpty(this.ConnectionString) && null != this._configuration)
 			{
 				// ** Automatically aquire connection string
 				var ConnectionStrings = this._configuration.GetSection("ConnectionStrings").GetChildren();
@@ -60,8 +94,6 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 			if (string.IsNullOrEmpty(this.ConnectionString))
 				throw new InvalidOperationException("A connection string for the application couldn't be determined. Wolf will automatically use a connection string from your configuration providing it is the only connection string defined. Otherwise, a connection string can be defined via the options.");
-
-			return SqlServer.SqlServerProvider.NewSqlServerConnection(this.ConnectionString);
 		}
 	}
 }

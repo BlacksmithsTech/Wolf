@@ -10,6 +10,7 @@ using System.Data.Common;
 using System.Text;
 using System.Data.SqlClient;
 using System.Data;
+using Blacksmiths.Utils.Wolf.Utility;
 
 namespace Blacksmiths.Utils.Wolf.SqlServer
 {

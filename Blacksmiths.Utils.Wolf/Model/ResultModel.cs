@@ -151,7 +151,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 				if (null != ModelObject)
 				{
 					// ** Update the row and tally off the object.
-					//this.UnboxObject(ModelObject, tl, row);
+					this.BoxObject(ModelObject, tl, row);
 					UnhandledModels.Remove(ModelObject);
 				}
 				else
@@ -165,7 +165,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			foreach (var ModelObject in UnhandledModels)
 				Result.Remove(ModelObject);
 
-			if(Result == collection)
+			if (Result == collection)
 			{
 				return Result;
 			}
@@ -183,12 +183,20 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			foreach (var ml in tl.GetLinkedMembers())
 				if (r.IsNull(ml.Column))
-					Utility.ReflectionHelper.SetValue(ml.Member, o, null);//TODO: check if null is possible for the member.
+					this.SetModelValue(ml, o, null);
 				else
-					Utility.ReflectionHelper.SetValue(ml.Member, o, r[ml.Column]);
+					this.SetModelValue(ml, o, r[ml.Column]);
+
 			return o;
 		}
 
+		private void SetModelValue(MemberLink ml, object model, object value)
+		{
+			if (!ml.Column.DataType.IsAssignableFrom(ml.MemberType))
+				throw new ArgumentException($"Incompatible type '{ml.Column.DataType.FullName}'->'{ml.MemberType.FullName}' whilst assigning '{Utility.StringHelpers.GetFullColumnName(ml.Column)}'->'{Utility.StringHelpers.GetFullMemberName(ml.Member)}'");
+
+			Utility.ReflectionHelper.SetValue(ml.Member, model, value);
+		}
 		private TypeLink GetTableForType(ModelLink ml, DataSet ds)
 		{
 			if (null == this._typeLinks)
@@ -198,8 +206,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == link)
 			{
 				link = new TypeLink(ml);
-				foreach(var source in ml.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
-					if(ds.Tables.Contains(source.Name, source.Schema))
+				foreach (var source in ml.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
+					if (ds.Tables.Contains(source.Name, source.Schema))
 					{
 						link.Table = ds.Tables[source.Name, source.Schema];
 						break;
@@ -273,7 +281,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		internal string[] GetSources()
 		{
-			if(null == this._Sources)
+			if (null == this._Sources)
 			{
 				// Asc order sensitive.
 				var Ret = this.Member.GetCustomAttributes<Attribution.Source>()
@@ -339,7 +347,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			return this.Members.Where(m => null != m.Column);
 		}
-		
+
 		internal object FindObject_FullEquality(DataRow r, IEnumerable<object> collection)
 		{
 			foreach (var o in collection)
@@ -392,10 +400,12 @@ namespace Blacksmiths.Utils.Wolf.Model
 	{
 		internal MemberInfo Member;
 		internal DataColumn Column;
+		internal Type MemberType;
 
 		internal MemberLink(MemberInfo m)
 		{
 			this.Member = m;
+			this.MemberType = Utility.ReflectionHelper.GetMemberType(this.Member);
 		}
 	}
 }

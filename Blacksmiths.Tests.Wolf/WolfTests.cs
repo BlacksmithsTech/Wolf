@@ -145,7 +145,6 @@ namespace Blacksmiths.Tests.Wolf
 			var ds = new Schema.TestData();
 			Connection.WithModel(rows).MergeInto(ds);
 
-			Assert.AreEqual(1, ds.Tables.Count);
 			Assert.IsTrue(null != ds.Test);
 			Assert.AreEqual("Alice", ds.Test[0].Name);
 		}
@@ -189,11 +188,14 @@ namespace Blacksmiths.Tests.Wolf
 		public void Commit_DataSet()
 		{
 			var ds = new Schema.TestData();
-			ds.Test.AddTestRow(1, "Alice");
+			var r = ds.Test.NewTestRow();
+			r.ID = 1;
+			r.Name = "Sample original value";
+			ds.Test.AddTestRow(r);
 			ds.AcceptChanges();
-			ds.Test[0].Name = "Alex";
+			ds.Test[0].Name = "Sample updated value";
 
-			Assert.AreEqual(1, Connection.WithModel(ds).Commit().AffectedRowCount);
+			Assert.AreEqual(1, Connection.WithModel(ds).AsUpdate().Commit().AffectedRowCount);
 		}
 
 		public class TestModel : Utils.Wolf.Model.ResultModel

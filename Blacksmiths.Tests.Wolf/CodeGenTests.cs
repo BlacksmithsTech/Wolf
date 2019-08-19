@@ -17,11 +17,13 @@ namespace Blacksmiths.Tests.Wolf
 			var Options = new GenerationOptions();
 			var ConnectionOptions = new Blacksmiths.Utils.Wolf.Utility.WolfOptionsSqlServer(null);
 			ConnectionOptions.ConnectionString = @"Server=(localdb)\mssqllocaldb;Database=AdventureWorks2016;Integrated Security=true";
-			Options.ConnectionOptions = ConnectionOptions;
+			Options.ConnectionOptions = ConnectionOptions.Options;
 
 			var Result = new Blacksmiths.Utils.Wolf.Generation.CSharp.CSharpGenerator().GenerateCode(Options);
 			var SprocCode = Result[0].Generate();
 			var ModelCode = Result[1].Generate();
+
+			//TODO: Assert (this is currently a test handle for dev purposes)
 		}
 	}
 }

@@ -15,5 +15,23 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			else
 				return (string.Empty, Name);
 		}
+
+		public static string GetFullTableName(System.Data.DataTable dt)
+		{
+			if (!string.IsNullOrEmpty(dt.Namespace))
+				return $"{dt.Namespace}.{dt.TableName}";
+			else
+				return dt.TableName;
+		}
+
+		public static string GetFullColumnName(System.Data.DataColumn dc)
+		{
+			return $"{GetFullTableName(dc.Table)}.{dc.ColumnName}";
+		}
+
+		public static string GetFullMemberName(System.Reflection.MemberInfo mi)
+		{
+			return $"{mi.DeclaringType.FullName}.{mi.Name}";
+		}
 	}
 }

@@ -48,7 +48,7 @@ namespace Blacksmiths.Utils.Wolf
 			this.Provider = provider;
 		}
 
-		public static IDataConnection FromOptions(Utility.WolfOptions options)
+		public static IDataConnection FromOptions(Utility.WolfConnectionOptions options)
 		{
 			var dc = options.NewDataConnection();
 			if (null == dc)
@@ -145,7 +145,7 @@ namespace Blacksmiths.Utils.Wolf
 			if (null == processor)
 				throw new ArgumentNullException($"{nameof(processor)} may not be null");
 
-			var ds = processor.ToDataSet().GetChanges();
+			var ds = processor.ToDataSetForCommit();
 			CommitResult ret = new CommitResult();
 
 			if (null == ds)

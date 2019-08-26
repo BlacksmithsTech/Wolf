@@ -32,4 +32,34 @@ namespace Blacksmiths.Tests.Wolf.Models
 		public string FirstName { get; set; }
 		public string LastName { get; set; }
 	}
+
+	[Source(From = "uspGetBusinessEntities")]
+	class BusinessEntityNoRelationshipAttribution
+	{
+		public int BusinessEntityID { get; set; }
+		public Guid rowguid { get; set; }
+		public DateTime ModifiedDate { get; set; }
+		public BusinessEntityAddress[] BusinessEntityAddresses { get; set; }
+	}
+
+	[Source(From = "uspGetBusinessEntities")]
+	class BusinessEntity
+	{
+		public int BusinessEntityID { get; set; }
+		public Guid rowguid { get; set; }
+		public DateTime ModifiedDate { get; set; }
+
+		[Relation(nameof(BusinessEntityID))]
+		public BusinessEntityAddress[] BusinessEntityAddresses { get; set; }
+	}
+
+	[Source(From = "uspGetBusinessEntityAddresses")]
+	class BusinessEntityAddress
+	{
+		public int BusinessEntityID { get; set; }
+		public int AddressID { get; set; }
+		public int AddressTypeID { get; set; }
+		public Guid rowguid { get; set; }
+		public DateTime ModifiedDate { get; set; }
+	}
 }

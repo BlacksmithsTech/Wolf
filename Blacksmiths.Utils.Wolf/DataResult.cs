@@ -76,22 +76,54 @@ namespace Blacksmiths.Utils.Wolf
 			if (null == ds)
 				throw new ArgumentNullException("DataSet cannot be null");
 
+			PerfDebuggers.BeginTrace("DataSet preperation");
+
 			ds.EnforceConstraints = false;
 
 			foreach (var cmd in this.Commands)
 			{
 				// ** Simple non-configurable merge for now.
-				ds.Merge(cmd.ResultData);
+				//ds.Merge(cmd.ResultData); //AA: This is could be slow if there's a lot of data as it's a deep clone operation - I'm going to try to avoid.
+
+				for(int i = 0; i < cmd.ResultData.Tables.Count; i++)
+				{
+					var sourceTable = cmd.ResultData.Tables[i];
+
+					if(ds.Tables.Contains(sourceTable.TableName, sourceTable.Namespace))
+					{
+						var targetTable = ds.Tables[sourceTable.TableName, sourceTable.Namespace];
+						if (0 == targetTable.Rows.Count)
+						{
+							// ** No data in the target so perform a higher-performance shallow import/copy of the source rows
+							foreach (DataRow sourceRow in sourceTable.Rows)
+								targetTable.ImportRow(sourceRow);
+						}
+						else
+						{
+							// ** Target contains data, pay the price of the merge
+							targetTable.Merge(sourceTable);
+						}
+					}
+					else
+					{
+						// ** Target simply doesn't contain this table, so high-perf shallow move the datatable into the target
+						cmd.ResultData.Tables.Remove(sourceTable);
+						ds.Tables.Add(sourceTable);
+						i--;
+					}
+				}
 			}
 
 			ds.EnforceConstraints = true;
+
+			PerfDebuggers.EndTrace("DataSet preperation");
 
 			return ds;
 		}
 
 		public Model.SimpleResultModel<T> ToSimpleModel<T>() where T : class, new()
 		{
-			return this.ToSimpleModel(new T[0]);
+			return this.ToSimpleModel<T>(null);
 		}
 
 		public Model.SimpleResultModel<T> ToSimpleModel<T>(params T[] model) where T : class, new()

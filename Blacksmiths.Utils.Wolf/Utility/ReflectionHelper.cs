@@ -14,6 +14,13 @@ namespace Blacksmiths.Utils.Wolf.Utility
 {
 	public static class ReflectionHelper
 	{
+		public static Array ArrayFromList(Type CollectionType, System.Collections.IList Collection)
+		{
+			var a = Array.CreateInstance(CollectionType, Collection.Count);
+			Array.Copy(Collection.Cast<object>().ToArray(), a, Collection.Count);
+			return a;
+		}
+
 		public static object GetValue(MemberInfo Member, object source)
 		{
 			if (Member is FieldInfo fi)
@@ -49,6 +56,42 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return mt.GetElementType();
 			else
 				return mt.GetInterfaces().FirstOrDefault(i => i.IsGenericType && typeof(ICollection<>).Equals(i.GetGenericTypeDefinition()))?.GetGenericArguments()[0];
+		}
+
+		public static bool IsAssignable(Type x, Type y)
+		{
+			y = Nullable.GetUnderlyingType(y) ?? y;
+			return x.IsAssignableFrom(y);
+		}
+
+		public static bool IsPrimitive(Type x)
+		{
+			// ** Wolf defines primitive types as those that should be data bound directly to a column
+			var PrimitiveTypes = new[]
+			{
+				typeof(bool),
+				typeof(byte),
+				typeof(sbyte),
+				typeof(short),
+				typeof(ushort),
+				typeof(int),
+				typeof(uint),
+				typeof(long),
+				typeof(ulong),
+				typeof(IntPtr),
+				typeof(UIntPtr),
+				typeof(char),
+				typeof(double),
+				typeof(float),
+				typeof(string),
+				typeof(DateTime),
+				typeof(Guid),
+				typeof(decimal),
+				typeof(TimeSpan),
+				typeof(DateTimeOffset),
+			};
+
+			return PrimitiveTypes.Any(t => IsAssignable(t, x));
 		}
 	}
 }

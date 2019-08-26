@@ -10,6 +10,7 @@ using System.Data;
 using Blacksmiths.Tests.Wolf.Models;
 using System.Diagnostics;
 using Blacksmiths.Utils.Wolf;
+using System.Linq;
 
 namespace Blacksmiths.Tests.Wolf
 {
@@ -82,6 +83,51 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
+		public void Request_SimpleModel_New_DoesntCorrelate_StrongSproc()
+		{
+			// When the sprocs used don't correlate to the model, we should expect null
+			Assert.IsNull(Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results);
+		}
+
+		[TestMethod]
+		public void Request_SimpleModel_New_UnsuppliedNested_StrongSproc()
+		{
+			// This model requests a nested model, but it's not supplied in the request. All the nested models should be null
+			var IncompleteResult = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results;
+
+			Assert.IsTrue(IncompleteResult.All(r => null == r.BusinessEntityAddresses));
+		}
+
+		[TestMethod]
+		public void Request_SimpleModel_New_CrossNested_StrongSproc()
+		{
+			var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results;
+
+			var First = Result.First();
+			Assert.IsTrue(Result.All(r => r.BusinessEntityAddresses.SequenceEqual(First.BusinessEntityAddresses)));
+		}
+
+		[TestMethod]
+		public void Request_SimpleModel_New_Related_StrongSproc()
+		{
+			var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntity>().Results;
+		}
+
+		[TestMethod]
 		public void Request_Fetch1_Perf()
 		{
 			Utility.Perf.Measure(() => {
@@ -95,7 +141,41 @@ namespace Blacksmiths.Tests.Wolf
 			}, "uspGetManagerEmployees", 10, 100);
 		}
 
-		
+		[TestMethod]
+		public void Request_Fetch2_Perf()
+		{
+			Utility.Perf.Measure(() => {
+				var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute();
+			}, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (No processing)", 10, 100);
+		}
+
+		[TestMethod]
+		public void Request_Fetch3_Perf()
+		{
+			Utility.Perf.Measure(() => {
+				var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToDataSet();
+			}, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (DataSet)", 10, 100);
+		}
+
+		[TestMethod]
+		public void Request_Fetch4_Perf()
+		{
+			// 200ms currently alloted for 40,391 rows
+			Utility.Perf.Measure(() => {
+				var Result = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results;
+			}, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (Boxed)", 10, 200);
+		}
 
 		[TestMethod]
 		public void Request_LooseSp()

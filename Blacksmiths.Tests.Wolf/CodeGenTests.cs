@@ -24,6 +24,7 @@ namespace Blacksmiths.Tests.Wolf
 			var ConnectionOptions = new Blacksmiths.Utils.Wolf.Utility.WolfOptionsSqlServer(null);
 			ConnectionOptions.ConnectionString = @"Server=(localdb)\mssqllocaldb;Database=AdventureWorks2016;Integrated Security=true";
 			Options.ConnectionOptions = ConnectionOptions.Options;
+			Options.StoredProcedures.Namespace = "Blacksmiths.Tests.Wolf.Sprocs";
 
 			var Result = new Blacksmiths.Utils.Wolf.Generation.CSharp.CSharpGenerator().GenerateCode(Options);
 			var SprocCode = Result[0].Generate();

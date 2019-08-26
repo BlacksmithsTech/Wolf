@@ -27,7 +27,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 	{
 		private DataSet _data;
 
-		private List<TypeLink> _typeLinks;
+		//private List<TypeLink> _typeLinks;
 		private ModelLink[] _modelMembers;
 
 		public static SimpleResultModel<T> CreateSimpleResultModel<T>(params T[] model) where T : class, new()
@@ -67,15 +67,55 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		internal void DataBind(DataSet ds)
 		{
+			Utility.PerfDebuggers.BeginTrace("Model databinding");
+
+			//TODO: The reliance here on using the DataSet as the foundation to the boxing is probably aggravating perf costs (exhasibated over large result sets). Should consider directly boxing from DataReaders.
 			if (null == this._data)
-				this._data = new DataSet();
+				this._data = ds;
+			else
+				this._data.Merge(ds);
 
-			this._data.Merge(ds);
-
-			this._data.EnforceConstraints = false;
+			// ** Populate root model objects
+			var Relationships = new Queue<MemberRelationshipDemand>();
 			foreach (var ml in this.GetModelMembers())
-				Utility.ReflectionHelper.SetValue(ml.Member, this, this.BoxEnumerable(ml, this._data));
-			this._data.EnforceConstraints = true;
+				ml.SetValue(this, this.BoxEnumerable(ml, this._data, Relationships, ml.ToCollection(this)));
+
+			// ** Assign related data
+			this.SatisfyRelationshipDemands(Relationships);
+
+			Utility.PerfDebuggers.EndTrace("Model databinding");
+		}
+
+		private void SatisfyRelationshipDemands(Queue<MemberRelationshipDemand> Demands)
+		{
+			if (Demands.Count > 0)
+			{
+				// ** Create a collection which holds both strongly defined model members and any nested members which turn up in the model
+				var ModelLinks = new List<ModelLink>(this.GetModelMembers());
+				var Collections = new Dictionary<Type, System.Collections.IList>();
+
+				foreach (var ml in ModelLinks)
+					if (!Collections.ContainsKey(ml.CollectionType))
+						Collections.Add(ml.CollectionType, ml.ToCollection(this));
+
+				while (Demands.Count > 0)
+				{
+					var Demand = Demands.Dequeue();
+					var ModelLink = ModelLinks.FirstOrDefault(ml => ml.MemberEquals(Demand.Relationship.Member));
+					
+					if(null == ModelLink)
+					{
+						// ** Not seen this model member before (probably nested)
+						ModelLink = new ModelLink(Demand.Relationship.Member);
+						ModelLinks.Add(ModelLink);
+					}
+
+					if (!Collections.ContainsKey(ModelLink.CollectionType))
+						Collections.Add(ModelLink.CollectionType, this.BoxEnumerable(ModelLink, this._data, Demands, null));
+
+					Demand.SatisfyFrom(ModelLink.TypeLink, Collections[ModelLink.CollectionType]);
+				}
+			}
 		}
 
 		private ModelLink[] GetModelMembers()
@@ -85,18 +125,14 @@ namespace Blacksmiths.Utils.Wolf.Model
 					.GetMembers(BindingFlags.Instance | BindingFlags.Public)
 					.Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
 					.Where(m => typeof(System.Collections.IList).IsAssignableFrom(Utility.ReflectionHelper.GetMemberType(m)))
-					.Select(m => new ModelLink()
-					{
-						Member = m,
-						CollectionType = Utility.ReflectionHelper.GetCollectionType(m)
-					})
+					.Select(m => new ModelLink(m))
 					.ToArray();
 			return this._modelMembers;
 		}
 
 		private void UnboxEnumerable(ModelLink ml, DataSet ds)
 		{
-			var tl = this.GetTableForType(ml, ds);
+			var tl = this.GetTableForType(ml, ds, true);
 			var collection = ml.ToCollection(this).Cast<object>();
 			var UnhandledModels = new List<object>(collection);
 
@@ -135,12 +171,18 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 		}
 
-		private System.Collections.IList BoxEnumerable(ModelLink ml, DataSet ds)
+		private System.Collections.IList BoxEnumerable(ModelLink ml, DataSet ds, Queue<MemberRelationshipDemand> relationships, System.Collections.IList sourceCollection)
 		{
-			var tl = this.GetTableForType(ml, ds);
-			var collection = ml.ToCollection(this);
-			var castedCollection = collection.Cast<object>();
-			var Result = collection.IsFixedSize ? new List<object>(castedCollection) : collection;
+			var tl = this.GetTableForType(ml, ds, false);
+			IEnumerable<object> castedCollection;
+
+			if (null == tl.Table)
+				return sourceCollection; //No table data source, return original source as presented unchanged
+			else if (null == sourceCollection)
+				sourceCollection = new List<object>(); // Null original data, forge an empty array
+
+			castedCollection = sourceCollection.Cast<object>();
+			var Result = ml.MemberType.IsArray ? new List<object>(castedCollection) : sourceCollection;
 			var UnhandledModels = new List<object>(castedCollection);
 
 			// ** Updates and inserts
@@ -151,35 +193,42 @@ namespace Blacksmiths.Utils.Wolf.Model
 				if (null != ModelObject)
 				{
 					// ** Update the row and tally off the object.
-					this.BoxObject(ModelObject, tl, row);
+					this.BoxObject(ModelObject, tl, row, relationships);
 					UnhandledModels.Remove(ModelObject);
 				}
 				else
 				{
 					// ** No Model Object, this row is to be inserted
-					Result.Add(this.BoxObject(Activator.CreateInstance(ml.CollectionType), tl, row));//TODO: sensible errors for objects which can't be activated simply
+					Result.Add(this.BoxObject(Activator.CreateInstance(ml.CollectionType), tl, row, relationships));//TODO: sensible errors for objects which can't be activated simply
 				}
 			}
 
 			// ** Deletes
 			foreach (var ModelObject in UnhandledModels)
-				Result.Remove(ModelObject);
+				Result?.Remove(ModelObject);
 
-			if (Result == collection)
+			if (ml.MemberType.IsArray)
 			{
-				return Result;
+				return Utility.ReflectionHelper.ArrayFromList(ml.CollectionType, Result);
 			}
 			else
 			{
-				var a = Array.CreateInstance(ml.CollectionType, Result.Count);
-				Array.Copy(Result.Cast<object>().ToArray(), a, Result.Count);
-				return (System.Collections.IList)a;
+				return Result;
 			}
 		}
 
-		private object BoxObject(object o, TypeLink tl, DataRow r)
+		private object BoxObject(object o, TypeLink tl, DataRow r, Queue<MemberRelationshipDemand> relationships)
 		{
-			//TODO: inner nested types
+			foreach (var tlr in tl.Relationships)
+			{
+				var Demand = relationships.FirstOrDefault(d => d.Relationship.Equals(tlr));
+				if(null == Demand)
+				{
+					Demand = new MemberRelationshipDemand(tlr);
+					relationships.Enqueue(Demand);
+				}
+				Demand.Instances.Enqueue(o);
+			}
 
 			foreach (var ml in tl.GetLinkedMembers())
 				if (r.IsNull(ml.Column))
@@ -192,62 +241,16 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private void SetModelValue(MemberLink ml, object model, object value)
 		{
-			if (!ml.Column.DataType.IsAssignableFrom(ml.MemberType))
+			if (!Utility.ReflectionHelper.IsAssignable(ml.Column.DataType, ml.MemberType))
 				throw new ArgumentException($"Incompatible type '{ml.Column.DataType.FullName}'->'{ml.MemberType.FullName}' whilst assigning '{Utility.StringHelpers.GetFullColumnName(ml.Column)}'->'{Utility.StringHelpers.GetFullMemberName(ml.Member)}'");
 
 			Utility.ReflectionHelper.SetValue(ml.Member, model, value);
 		}
-		private TypeLink GetTableForType(ModelLink ml, DataSet ds)
+		private TypeLink GetTableForType(ModelLink ml, DataSet ds, bool AutoCreate)
 		{
-			if (null == this._typeLinks)
-				this._typeLinks = new List<TypeLink>();
-			var link = this._typeLinks.FirstOrDefault(tl => ml.CollectionType.Equals(tl.Type));
-
-			if (null == link)
-			{
-				link = new TypeLink(ml);
-				foreach (var source in ml.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
-					if (ds.Tables.Contains(source.Name, source.Schema))
-					{
-						link.Table = ds.Tables[source.Name, source.Schema];
-						break;
-					}
-
-				if (null == link.Table)
-					link.Table = this.CreateTableForType(link, ds);
-
-				this.LinkColumns(link, link.Table);
-
-				//TODO: Work out the most effective way of relating objects to rows and assign that as a delegate method
-				link.FindRow = link.AlwaysNewRow;
-				link.FindObject = link.FindObject_FullEquality;
-
-				this._typeLinks.Add(link);
-			}
-
-			return link;
-		}
-
-		private void LinkColumns(TypeLink tl, DataTable dt)
-		{
-			foreach (var member in tl.Members)
-			{
-				if (null == member.Column)
-					member.Column = dt.Columns[member.Member.Name];
-			}
-		}
-
-		private DataTable CreateTableForType(TypeLink tl, DataSet ds)
-		{
-			var tn = Utility.StringHelpers.GetQualifiedSpName(tl.DefaultTableName);
-			var dt = new DataTable(tn.Name, tn.Schema);
-
-			foreach (var member in tl.Members)
-				if (!dt.Columns.Contains(member.Member.Name))
-					dt.Columns.Add(member.Member.Name, Utility.ReflectionHelper.GetMemberType(member.Member));
-
-			ds.Tables.Add(dt);
-			return dt;
+			if (null == ml.TypeLink)
+				ml.CreateTypeLink(ds, AutoCreate);
+			return ml.TypeLink;
 		}
 
 		internal DataSet GetDataSet()
@@ -271,18 +274,40 @@ namespace Blacksmiths.Utils.Wolf.Model
 	{
 		private string[] _Sources;
 
-		internal MemberInfo Member;
-		internal Type CollectionType;
+		private MemberInfo Member;
+		internal string Name { get; private set; }
+		internal Type MemberType { get; private set; }
+		internal Type CollectionType { get; private set;}
+
+		internal TypeLink TypeLink { get; private set; }
+
+		internal ModelLink(MemberInfo mi)
+		{
+			this.Member = mi;
+			this.Name = mi.Name;
+			this.MemberType = Utility.ReflectionHelper.GetMemberType(mi);
+			this.CollectionType = Utility.ReflectionHelper.GetCollectionType(mi);
+		}
+
+		internal bool MemberEquals(MemberInfo mi)
+		{
+			return this.Member.Equals(mi);
+		}
 
 		internal System.Collections.IList ToCollection(object source)
 		{
 			return (System.Collections.IList)Utility.ReflectionHelper.GetValue(Member, source);
 		}
 
-		internal IEnumerable<object> ToEnumerable(object source)
+		internal void SetValue(object source, object value)
 		{
-			return this.ToCollection(source).Cast<object>().Where(o => null != o);
+			Utility.ReflectionHelper.SetValue(this.Member, source, value);
 		}
+
+		//internal IEnumerable<object> ToEnumerable(object source)
+		//{
+		//	return this.ToCollection(source).Cast<object>().Where(o => null != o);
+		//}
 
 		internal string[] GetSources()
 		{
@@ -318,6 +343,51 @@ namespace Blacksmiths.Utils.Wolf.Model
 				&& (type.Name.StartsWith("<>") || type.Name.StartsWith("VB$"))
 				&& type.Attributes.HasFlag(TypeAttributes.NotPublic);
 		}
+
+		internal void CreateTypeLink(DataSet ds, bool AutoCreate)
+		{
+			var link = new TypeLink(this);
+			foreach (var source in this.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
+				if (ds.Tables.Contains(source.Name, source.Schema))
+				{
+					link.Table = ds.Tables[source.Name, source.Schema];
+					break;
+				}
+
+			if (null == link.Table && AutoCreate)
+				link.Table = this.CreateTableForType(link, ds);
+
+			this.LinkColumns(link, link.Table);
+
+			//TODO: Work out the most effective way of relating objects to rows and assign that as a delegate method
+			link.FindRow = link.AlwaysNewRow;
+			link.FindObject = link.FindObject_FullEquality;
+
+			this.TypeLink = link;
+		}
+
+		private void LinkColumns(TypeLink tl, DataTable dt)
+		{
+			if (null != dt)
+				foreach (var member in tl.Members)
+				{
+					if (null == member.Column)
+						member.Column = dt.Columns[member.Member.Name];
+				}
+		}
+
+		private DataTable CreateTableForType(TypeLink tl, DataSet ds)
+		{
+			var tn = Utility.StringHelpers.GetQualifiedSpName(tl.DefaultTableName);
+			var dt = new DataTable(tn.Name, tn.Schema);
+
+			foreach (var member in tl.Members)
+				if (!dt.Columns.Contains(member.Member.Name))
+					dt.Columns.Add(member.Member.Name, Utility.ReflectionHelper.GetMemberType(member.Member));
+
+			ds.Tables.Add(dt);
+			return dt;
+		}
 	}
 
 	internal sealed class TypeLink
@@ -325,24 +395,63 @@ namespace Blacksmiths.Utils.Wolf.Model
 		internal delegate DataRow RowFinder(object o);
 		internal delegate object ObjectFinder(DataRow r, IEnumerable<object> collection);
 
-		internal ModelLink ModelLink;
+		internal MemberLink this[string Name]
+		{
+			get
+			{
+				return this.Members.FirstOrDefault(m => m.Member.Name.Equals(Name));
+			}
+		}
+
+		//internal ModelLink ModelLink;
 		internal Type Type;
 		internal string DefaultTableName;
 		internal MemberLink[] Members;
-		internal DataTable Table;
+		internal MemberRelationship[] Relationships;
+		internal DataTable Table;//this can be null if no source table in the results can be located
 		internal RowFinder FindRow;
 		internal ObjectFinder FindObject;
 
 		internal TypeLink(ModelLink ml)
 		{
-			this.ModelLink = ml;
+			//this.ModelLink = ml;
 			this.Type = ml.CollectionType;
 			this.DefaultTableName = this.GetDefaultTableNameForType(ml);
-			this.Members = this.Type
-				.GetMembers(BindingFlags.Public | BindingFlags.Instance)
+
+			var ReflectedMembers = this.Type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
 				.Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
+				.ToArray();
+
+			this.Members = ReflectedMembers
+				.Where(m => Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
 				.Select(m => new MemberLink(m))
 				.ToArray();
+
+			this.Relationships = ReflectedMembers
+				.Where(m => !Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
+				.Select(m => new MemberRelationship(this, m))
+				.ToArray();
+		}
+
+		internal bool HasMember(string Name)
+		{
+			return this.Members.Any(m => m.Member.Name.Equals(Name));
+		}
+
+		internal Dictionary<string, object> GetValues(object source, IEnumerable<string> MemberNames)
+		{
+			var Ret = new Dictionary<string, object>();
+			foreach (var MemberName in MemberNames)
+				Ret.Add(MemberName, this[MemberName].GetValue(source));
+			return Ret;
+		}
+
+		internal bool CompareValues(object source, string[] MemberNames, object[] ComparisonValues)
+		{
+			for (int i = 0; i < MemberNames.Length; i++)
+				if (!this[MemberNames[i]].GetValue(source).Equals(ComparisonValues[i]))
+					return false;
+			return true;
 		}
 
 		/// <summary>
@@ -395,9 +504,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 			//TODO: Default via further attribution?
 
 			if (Sources.Length > 1)
-				throw new InvalidOperationException($"The model member '{ml.Member.Name}' ({Utility.ReflectionHelper.GetMemberType(ml.Member)}) specifies multiple sources. A target table to commit changes into can't be determined.");
+				throw new InvalidOperationException($"The model member '{ml.Name}' ({ml.MemberType}) specifies multiple sources. A target table to commit changes into can't be determined.");
 			else
-				throw new InvalidOperationException($"A target table for the model member '{ml.Member.Name}' ({Utility.ReflectionHelper.GetMemberType(ml.Member)}) couldn't be determined.");
+				throw new InvalidOperationException($"A target table for the model member '{ml.Name}' ({ml.MemberType}) couldn't be determined.");
 		}
 	}
 
@@ -411,6 +520,107 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			this.Member = m;
 			this.MemberType = Utility.ReflectionHelper.GetMemberType(this.Member);
+		}
+
+		internal object GetValue(object source)
+		{
+			return Utility.ReflectionHelper.GetValue(this.Member, source);
+		}
+	}
+
+	internal sealed class MemberRelationship
+	{
+		internal TypeLink ParentTypeLink;
+		internal MemberInfo Member;
+		internal Type MemberType;
+		internal Type CollectionType;
+
+		internal MemberRelationship(TypeLink parentTl, MemberInfo m)
+		{
+			this.ParentTypeLink = parentTl;
+			this.Member = m;
+			this.MemberType = Utility.ReflectionHelper.GetMemberType(this.Member);
+			this.CollectionType = Utility.ReflectionHelper.GetCollectionType(this.Member) ?? Utility.ReflectionHelper.GetMemberType(this.Member);
+		}
+
+		internal void SetValue(object source, System.Collections.IList value)
+		{
+			if (this.MemberType.IsArray)
+				Utility.ReflectionHelper.SetValue(this.Member, source, Utility.ReflectionHelper.ArrayFromList(this.CollectionType, value));
+			else
+				Utility.ReflectionHelper.SetValue(this.Member, source, value);
+		}
+	}
+
+	internal sealed class MemberRelationshipDemand
+	{
+		internal MemberRelationship Relationship;
+		internal Queue<object> Instances = new Queue<object>();
+
+		internal MemberRelationshipDemand(MemberRelationship r)
+		{
+			this.Relationship = r;
+		}
+
+		internal void SatisfyFrom(TypeLink ChildTypeLink, System.Collections.IList sourceCollection)
+		{
+			if (null == sourceCollection)
+			{
+				// No data available to satisfy the relationship. Clear all instances (finished)
+				this.Instances.Clear();
+				return;
+			}
+
+			//Fail. This is taking forever to execute (seconds)
+			//Suspect the .NET reflection calls to GetValue and SetValue are slow. Need to optimise and think carefully about how FKs work 1:1, 1:X and X:X
+			//See https://mattwarren.org/2016/12/14/Why-is-Reflection-slow/ for techniques to improve the lookup
+
+			//var Relation = this.FindFirstValidRelationship(ChildTypeLink);
+			//var sourceDiminishing = new List<object>(sourceCollection.Cast<object>());
+
+			//while (this.Instances.Count > 0)
+			//{
+			//	var Instance = this.Instances.Dequeue();
+			//	this.FilterCollectionForInstance(ChildTypeLink, Instance, Relation, sourceDiminishing);
+			//	//this.Relationship.SetValue(Instance, this.FilterCollectionForInstance(ChildTypeLink, Instance, Relation, sourceDiminishing));
+			//}
+
+		}
+
+		//private System.Collections.IList FilterCollectionForInstance(TypeLink ChildTypeLink, object ParentInstance, Attribution.Relation Relation, System.Collections.IList sourceCollection)
+		//{
+		//	if (null == sourceCollection // Nothing to filter on
+		//		|| null == Relation) // Or no definition for what to filter by
+		//		return sourceCollection;
+
+		//	//TODO: Work directly onto the target collection if possible.For now, always rebuild the collection.
+		//	var ParentKeyValues = this.Relationship.ParentTypeLink.GetValues(ParentInstance, Relation.ParentFieldNames).Values.ToArray();
+		//	var Result = new List<object>();
+		//	for(int i = 0; i < sourceCollection.Count; i++)
+		//	{
+		//		var ChildInstance = sourceCollection[i];
+		//		if(ChildTypeLink.CompareValues(ChildInstance, Relation.ChildFieldNames, ParentKeyValues))
+		//		{
+		//			sourceCollection.RemoveAt(i);
+		//			i--;
+		//		}
+		//	}
+
+		//	return Result;
+		//}
+
+		private Attribution.Relation FindFirstValidRelationship(TypeLink ChildTypeLink)
+		{
+			foreach(var Relation in this.Relationship.Member.GetCustomAttributes<Attribution.Relation>(true))
+			{
+				if(Relation.IsSane()
+					&& Relation.ParentFieldNames.All(fn => this.Relationship.ParentTypeLink.HasMember(fn))
+					&& Relation.ChildFieldNames.All(fn => ChildTypeLink.HasMember(fn)))
+				{
+					return Relation;
+				}
+			}
+			return null;
 		}
 	}
 }

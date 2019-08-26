@@ -65,19 +65,22 @@ namespace Blacksmiths.Utils.Wolf
 			return Result;
 		}
 
-		public virtual DataSet ToDataSet()
-		{
-			var ds = new DataSet();
-			this.MergeInto(ds);
-			return ds;
-		}
-
-		public virtual void MergeInto(DataSet ds)
+		protected virtual DataSet GetModelDataSet()
 		{
 			var SourceDs = this.Model.GetDataSet();
 			foreach (DataTable dt in SourceDs.Tables)
 				this.RaisePreCommitActions(dt);
-			ds.Merge(SourceDs);
+			return SourceDs;
+		}
+
+		public virtual DataSet ToDataSet()
+		{
+			return this.GetModelDataSet();
+		}
+
+		public virtual void MergeInto(DataSet ds)
+		{
+			ds.Merge(this.GetModelDataSet());
 		}
 
 		internal virtual DataSet ToDataSetForCommit()

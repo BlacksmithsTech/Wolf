@@ -19,14 +19,28 @@ namespace Blacksmiths.Tests.Wolf.Utility
 			var sw = new Stopwatch();
 			var totalMs = limit.GetValueOrDefault() * iterations;
 			long avg = 0;
-			for (int i = 0; i < iterations; i++)
+			var warmUpIterations = iterations > 0 ? 1 : 0;
+			for (int i = 0; i < iterations + warmUpIterations; i++)
 			{
 				sw.Restart();
 				a();
-				avg += sw.ElapsedMilliseconds;
+				var elapsed = sw.ElapsedMilliseconds;
+				if (i < warmUpIterations)
+				{
+					Trace.WriteLine($"Warm up {i + 1}: {elapsed}ms");
+				}
+				else
+				{
+					var displayIterations = i - warmUpIterations + 1;
+					Trace.WriteLine($"{displayIterations}: {elapsed}ms");
+					avg += elapsed;
 
-				if (limit.HasValue)
-					Assert.IsTrue(avg < totalMs);
+					if (limit.HasValue && avg > totalMs)
+					{
+						avg = avg / Math.Max(displayIterations, 1);
+						Assert.Fail($"Performance limit {limit}ms exceeded - {avg}ms average - {desc} (x{displayIterations}/{iterations})");
+					}
+				}
 			}
 			sw.Stop();
 

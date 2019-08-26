@@ -115,6 +115,8 @@ namespace Blacksmiths.Utils.Wolf
 			Result.Request = request;
 
 			// ** Connect to the database
+			Utility.PerfDebuggers.BeginTrace("Request execution");
+
 			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
 			{
 				var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection)));
@@ -132,6 +134,8 @@ namespace Blacksmiths.Utils.Wolf
 					wolfCommand.Bind();
 				}
 			}
+
+			Utility.PerfDebuggers.EndTrace("Request execution");
 
 			return Result;
 		}

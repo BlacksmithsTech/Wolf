@@ -35,7 +35,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return $"{GetFullTableName(dc.Table)}.{dc.ColumnName}";
 		}
 
-		public static string GetFullMemberName(System.Reflection.MemberInfo mi)
+        internal static string GetFullMemberName(Utility.MemberAccessor ma)
+        {
+            return GetFullMemberName(ma.Member);
+        }
+
+        public static string GetFullMemberName(System.Reflection.MemberInfo mi)
 		{
 			return $"{mi.DeclaringType.FullName}.{mi.Name}";
 		}

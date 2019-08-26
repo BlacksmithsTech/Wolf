@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
@@ -17,11 +18,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		public static Array ArrayFromList(Type CollectionType, System.Collections.IList Collection)
 		{
 			var a = Array.CreateInstance(CollectionType, Collection.Count);
-			Array.Copy(Collection.Cast<object>().ToArray(), a, Collection.Count);
-			return a;
+            Collection.CopyTo(a, 0);
+            return a;
 		}
 
-		public static object GetValue(MemberInfo Member, object source)
+        public static object GetValue(MemberInfo Member, object source)
 		{
 			if (Member is FieldInfo fi)
 				return fi.GetValue(source);
@@ -94,4 +95,75 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return PrimitiveTypes.Any(t => IsAssignable(t, x));
 		}
 	}
+
+    internal class MemberAccessor
+    {
+        internal MemberInfo Member;
+
+        internal string Name { get { return this.Member.Name; } }
+
+        protected MemberAccessor(MemberInfo m)
+        {
+            this.Member = m;
+        }
+
+        internal static MemberAccessor Create(MemberInfo m)
+        {
+            if (m is PropertyInfo pi)
+                return new PropertyAccessor(pi);
+            else
+                return new MemberAccessor(m);
+        }
+
+        internal virtual object GetValue(object source)
+        {
+            return Utility.ReflectionHelper.GetValue(this.Member, source);
+        }
+
+        internal virtual void SetValue(object source, object value)
+        {
+            Utility.ReflectionHelper.SetValue(this.Member, source, value);
+        }
+    }
+
+    internal sealed class PropertyAccessor : MemberAccessor
+    {
+        private Func<object, object> Getter;
+        private Action<object, object> Setter;
+
+        internal PropertyInfo Property { get { return (PropertyInfo)this.Member; } }
+
+        internal PropertyAccessor(PropertyInfo pi)
+            : base(pi)
+        {
+            this.CompileGetter();
+            this.CompileSetter();
+        }
+
+        private void CompileGetter()
+        {
+            var instance = Expression.Parameter(typeof(object), "instance");
+            UnaryExpression instanceCast = (!this.Property.DeclaringType.IsValueType) ? Expression.TypeAs(instance, this.Property.DeclaringType) : Expression.Convert(instance, this.Property.DeclaringType);
+            this.Getter = Expression.Lambda<Func<object, object>>(Expression.TypeAs(Expression.Call(instanceCast, this.Property.GetGetMethod()), typeof(object)), instance).Compile();
+        }
+
+        private void CompileSetter()
+        {
+            var instance = Expression.Parameter(typeof(object), "instance");
+            var value = Expression.Parameter(typeof(object), "value");
+            UnaryExpression instanceCast = (!this.Property.DeclaringType.IsValueType) ? Expression.TypeAs(instance, this.Property.DeclaringType) : Expression.Convert(instance, this.Property.DeclaringType);
+            UnaryExpression valueCast = (!this.Property.PropertyType.IsValueType) ? Expression.TypeAs(value, this.Property.PropertyType) : Expression.Convert(value, this.Property.PropertyType);
+            this.Setter = Expression.Lambda<Action<object, object>>(Expression.Call(instanceCast, this.Property.GetSetMethod(), valueCast), new ParameterExpression[] { instance, value }).Compile();
+        }
+
+        internal override object GetValue(object source)
+        {
+            return this.Getter(source);
+        }
+
+        internal override void SetValue(object source, object value)
+        {
+            this.Setter(source, value);
+        }
+    }
 }

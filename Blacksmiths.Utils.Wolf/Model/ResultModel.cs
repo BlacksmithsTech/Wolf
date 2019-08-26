@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -80,15 +81,17 @@ namespace Blacksmiths.Utils.Wolf.Model
 			foreach (var ml in this.GetModelMembers())
 				ml.SetValue(this, this.BoxEnumerable(ml, this._data, Relationships, ml.ToCollection(this)));
 
-			// ** Assign related data
-			this.SatisfyRelationshipDemands(Relationships);
 
-			Utility.PerfDebuggers.EndTrace("Model databinding");
-		}
+            // ** Assign related data
+            this.SatisfyRelationshipDemands(Relationships);
+            Utility.PerfDebuggers.EndTrace("Model databinding");
+        }
 
-		private void SatisfyRelationshipDemands(Queue<MemberRelationshipDemand> Demands)
+        private void SatisfyRelationshipDemands(Queue<MemberRelationshipDemand> Demands)
 		{
-			if (Demands.Count > 0)
+            Utility.PerfDebuggers.BeginTrace("Satisfying relationships");
+
+            if (Demands.Count > 0)
 			{
 				// ** Create a collection which holds both strongly defined model members and any nested members which turn up in the model
 				var ModelLinks = new List<ModelLink>(this.GetModelMembers());
@@ -116,9 +119,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 					Demand.SatisfyFrom(ModelLink.TypeLink, Collections[ModelLink.CollectionType]);
 				}
 			}
-		}
 
-		private ModelLink[] GetModelMembers()
+            Utility.PerfDebuggers.EndTrace("Satisfying relationships");
+        }
+
+        private ModelLink[] GetModelMembers()
 		{
 			if (null == this._modelMembers)
 				this._modelMembers = this.GetType()
@@ -167,7 +172,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			foreach (var ml in tl.GetLinkedMembers())
 			{
-				r[ml.Column] = Utility.ReflectionHelper.GetValue(ml.Member, o);
+                r[ml.Column] = ml.GetValue(o);
 			}
 		}
 
@@ -208,28 +213,24 @@ namespace Blacksmiths.Utils.Wolf.Model
 				Result?.Remove(ModelObject);
 
 			if (ml.MemberType.IsArray)
-			{
-				return Utility.ReflectionHelper.ArrayFromList(ml.CollectionType, Result);
-			}
-			else
-			{
-				return Result;
-			}
-		}
+                Result = Utility.ReflectionHelper.ArrayFromList(ml.CollectionType, Result);
+
+            // ** Relationship demands
+            foreach (var tlr in tl.Relationships)
+            {
+                var Demand = relationships.FirstOrDefault(d => d.Relationship.Equals(tlr));
+                if (null == Demand)
+                {
+                    Demand = new MemberRelationshipDemand(tlr, Result);
+                    relationships.Enqueue(Demand);
+                }
+            }
+
+            return Result;
+        }
 
 		private object BoxObject(object o, TypeLink tl, DataRow r, Queue<MemberRelationshipDemand> relationships)
 		{
-			foreach (var tlr in tl.Relationships)
-			{
-				var Demand = relationships.FirstOrDefault(d => d.Relationship.Equals(tlr));
-				if(null == Demand)
-				{
-					Demand = new MemberRelationshipDemand(tlr);
-					relationships.Enqueue(Demand);
-				}
-				Demand.Instances.Enqueue(o);
-			}
-
 			foreach (var ml in tl.GetLinkedMembers())
 				if (r.IsNull(ml.Column))
 					this.SetModelValue(ml, o, null);
@@ -243,9 +244,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			if (!Utility.ReflectionHelper.IsAssignable(ml.Column.DataType, ml.MemberType))
 				throw new ArgumentException($"Incompatible type '{ml.Column.DataType.FullName}'->'{ml.MemberType.FullName}' whilst assigning '{Utility.StringHelpers.GetFullColumnName(ml.Column)}'->'{Utility.StringHelpers.GetFullMemberName(ml.Member)}'");
-
-			Utility.ReflectionHelper.SetValue(ml.Member, model, value);
+            ml.SetValue(model, value);
 		}
+
 		private TypeLink GetTableForType(ModelLink ml, DataSet ds, bool AutoCreate)
 		{
 			if (null == ml.TypeLink)
@@ -369,7 +370,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		private void LinkColumns(TypeLink tl, DataTable dt)
 		{
 			if (null != dt)
-				foreach (var member in tl.Members)
+				foreach (var member in tl.Members.Values)
 				{
 					if (null == member.Column)
 						member.Column = dt.Columns[member.Member.Name];
@@ -381,9 +382,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 			var tn = Utility.StringHelpers.GetQualifiedSpName(tl.DefaultTableName);
 			var dt = new DataTable(tn.Name, tn.Schema);
 
-			foreach (var member in tl.Members)
+			foreach (var member in tl.Members.Values)
 				if (!dt.Columns.Contains(member.Member.Name))
-					dt.Columns.Add(member.Member.Name, Utility.ReflectionHelper.GetMemberType(member.Member));
+					dt.Columns.Add(member.Member.Name, member.MemberType);
 
 			ds.Tables.Add(dt);
 			return dt;
@@ -399,14 +400,14 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
 			get
 			{
-				return this.Members.FirstOrDefault(m => m.Member.Name.Equals(Name));
+                return this.Members[Name];
 			}
 		}
 
 		//internal ModelLink ModelLink;
 		internal Type Type;
 		internal string DefaultTableName;
-		internal MemberLink[] Members;
+		internal Dictionary<string, MemberLink> Members;
 		internal MemberRelationship[] Relationships;
 		internal DataTable Table;//this can be null if no source table in the results can be located
 		internal RowFinder FindRow;
@@ -422,10 +423,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 				.Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
 				.ToArray();
 
-			this.Members = ReflectedMembers
-				.Where(m => Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
-				.Select(m => new MemberLink(m))
-				.ToArray();
+            this.Members = ReflectedMembers
+                .Where(m => Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
+                .Select(m => new MemberLink(m))
+                .ToDictionary(k => k.Member.Name);
 
 			this.Relationships = ReflectedMembers
 				.Where(m => !Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
@@ -433,9 +434,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 				.ToArray();
 		}
 
-		internal bool HasMember(string Name)
+		internal bool ContainsMember(string Name)
 		{
-			return this.Members.Any(m => m.Member.Name.Equals(Name));
+            return this.Members.ContainsKey(Name);
 		}
 
 		internal Dictionary<string, object> GetValues(object source, IEnumerable<string> MemberNames)
@@ -445,6 +446,17 @@ namespace Blacksmiths.Utils.Wolf.Model
 				Ret.Add(MemberName, this[MemberName].GetValue(source));
 			return Ret;
 		}
+
+        internal IComparable GetKey(object source, string[] KeyNames)
+        {
+            switch(KeyNames.Length)
+            {
+                case 1:
+                    return new Tuple<object>(this[KeyNames[0]].GetValue(source));
+                default:
+                    throw new InvalidOperationException("Unsupported key length");
+            }
+        }
 
 		internal bool CompareValues(object source, string[] MemberNames, object[] ComparisonValues)
 		{
@@ -459,7 +471,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		/// </summary>
 		internal IEnumerable<MemberLink> GetLinkedMembers()
 		{
-			return this.Members.Where(m => null != m.Column);
+			return this.Members.Values.Where(m => null != m.Column);
 		}
 
 		internal object FindObject_FullEquality(DataRow r, IEnumerable<object> collection)
@@ -470,7 +482,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 				foreach (var ml in this.GetLinkedMembers())
 				{
-					object value = Utility.ReflectionHelper.GetValue(ml.Member, o);
+                    object value = ml.GetValue(o);
 
 					if (!r[ml.Column].Equals(value))
 					{
@@ -512,110 +524,105 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 	internal sealed class MemberLink
 	{
-		internal MemberInfo Member;
+		internal Utility.MemberAccessor Member;
 		internal DataColumn Column;
 		internal Type MemberType;
 
 		internal MemberLink(MemberInfo m)
 		{
-			this.Member = m;
-			this.MemberType = Utility.ReflectionHelper.GetMemberType(this.Member);
+            this.Member = Utility.MemberAccessor.Create(m);
+			this.MemberType = Utility.ReflectionHelper.GetMemberType(m);
 		}
 
 		internal object GetValue(object source)
 		{
-			return Utility.ReflectionHelper.GetValue(this.Member, source);
+            return this.Member.GetValue(source);
 		}
+
+        internal void SetValue(object source, object value)
+        {
+            this.Member.SetValue(source, value);
+        }
 	}
 
 	internal sealed class MemberRelationship
 	{
 		internal TypeLink ParentTypeLink;
-		internal MemberInfo Member;
+		internal Utility.MemberAccessor MemberAccessor;
+        internal MemberInfo Member;
 		internal Type MemberType;
 		internal Type CollectionType;
 
 		internal MemberRelationship(TypeLink parentTl, MemberInfo m)
 		{
 			this.ParentTypeLink = parentTl;
-			this.Member = m;
+            this.Member = m;
+            this.MemberAccessor = Utility.MemberAccessor.Create(this.Member);
 			this.MemberType = Utility.ReflectionHelper.GetMemberType(this.Member);
 			this.CollectionType = Utility.ReflectionHelper.GetCollectionType(this.Member) ?? Utility.ReflectionHelper.GetMemberType(this.Member);
 		}
 
-		internal void SetValue(object source, System.Collections.IList value)
+		internal void SetValue(object source, IEnumerable<object> collection)
 		{
-			if (this.MemberType.IsArray)
-				Utility.ReflectionHelper.SetValue(this.Member, source, Utility.ReflectionHelper.ArrayFromList(this.CollectionType, value));
-			else
-				Utility.ReflectionHelper.SetValue(this.Member, source, value);
+            if (this.MemberType.IsArray)
+                this.MemberAccessor.SetValue(source, Utility.ReflectionHelper.ArrayFromList(this.CollectionType, collection.ToArray()));
+            else
+                this.MemberAccessor.SetValue(source, collection);
 		}
-	}
+
+        internal void SetValue(object source, System.Collections.IList list)
+        {
+            this.MemberAccessor.SetValue(source, list);
+        }
+    }
 
 	internal sealed class MemberRelationshipDemand
 	{
 		internal MemberRelationship Relationship;
-		internal Queue<object> Instances = new Queue<object>();
+        internal System.Collections.IList parentCollection;
 
-		internal MemberRelationshipDemand(MemberRelationship r)
+        internal MemberRelationshipDemand(MemberRelationship r, System.Collections.IList parentCollection)
 		{
 			this.Relationship = r;
+            this.parentCollection = parentCollection;
 		}
 
 		internal void SatisfyFrom(TypeLink ChildTypeLink, System.Collections.IList sourceCollection)
 		{
 			if (null == sourceCollection)
 			{
-				// No data available to satisfy the relationship. Clear all instances (finished)
-				this.Instances.Clear();
+				// No data available to satisfy the relationship.
 				return;
 			}
 
-			//Fail. This is taking forever to execute (seconds)
-			//Suspect the .NET reflection calls to GetValue and SetValue are slow. Need to optimise and think carefully about how FKs work 1:1, 1:X and X:X
-			//See https://mattwarren.org/2016/12/14/Why-is-Reflection-slow/ for techniques to improve the lookup
+			var Relation = this.FindFirstValidRelationship(ChildTypeLink);
 
-			//var Relation = this.FindFirstValidRelationship(ChildTypeLink);
-			//var sourceDiminishing = new List<object>(sourceCollection.Cast<object>());
+            if(null != Relation)
+            {
+                var Lookup = sourceCollection.Cast<object>().ToLookup(k => ChildTypeLink.GetKey(k, Relation.ChildFieldNames));
 
-			//while (this.Instances.Count > 0)
-			//{
-			//	var Instance = this.Instances.Dequeue();
-			//	this.FilterCollectionForInstance(ChildTypeLink, Instance, Relation, sourceDiminishing);
-			//	//this.Relationship.SetValue(Instance, this.FilterCollectionForInstance(ChildTypeLink, Instance, Relation, sourceDiminishing));
-			//}
+                foreach (var parenti in this.parentCollection)
+                {
+                    var ParentKey = this.Relationship.ParentTypeLink.GetKey(parenti, Relation.ParentFieldNames);
+                    this.Relationship.SetValue(parenti, Lookup[ParentKey]);
+                }
+            }
+            else
+            {
+                // ** No relationship. Cross join all children with a reference to the same collection
+                var Values = this.Relationship.MemberType.IsArray ? Utility.ReflectionHelper.ArrayFromList(this.Relationship.CollectionType, sourceCollection) : sourceCollection;
+                foreach (var parenti in this.parentCollection)
+                    this.Relationship.SetValue(parenti, sourceCollection);
+            }
+        }
 
-		}
-
-		//private System.Collections.IList FilterCollectionForInstance(TypeLink ChildTypeLink, object ParentInstance, Attribution.Relation Relation, System.Collections.IList sourceCollection)
-		//{
-		//	if (null == sourceCollection // Nothing to filter on
-		//		|| null == Relation) // Or no definition for what to filter by
-		//		return sourceCollection;
-
-		//	//TODO: Work directly onto the target collection if possible.For now, always rebuild the collection.
-		//	var ParentKeyValues = this.Relationship.ParentTypeLink.GetValues(ParentInstance, Relation.ParentFieldNames).Values.ToArray();
-		//	var Result = new List<object>();
-		//	for(int i = 0; i < sourceCollection.Count; i++)
-		//	{
-		//		var ChildInstance = sourceCollection[i];
-		//		if(ChildTypeLink.CompareValues(ChildInstance, Relation.ChildFieldNames, ParentKeyValues))
-		//		{
-		//			sourceCollection.RemoveAt(i);
-		//			i--;
-		//		}
-		//	}
-
-		//	return Result;
-		//}
-
-		private Attribution.Relation FindFirstValidRelationship(TypeLink ChildTypeLink)
+        private Attribution.Relation FindFirstValidRelationship(TypeLink ChildTypeLink)
 		{
 			foreach(var Relation in this.Relationship.Member.GetCustomAttributes<Attribution.Relation>(true))
 			{
 				if(Relation.IsSane()
-					&& Relation.ParentFieldNames.All(fn => this.Relationship.ParentTypeLink.HasMember(fn))
-					&& Relation.ChildFieldNames.All(fn => ChildTypeLink.HasMember(fn)))
+					&& Relation.ParentFieldNames.All(fn => this.Relationship.ParentTypeLink.ContainsMember(fn))
+					&& Relation.ChildFieldNames.All(fn => ChildTypeLink.ContainsMember(fn)))
 				{
 					return Relation;
 				}

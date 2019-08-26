@@ -114,7 +114,7 @@ namespace Blacksmiths.Tests.Wolf
 				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results;
 
 			var First = Result.First();
-			Assert.IsTrue(Result.All(r => r.BusinessEntityAddresses.SequenceEqual(First.BusinessEntityAddresses)));
+            Assert.IsTrue(Result.All(r => r.BusinessEntityAddresses.Length == First.BusinessEntityAddresses.Length));
 		}
 
 		[TestMethod]
@@ -174,10 +174,23 @@ namespace Blacksmiths.Tests.Wolf
 				.Add(new Sprocs.uspGetBusinessEntityAddresses())
 				.Execute()
 				.ToSimpleModel<Models.BusinessEntityNoRelationshipAttribution>().Results;
-			}, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (Boxed)", 10, 200);
+			}, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (Boxed, Unrelated)", 10, 200);
 		}
 
-		[TestMethod]
+        [TestMethod]
+        public void Request_Fetch5_Perf()
+        {
+            // 200ms currently alloted for 40,391 rows
+            Utility.Perf.Measure(() => {
+                var Result = Connection.NewRequest()
+                .Add(new Sprocs.uspGetBusinessEntities())
+                .Add(new Sprocs.uspGetBusinessEntityAddresses())
+                .Execute()
+                .ToSimpleModel<Models.BusinessEntity>().Results;
+            }, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (Boxed, Related)", 10, 200);
+        }
+
+        [TestMethod]
 		public void Request_LooseSp()
 		{
 			Assert.AreEqual(5, new Utils.Wolf.StoredProcedure("uspAdd")

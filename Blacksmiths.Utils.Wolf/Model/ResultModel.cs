@@ -81,9 +81,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 			foreach (var ml in this.GetModelMembers())
 				ml.SetValue(this, this.BoxEnumerable(ml, this._data, Relationships, ml.ToCollection(this)));
 
-
             // ** Assign related data
             this.SatisfyRelationshipDemands(Relationships);
+
             Utility.PerfDebuggers.EndTrace("Model databinding");
         }
 
@@ -110,6 +110,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 					{
 						// ** Not seen this model member before (probably nested)
 						ModelLink = new ModelLink(Demand.Relationship.Member);
+                        this.GetTableForType(ModelLink, this._data, false);//TODO: Optimise, type links should be re-usable
 						ModelLinks.Add(ModelLink);
 					}
 
@@ -254,6 +255,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return ml.TypeLink;
 		}
 
+        internal bool IsSameDs(DataSet ds)
+        {
+            return this._data == ds;
+        }
+
 		internal DataSet GetDataSet()
 		{
 			this.TrackChanges();
@@ -273,6 +279,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 	internal sealed class ModelLink
 	{
+        private bool _isCollection;
 		private string[] _Sources;
 
 		private MemberInfo Member;
@@ -287,7 +294,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this.Member = mi;
 			this.Name = mi.Name;
 			this.MemberType = Utility.ReflectionHelper.GetMemberType(mi);
-			this.CollectionType = Utility.ReflectionHelper.GetCollectionType(mi);
+            this.CollectionType = Utility.ReflectionHelper.GetCollectionType(mi);
+            this._isCollection = null != this.CollectionType;
+            if (!this._isCollection)
+                this.CollectionType = this.MemberType;
 		}
 
 		internal bool MemberEquals(MemberInfo mi)
@@ -297,20 +307,26 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		internal System.Collections.IList ToCollection(object source)
 		{
-			return (System.Collections.IList)Utility.ReflectionHelper.GetValue(Member, source);
+            if (this._isCollection)
+                return (System.Collections.IList)Utility.ReflectionHelper.GetValue(Member, source);
+            else
+                return new[] { source };
 		}
 
-		internal void SetValue(object source, object value)
+		internal void SetValue(object source, System.Collections.IList value)
 		{
-			Utility.ReflectionHelper.SetValue(this.Member, source, value);
-		}
+            if (this._isCollection)
+                Utility.ReflectionHelper.SetValue(this.Member, source, value);
+            else
+                Utility.ReflectionHelper.SetValue(this.Member, source, value.Cast<object>().FirstOrDefault());
+        }
 
-		//internal IEnumerable<object> ToEnumerable(object source)
-		//{
-		//	return this.ToCollection(source).Cast<object>().Where(o => null != o);
-		//}
+        //internal IEnumerable<object> ToEnumerable(object source)
+        //{
+        //	return this.ToCollection(source).Cast<object>().Where(o => null != o);
+        //}
 
-		internal string[] GetSources()
+        internal string[] GetSources()
 		{
 			if (null == this._Sources)
 			{
@@ -348,10 +364,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 		internal void CreateTypeLink(DataSet ds, bool AutoCreate)
 		{
 			var link = new TypeLink(this);
-			foreach (var source in this.GetSources().Select(s => Utility.StringHelpers.GetQualifiedSpName(s)))
-				if (ds.Tables.Contains(source.Name, source.Schema))
+			foreach (var source in this.GetSources())
+				if (ds.Tables.Contains(source))
 				{
-					link.Table = ds.Tables[source.Name, source.Schema];
+					link.Table = ds.Tables[source];
 					break;
 				}
 
@@ -566,8 +582,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 		{
             if (this.MemberType.IsArray)
                 this.MemberAccessor.SetValue(source, Utility.ReflectionHelper.ArrayFromList(this.CollectionType, collection.ToArray()));
-            else
+            else if (typeof(System.Collections.IList).IsAssignableFrom(this.MemberType))
                 this.MemberAccessor.SetValue(source, collection);
+            else
+                this.MemberAccessor.SetValue(source, collection.FirstOrDefault());
 		}
 
         internal void SetValue(object source, System.Collections.IList list)

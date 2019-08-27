@@ -14,7 +14,7 @@
   <xs:element name="HumanResources" msdata:IsDataSet="true" msdata:UseCurrentLocale="true" msprop:EnableTableAdapterManager="true" msprop:Generator_DataSetName="HumanResources" msprop:Generator_UserDSName="HumanResources">
     <xs:complexType>
       <xs:choice minOccurs="0" maxOccurs="unbounded">
-        <xs:element name="Department" msprop:Generator_TableClassName="DepartmentDataTable" msprop:Generator_TableVarName="tableDepartment" msprop:Generator_TablePropName="Department" msprop:Generator_RowDeletingName="DepartmentRowDeleting" msprop:Generator_RowChangingName="DepartmentRowChanging" msprop:Generator_RowEvHandlerName="DepartmentRowChangeEventHandler" msprop:Generator_RowDeletedName="DepartmentRowDeleted" msprop:Generator_UserTableName="Department" msprop:Generator_RowChangedName="DepartmentRowChanged" msprop:Generator_RowEvArgName="DepartmentRowChangeEvent" msprop:Generator_RowClassName="DepartmentRow">
+        <xs:element name="HumanResources.Department" msprop:Generator_TableClassName="_HumanResources_DepartmentDataTable" msprop:Generator_TableVarName="_tableHumanResources_Department" msprop:Generator_RowChangedName="_HumanResources_DepartmentRowChanged" msprop:Generator_TablePropName="_HumanResources_Department" msprop:Generator_RowDeletingName="_HumanResources_DepartmentRowDeleting" msprop:Generator_RowChangingName="_HumanResources_DepartmentRowChanging" msprop:Generator_RowEvHandlerName="_HumanResources_DepartmentRowChangeEventHandler" msprop:Generator_RowDeletedName="_HumanResources_DepartmentRowDeleted" msprop:Generator_RowClassName="_HumanResources_DepartmentRow" msprop:Generator_UserTableName="HumanResources.Department" msprop:Generator_RowEvArgName="_HumanResources_DepartmentRowChangeEvent">
           <xs:complexType>
             <xs:sequence>
               <xs:element name="DepartmentID" msdata:ReadOnly="true" msdata:AutoIncrement="true" msdata:AutoIncrementSeed="-1" msdata:AutoIncrementStep="-1" msprop:Generator_ColumnVarNameInTable="columnDepartmentID" msprop:Generator_ColumnPropNameInRow="DepartmentID" msprop:Generator_ColumnPropNameInTable="DepartmentIDColumn" msprop:Generator_UserColumnName="DepartmentID" type="xs:short" />
@@ -39,7 +39,7 @@
       </xs:choice>
     </xs:complexType>
     <xs:unique name="Constraint1" msdata:PrimaryKey="true">
-      <xs:selector xpath=".//mstns:Department" />
+      <xs:selector xpath=".//mstns:HumanResources.Department" />
       <xs:field xpath="mstns:DepartmentID" />
     </xs:unique>
   </xs:element>

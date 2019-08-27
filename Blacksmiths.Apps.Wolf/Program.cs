@@ -55,7 +55,7 @@ namespace Blacksmiths.Apps.Wolf
 				.AddJsonFile("appsettings.json", true);
 
 			if (!string.IsNullOrEmpty(userConfigurationPath))
-				stage2configBuilder.AddJsonFile(userConfigurationPath, true);
+				stage2configBuilder.AddJsonFile(userConfigurationPath, false);
 
 			stage2configBuilder.AddCommandLine(args);
 

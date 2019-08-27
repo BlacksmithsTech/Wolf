@@ -56,12 +56,12 @@ namespace Blacksmiths.Tests.Wolf
 		{
 			var ds = new Schema.HumanResources();
 			var Result = Connection.NewRequest()
-				.Add(new Sprocs.uspGetDepartments(), ds.Department)
+				.Add(new Sprocs.uspGetDepartments(), ds._HumanResources_Department)
 				.Execute()
 				.ToDataSet(ds);
 
 			Assert.IsTrue(1 == Result.Tables.Count);
-			Assert.IsTrue(Result.Department.Count > 0);
+			Assert.IsTrue(Result._HumanResources_Department.Count > 0);
 		}
 
 		[TestMethod]
@@ -309,5 +309,16 @@ namespace Blacksmiths.Tests.Wolf
 			var model = new TestModel();
 			Assert.AreEqual(0, Connection.WithModel(model).Commit().AffectedRowCount);
 		}
+
+        [TestMethod]
+        public void Model_OneToOne()
+        {
+            var Model = new Schema.TestData();
+            var Parent = Model.GroupOfTests.AddGroupOfTestsRow(1);
+            const string Value = "Hello World";
+            Model.GroupExtras.AddGroupExtrasRow(Parent, Value);
+            var Result = Connection.WithModel(Model).ToSimpleModel<GroupOfTests>().Results;
+            Assert.AreEqual(Value, Result?.FirstOrDefault().Extras?.Name);
+        }
 	}
 }

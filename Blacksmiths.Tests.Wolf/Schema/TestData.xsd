@@ -31,15 +31,23 @@
         <xs:element name="GroupOfTests" msprop:Generator_TableClassName="GroupOfTestsDataTable" msprop:Generator_TableVarName="tableGroupOfTests" msprop:Generator_TablePropName="GroupOfTests" msprop:Generator_RowDeletingName="GroupOfTestsRowDeleting" msprop:Generator_RowChangingName="GroupOfTestsRowChanging" msprop:Generator_RowEvHandlerName="GroupOfTestsRowChangeEventHandler" msprop:Generator_RowDeletedName="GroupOfTestsRowDeleted" msprop:Generator_UserTableName="GroupOfTests" msprop:Generator_RowChangedName="GroupOfTestsRowChanged" msprop:Generator_RowEvArgName="GroupOfTestsRowChangeEvent" msprop:Generator_RowClassName="GroupOfTestsRow">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="ID" msprop:Generator_ColumnVarNameInTable="columnID" msprop:Generator_ColumnPropNameInRow="ID" msprop:Generator_ColumnPropNameInTable="IDColumn" msprop:Generator_UserColumnName="ID" type="xs:string" minOccurs="0" />
+              <xs:element name="ID" msprop:Generator_ColumnVarNameInTable="columnID" msprop:Generator_ColumnPropNameInRow="ID" msprop:Generator_ColumnPropNameInTable="IDColumn" msprop:Generator_UserColumnName="ID" type="xs:int" />
             </xs:sequence>
           </xs:complexType>
         </xs:element>
         <xs:element name="JoiningTable" msprop:Generator_TableClassName="JoiningTableDataTable" msprop:Generator_TableVarName="tableJoiningTable" msprop:Generator_TablePropName="JoiningTable" msprop:Generator_RowDeletingName="JoiningTableRowDeleting" msprop:Generator_RowChangingName="JoiningTableRowChanging" msprop:Generator_RowEvHandlerName="JoiningTableRowChangeEventHandler" msprop:Generator_RowDeletedName="JoiningTableRowDeleted" msprop:Generator_UserTableName="JoiningTable" msprop:Generator_RowChangedName="JoiningTableRowChanged" msprop:Generator_RowEvArgName="JoiningTableRowChangeEvent" msprop:Generator_RowClassName="JoiningTableRow">
           <xs:complexType>
             <xs:sequence>
-              <xs:element name="Parent" msprop:Generator_ColumnVarNameInTable="columnParent" msprop:Generator_ColumnPropNameInRow="Parent" msprop:Generator_ColumnPropNameInTable="ParentColumn" msprop:Generator_UserColumnName="Parent" type="xs:string" minOccurs="0" />
-              <xs:element name="ChildTest" msprop:Generator_ColumnVarNameInTable="columnChildTest" msprop:Generator_ColumnPropNameInRow="ChildTest" msprop:Generator_ColumnPropNameInTable="ChildTestColumn" msprop:Generator_UserColumnName="ChildTest" type="xs:int" minOccurs="0" />
+              <xs:element name="Parent" msprop:Generator_ColumnVarNameInTable="columnParent" msprop:Generator_ColumnPropNameInRow="Parent" msprop:Generator_ColumnPropNameInTable="ParentColumn" msprop:Generator_UserColumnName="Parent" type="xs:int" />
+              <xs:element name="Child" msprop:Generator_ColumnVarNameInTable="columnChild" msprop:Generator_ColumnPropNameInRow="Child" msprop:Generator_ColumnPropNameInTable="ChildColumn" msprop:Generator_UserColumnName="Child" type="xs:int" />
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="GroupExtras" msprop:Generator_TableClassName="GroupExtrasDataTable" msprop:Generator_TableVarName="tableGroupExtras" msprop:Generator_RowChangedName="GroupExtrasRowChanged" msprop:Generator_TablePropName="GroupExtras" msprop:Generator_RowDeletingName="GroupExtrasRowDeleting" msprop:Generator_RowChangingName="GroupExtrasRowChanging" msprop:Generator_RowEvHandlerName="GroupExtrasRowChangeEventHandler" msprop:Generator_RowDeletedName="GroupExtrasRowDeleted" msprop:Generator_RowClassName="GroupExtrasRow" msprop:Generator_UserTableName="GroupExtras" msprop:Generator_RowEvArgName="GroupExtrasRowChangeEvent">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ID" msprop:Generator_ColumnVarNameInTable="columnID" msprop:Generator_ColumnPropNameInRow="ID" msprop:Generator_ColumnPropNameInTable="IDColumn" msprop:Generator_UserColumnName="ID" type="xs:int" />
+              <xs:element name="Name" msprop:Generator_ColumnVarNameInTable="columnName" msprop:Generator_ColumnPropNameInRow="Name" msprop:Generator_ColumnPropNameInTable="NameColumn" msprop:Generator_UserColumnName="Name" type="xs:string" minOccurs="0" />
             </xs:sequence>
           </xs:complexType>
         </xs:element>
@@ -49,11 +57,25 @@
       <xs:selector xpath=".//mstns:Test" />
       <xs:field xpath="mstns:ID" />
     </xs:unique>
+    <xs:unique name="GroupOfTests_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:GroupOfTests" />
+      <xs:field xpath="mstns:ID" />
+    </xs:unique>
+    <xs:unique name="JoiningTable_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:JoiningTable" />
+      <xs:field xpath="mstns:Parent" />
+      <xs:field xpath="mstns:Child" />
+    </xs:unique>
+    <xs:unique name="GroupExtras_Constraint1" msdata:ConstraintName="Constraint1" msdata:PrimaryKey="true">
+      <xs:selector xpath=".//mstns:GroupExtras" />
+      <xs:field xpath="mstns:ID" />
+    </xs:unique>
   </xs:element>
   <xs:annotation>
     <xs:appinfo>
+      <msdata:Relationship name="JoiningTable_Test" msdata:parent="JoiningTable" msdata:child="Test" msdata:parentkey="Child" msdata:childkey="ID" msprop:Generator_UserChildTable="Test" msprop:Generator_ChildPropName="GetTestRows" msprop:Generator_UserRelationName="JoiningTable_Test" msprop:Generator_RelationVarName="relationJoiningTable_Test" msprop:Generator_UserParentTable="JoiningTable" msprop:Generator_ParentPropName="JoiningTableRow" />
       <msdata:Relationship name="GroupOfTests_JoiningTable" msdata:parent="GroupOfTests" msdata:child="JoiningTable" msdata:parentkey="ID" msdata:childkey="Parent" msprop:Generator_UserChildTable="JoiningTable" msprop:Generator_ChildPropName="GetJoiningTableRows" msprop:Generator_UserRelationName="GroupOfTests_JoiningTable" msprop:Generator_ParentPropName="GroupOfTestsRow" msprop:Generator_RelationVarName="relationGroupOfTests_JoiningTable" msprop:Generator_UserParentTable="GroupOfTests" />
-      <msdata:Relationship name="JoiningTable_Test" msdata:parent="JoiningTable" msdata:child="Test" msdata:parentkey="ChildTest" msdata:childkey="ID" msprop:Generator_UserChildTable="Test" msprop:Generator_ChildPropName="GetTestRows" msprop:Generator_UserRelationName="JoiningTable_Test" msprop:Generator_RelationVarName="relationJoiningTable_Test" msprop:Generator_UserParentTable="JoiningTable" msprop:Generator_ParentPropName="JoiningTableRow" />
+      <msdata:Relationship name="GroupOfTests_GroupExtras" msdata:parent="GroupOfTests" msdata:child="GroupExtras" msdata:parentkey="ID" msdata:childkey="ID" msprop:Generator_UserChildTable="GroupExtras" msprop:Generator_ChildPropName="GetGroupExtrasRows" msprop:Generator_UserRelationName="GroupOfTests_GroupExtras" msprop:Generator_ParentPropName="GroupOfTestsRow" msprop:Generator_RelationVarName="relationGroupOfTests_GroupExtras" msprop:Generator_UserParentTable="GroupOfTests" />
     </xs:appinfo>
   </xs:annotation>
 </xs:schema>

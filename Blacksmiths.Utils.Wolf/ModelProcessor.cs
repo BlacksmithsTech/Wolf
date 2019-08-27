@@ -10,17 +10,12 @@ using System.Text;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using Blacksmiths.Utils.Wolf.Model;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public interface IFluentModelAction
+	public interface IFluentModelAction : IFluentResult
 	{
-		/// <summary>
-		/// Provides the data model as a new ADO.NET DataSet
-		/// </summary>
-		/// <returns>New loosely typed DataSet</returns>
-		DataSet ToDataSet();
-
 		/// <summary>
 		/// Merges the data model into an existing ADO.NET DataSet. Use this for strongly typed datasets produced using the Visual Studio DataSet designer.
 		/// </summary>
@@ -71,11 +66,6 @@ namespace Blacksmiths.Utils.Wolf
 			foreach (DataTable dt in SourceDs.Tables)
 				this.RaisePreCommitActions(dt);
 			return SourceDs;
-		}
-
-		public virtual DataSet ToDataSet()
-		{
-			return this.GetModelDataSet();
 		}
 
 		public virtual void MergeInto(DataSet ds)
@@ -174,7 +164,39 @@ namespace Blacksmiths.Utils.Wolf
 				}
 			}
 		}
-	}
+
+        public virtual DataSet ToDataSet()
+        {
+            return this.ToDataSet<DataSet>();
+        }
+
+        public T ToDataSet<T>() where T : DataSet, new()
+        {
+            var ds = this.GetModelDataSet();
+            if (ds is T)
+                return (T)ds;
+            else
+                return this.ToDataSet<T>((T)ds);
+        }
+
+        public T ToDataSet<T>(T ds) where T : DataSet
+        {
+            if (this.Model.IsSameDs(ds))
+                return (T)ds;
+            ds.Merge(this.GetModelDataSet());
+            return ds;
+        }
+
+        public SimpleResultModel<T> ToSimpleModel<T>() where T : class, new()
+        {
+            return this.ToSimpleModel<T>(null);
+        }
+
+        public SimpleResultModel<T> ToSimpleModel<T>(params T[] model) where T : class, new()
+        {
+            return DataResult.ToSimpleModel<T>(this.ToDataSet(), model);
+        }
+    }
 
 	public class AdHocModelProcessor : ModelProcessor
 	{

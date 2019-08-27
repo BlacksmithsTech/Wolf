@@ -89,9 +89,9 @@ namespace Blacksmiths.Utils.Wolf
 				{
 					var sourceTable = cmd.ResultData.Tables[i];
 
-					if(ds.Tables.Contains(sourceTable.TableName, sourceTable.Namespace))
+					if(ds.Tables.Contains(sourceTable.TableName))
 					{
-						var targetTable = ds.Tables[sourceTable.TableName, sourceTable.Namespace];
+						var targetTable = ds.Tables[sourceTable.TableName];
 						if (0 == targetTable.Rows.Count)
 						{
 							// ** No data in the target so perform a higher-performance shallow import/copy of the source rows
@@ -128,16 +128,21 @@ namespace Blacksmiths.Utils.Wolf
 
 		public Model.SimpleResultModel<T> ToSimpleModel<T>(params T[] model) where T : class, new()
 		{
-			// ** Sanity checks
-			if (typeof(Model.ResultModel).IsAssignableFrom(typeof(T)))
-				throw new ArgumentException("When using ToSimpleModel<T> T should be a plain object rather than another ResultModel");
-			else if (typeof(DataSet).IsAssignableFrom(typeof(T)))
-				throw new ArgumentException("DataSets should not be used with ToSimpleModel<T>, consider using ToDataSet()");
-
-			var simpleModel = Model.ResultModel.CreateSimpleResultModel<T>(model);
-			simpleModel.DataBind(this.ToDataSet());
-			return simpleModel;
+            return DataResult.ToSimpleModel<T>(this.ToDataSet(), model);
 		}
+
+        internal static Model.SimpleResultModel<T> ToSimpleModel<T>(DataSet source, params T[] model) where T : class, new()
+        {
+            // ** Sanity checks
+            if (typeof(Model.ResultModel).IsAssignableFrom(typeof(T)))
+                throw new ArgumentException("When using ToSimpleModel<T> T should be a plain object rather than another ResultModel");
+            else if (typeof(DataSet).IsAssignableFrom(typeof(T)))
+                throw new ArgumentException("DataSets should not be used with ToSimpleModel<T>, consider using ToDataSet()");
+
+            var simpleModel = Model.ResultModel.CreateSimpleResultModel<T>(model);
+            simpleModel.DataBind(source);
+            return simpleModel;
+        }
 	}
 
 	public interface IFluentResultSp<T> : IFluentResult where T : StoredProcedure

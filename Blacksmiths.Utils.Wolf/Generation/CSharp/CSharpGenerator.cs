@@ -347,8 +347,11 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					AttrName = $@"From = ""{Field.Name}""";
 				if (Field.Length > -1 && ValueTypeName.Equals("System.String", StringComparison.CurrentCultureIgnoreCase))
 					AttrLength = $@"Length = {Field.Length}";
-				if (!Field.AllowNulls)
-					AttrNullable = "Nullable = false";
+                if (!Field.AllowNulls)
+                {
+                    AttrNullable = "Nullable = false";
+                    ParamType = ParamType.Trim('?');
+                }
 
 				var AttrParamsSource = String.Join(", ", new[] { AttrName }.Where(a => null != a));
 				if (!string.IsNullOrEmpty(AttrParamsSource))
@@ -356,7 +359,6 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				var AttrParamsConstraints = String.Join(", ", new[] { AttrLength,AttrNullable }.Where(a => null != a));
 				if (!string.IsNullOrEmpty(AttrParamsConstraints))
 					sb.AppendLine($@"[Constraint({AttrParamsConstraints})]");
-
 				sb.AppendLine($"public {ParamType} {FieldName} {{ get; set; }}");
 			}
 			sb.Outdent();

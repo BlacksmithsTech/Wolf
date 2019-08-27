@@ -30,9 +30,13 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         
         private JoiningTableDataTable tableJoiningTable;
         
-        private global::System.Data.DataRelation relationGroupOfTests_JoiningTable;
+        private GroupExtrasDataTable tableGroupExtras;
         
         private global::System.Data.DataRelation relationJoiningTable_Test;
+        
+        private global::System.Data.DataRelation relationGroupOfTests_JoiningTable;
+        
+        private global::System.Data.DataRelation relationGroupOfTests_GroupExtras;
         
         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
         
@@ -70,6 +74,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 }
                 if ((ds.Tables["JoiningTable"] != null)) {
                     base.Tables.Add(new JoiningTableDataTable(ds.Tables["JoiningTable"]));
+                }
+                if ((ds.Tables["GroupExtras"] != null)) {
+                    base.Tables.Add(new GroupExtrasDataTable(ds.Tables["GroupExtras"]));
                 }
                 this.DataSetName = ds.DataSetName;
                 this.Prefix = ds.Prefix;
@@ -116,6 +123,16 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         public JoiningTableDataTable JoiningTable {
             get {
                 return this.tableJoiningTable;
+            }
+        }
+        
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+        [global::System.ComponentModel.Browsable(false)]
+        [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
+        public GroupExtrasDataTable GroupExtras {
+            get {
+                return this.tableGroupExtras;
             }
         }
         
@@ -195,6 +212,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 if ((ds.Tables["JoiningTable"] != null)) {
                     base.Tables.Add(new JoiningTableDataTable(ds.Tables["JoiningTable"]));
                 }
+                if ((ds.Tables["GroupExtras"] != null)) {
+                    base.Tables.Add(new GroupExtrasDataTable(ds.Tables["GroupExtras"]));
+                }
                 this.DataSetName = ds.DataSetName;
                 this.Prefix = ds.Prefix;
                 this.Namespace = ds.Namespace;
@@ -246,8 +266,15 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                     this.tableJoiningTable.InitVars();
                 }
             }
-            this.relationGroupOfTests_JoiningTable = this.Relations["GroupOfTests_JoiningTable"];
+            this.tableGroupExtras = ((GroupExtrasDataTable)(base.Tables["GroupExtras"]));
+            if ((initTable == true)) {
+                if ((this.tableGroupExtras != null)) {
+                    this.tableGroupExtras.InitVars();
+                }
+            }
             this.relationJoiningTable_Test = this.Relations["JoiningTable_Test"];
+            this.relationGroupOfTests_JoiningTable = this.Relations["GroupOfTests_JoiningTable"];
+            this.relationGroupOfTests_GroupExtras = this.Relations["GroupOfTests_GroupExtras"];
         }
         
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -264,14 +291,20 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             base.Tables.Add(this.tableGroupOfTests);
             this.tableJoiningTable = new JoiningTableDataTable();
             base.Tables.Add(this.tableJoiningTable);
+            this.tableGroupExtras = new GroupExtrasDataTable();
+            base.Tables.Add(this.tableGroupExtras);
+            this.relationJoiningTable_Test = new global::System.Data.DataRelation("JoiningTable_Test", new global::System.Data.DataColumn[] {
+                        this.tableJoiningTable.ChildColumn}, new global::System.Data.DataColumn[] {
+                        this.tableTest.IDColumn}, false);
+            this.Relations.Add(this.relationJoiningTable_Test);
             this.relationGroupOfTests_JoiningTable = new global::System.Data.DataRelation("GroupOfTests_JoiningTable", new global::System.Data.DataColumn[] {
                         this.tableGroupOfTests.IDColumn}, new global::System.Data.DataColumn[] {
                         this.tableJoiningTable.ParentColumn}, false);
             this.Relations.Add(this.relationGroupOfTests_JoiningTable);
-            this.relationJoiningTable_Test = new global::System.Data.DataRelation("JoiningTable_Test", new global::System.Data.DataColumn[] {
-                        this.tableJoiningTable.ChildTestColumn}, new global::System.Data.DataColumn[] {
-                        this.tableTest.IDColumn}, false);
-            this.Relations.Add(this.relationJoiningTable_Test);
+            this.relationGroupOfTests_GroupExtras = new global::System.Data.DataRelation("GroupOfTests_GroupExtras", new global::System.Data.DataColumn[] {
+                        this.tableGroupOfTests.IDColumn}, new global::System.Data.DataColumn[] {
+                        this.tableGroupExtras.IDColumn}, false);
+            this.Relations.Add(this.relationGroupOfTests_GroupExtras);
         }
         
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -289,6 +322,12 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
         private bool ShouldSerializeJoiningTable() {
+            return false;
+        }
+        
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+        private bool ShouldSerializeGroupExtras() {
             return false;
         }
         
@@ -355,6 +394,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
         public delegate void JoiningTableRowChangeEventHandler(object sender, JoiningTableRowChangeEvent e);
+        
+        [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+        public delegate void GroupExtrasRowChangeEventHandler(object sender, GroupExtrasRowChangeEvent e);
         
         /// <summary>
         ///Represents the strongly named DataTable class.
@@ -719,13 +761,20 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public GroupOfTestsRow AddGroupOfTestsRow(string ID) {
+            public GroupOfTestsRow AddGroupOfTestsRow(int ID) {
                 GroupOfTestsRow rowGroupOfTestsRow = ((GroupOfTestsRow)(this.NewRow()));
                 object[] columnValuesArray = new object[] {
                         ID};
                 rowGroupOfTestsRow.ItemArray = columnValuesArray;
                 this.Rows.Add(rowGroupOfTestsRow);
                 return rowGroupOfTestsRow;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupOfTestsRow FindByID(int ID) {
+                return ((GroupOfTestsRow)(this.Rows.Find(new object[] {
+                            ID})));
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -751,8 +800,12 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             private void InitClass() {
-                this.columnID = new global::System.Data.DataColumn("ID", typeof(string), null, global::System.Data.MappingType.Element);
+                this.columnID = new global::System.Data.DataColumn("ID", typeof(int), null, global::System.Data.MappingType.Element);
                 base.Columns.Add(this.columnID);
+                this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+                                this.columnID}, true));
+                this.columnID.AllowDBNull = false;
+                this.columnID.Unique = true;
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -888,7 +941,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             private global::System.Data.DataColumn columnParent;
             
-            private global::System.Data.DataColumn columnChildTest;
+            private global::System.Data.DataColumn columnChild;
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
@@ -933,9 +986,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public global::System.Data.DataColumn ChildTestColumn {
+            public global::System.Data.DataColumn ChildColumn {
                 get {
-                    return this.columnChildTest;
+                    return this.columnChild;
                 }
             }
             
@@ -976,17 +1029,25 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public JoiningTableRow AddJoiningTableRow(GroupOfTestsRow parentGroupOfTestsRowByGroupOfTests_JoiningTable, int ChildTest) {
+            public JoiningTableRow AddJoiningTableRow(GroupOfTestsRow parentGroupOfTestsRowByGroupOfTests_JoiningTable, int Child) {
                 JoiningTableRow rowJoiningTableRow = ((JoiningTableRow)(this.NewRow()));
                 object[] columnValuesArray = new object[] {
                         null,
-                        ChildTest};
+                        Child};
                 if ((parentGroupOfTestsRowByGroupOfTests_JoiningTable != null)) {
                     columnValuesArray[0] = parentGroupOfTestsRowByGroupOfTests_JoiningTable[0];
                 }
                 rowJoiningTableRow.ItemArray = columnValuesArray;
                 this.Rows.Add(rowJoiningTableRow);
                 return rowJoiningTableRow;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public JoiningTableRow FindByParentChild(int Parent, int Child) {
+                return ((JoiningTableRow)(this.Rows.Find(new object[] {
+                            Parent,
+                            Child})));
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -1007,16 +1068,21 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             internal void InitVars() {
                 this.columnParent = base.Columns["Parent"];
-                this.columnChildTest = base.Columns["ChildTest"];
+                this.columnChild = base.Columns["Child"];
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             private void InitClass() {
-                this.columnParent = new global::System.Data.DataColumn("Parent", typeof(string), null, global::System.Data.MappingType.Element);
+                this.columnParent = new global::System.Data.DataColumn("Parent", typeof(int), null, global::System.Data.MappingType.Element);
                 base.Columns.Add(this.columnParent);
-                this.columnChildTest = new global::System.Data.DataColumn("ChildTest", typeof(int), null, global::System.Data.MappingType.Element);
-                base.Columns.Add(this.columnChildTest);
+                this.columnChild = new global::System.Data.DataColumn("Child", typeof(int), null, global::System.Data.MappingType.Element);
+                base.Columns.Add(this.columnChild);
+                this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+                                this.columnParent,
+                                this.columnChild}, true));
+                this.columnParent.AllowDBNull = false;
+                this.columnChild.AllowDBNull = false;
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -1144,6 +1210,281 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         }
         
         /// <summary>
+        ///Represents the strongly named DataTable class.
+        ///</summary>
+        [global::System.Serializable()]
+        [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
+        public partial class GroupExtrasDataTable : global::System.Data.TypedTableBase<GroupExtrasRow> {
+            
+            private global::System.Data.DataColumn columnID;
+            
+            private global::System.Data.DataColumn columnName;
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasDataTable() {
+                this.TableName = "GroupExtras";
+                this.BeginInit();
+                this.InitClass();
+                this.EndInit();
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            internal GroupExtrasDataTable(global::System.Data.DataTable table) {
+                this.TableName = table.TableName;
+                if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
+                    this.CaseSensitive = table.CaseSensitive;
+                }
+                if ((table.Locale.ToString() != table.DataSet.Locale.ToString())) {
+                    this.Locale = table.Locale;
+                }
+                if ((table.Namespace != table.DataSet.Namespace)) {
+                    this.Namespace = table.Namespace;
+                }
+                this.Prefix = table.Prefix;
+                this.MinimumCapacity = table.MinimumCapacity;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected GroupExtrasDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+                    base(info, context) {
+                this.InitVars();
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public global::System.Data.DataColumn IDColumn {
+                get {
+                    return this.columnID;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public global::System.Data.DataColumn NameColumn {
+                get {
+                    return this.columnName;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            [global::System.ComponentModel.Browsable(false)]
+            public int Count {
+                get {
+                    return this.Rows.Count;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow this[int index] {
+                get {
+                    return ((GroupExtrasRow)(this.Rows[index]));
+                }
+            }
+            
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public event GroupExtrasRowChangeEventHandler GroupExtrasRowChanging;
+            
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public event GroupExtrasRowChangeEventHandler GroupExtrasRowChanged;
+            
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public event GroupExtrasRowChangeEventHandler GroupExtrasRowDeleting;
+            
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public event GroupExtrasRowChangeEventHandler GroupExtrasRowDeleted;
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public void AddGroupExtrasRow(GroupExtrasRow row) {
+                this.Rows.Add(row);
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow AddGroupExtrasRow(GroupOfTestsRow parentGroupOfTestsRowByGroupOfTests_GroupExtras, string Name) {
+                GroupExtrasRow rowGroupExtrasRow = ((GroupExtrasRow)(this.NewRow()));
+                object[] columnValuesArray = new object[] {
+                        null,
+                        Name};
+                if ((parentGroupOfTestsRowByGroupOfTests_GroupExtras != null)) {
+                    columnValuesArray[0] = parentGroupOfTestsRowByGroupOfTests_GroupExtras[0];
+                }
+                rowGroupExtrasRow.ItemArray = columnValuesArray;
+                this.Rows.Add(rowGroupExtrasRow);
+                return rowGroupExtrasRow;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow FindByID(int ID) {
+                return ((GroupExtrasRow)(this.Rows.Find(new object[] {
+                            ID})));
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public override global::System.Data.DataTable Clone() {
+                GroupExtrasDataTable cln = ((GroupExtrasDataTable)(base.Clone()));
+                cln.InitVars();
+                return cln;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override global::System.Data.DataTable CreateInstance() {
+                return new GroupExtrasDataTable();
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            internal void InitVars() {
+                this.columnID = base.Columns["ID"];
+                this.columnName = base.Columns["Name"];
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            private void InitClass() {
+                this.columnID = new global::System.Data.DataColumn("ID", typeof(int), null, global::System.Data.MappingType.Element);
+                base.Columns.Add(this.columnID);
+                this.columnName = new global::System.Data.DataColumn("Name", typeof(string), null, global::System.Data.MappingType.Element);
+                base.Columns.Add(this.columnName);
+                this.Constraints.Add(new global::System.Data.UniqueConstraint("Constraint1", new global::System.Data.DataColumn[] {
+                                this.columnID}, true));
+                this.columnID.AllowDBNull = false;
+                this.columnID.Unique = true;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow NewGroupExtrasRow() {
+                return ((GroupExtrasRow)(this.NewRow()));
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
+                return new GroupExtrasRow(builder);
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override global::System.Type GetRowType() {
+                return typeof(GroupExtrasRow);
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
+                base.OnRowChanged(e);
+                if ((this.GroupExtrasRowChanged != null)) {
+                    this.GroupExtrasRowChanged(this, new GroupExtrasRowChangeEvent(((GroupExtrasRow)(e.Row)), e.Action));
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
+                base.OnRowChanging(e);
+                if ((this.GroupExtrasRowChanging != null)) {
+                    this.GroupExtrasRowChanging(this, new GroupExtrasRowChangeEvent(((GroupExtrasRow)(e.Row)), e.Action));
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
+                base.OnRowDeleted(e);
+                if ((this.GroupExtrasRowDeleted != null)) {
+                    this.GroupExtrasRowDeleted(this, new GroupExtrasRowChangeEvent(((GroupExtrasRow)(e.Row)), e.Action));
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
+                base.OnRowDeleting(e);
+                if ((this.GroupExtrasRowDeleting != null)) {
+                    this.GroupExtrasRowDeleting(this, new GroupExtrasRowChangeEvent(((GroupExtrasRow)(e.Row)), e.Action));
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public void RemoveGroupExtrasRow(GroupExtrasRow row) {
+                this.Rows.Remove(row);
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public static global::System.Xml.Schema.XmlSchemaComplexType GetTypedTableSchema(global::System.Xml.Schema.XmlSchemaSet xs) {
+                global::System.Xml.Schema.XmlSchemaComplexType type = new global::System.Xml.Schema.XmlSchemaComplexType();
+                global::System.Xml.Schema.XmlSchemaSequence sequence = new global::System.Xml.Schema.XmlSchemaSequence();
+                TestData ds = new TestData();
+                global::System.Xml.Schema.XmlSchemaAny any1 = new global::System.Xml.Schema.XmlSchemaAny();
+                any1.Namespace = "http://www.w3.org/2001/XMLSchema";
+                any1.MinOccurs = new decimal(0);
+                any1.MaxOccurs = decimal.MaxValue;
+                any1.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+                sequence.Items.Add(any1);
+                global::System.Xml.Schema.XmlSchemaAny any2 = new global::System.Xml.Schema.XmlSchemaAny();
+                any2.Namespace = "urn:schemas-microsoft-com:xml-diffgram-v1";
+                any2.MinOccurs = new decimal(1);
+                any2.ProcessContents = global::System.Xml.Schema.XmlSchemaContentProcessing.Lax;
+                sequence.Items.Add(any2);
+                global::System.Xml.Schema.XmlSchemaAttribute attribute1 = new global::System.Xml.Schema.XmlSchemaAttribute();
+                attribute1.Name = "namespace";
+                attribute1.FixedValue = ds.Namespace;
+                type.Attributes.Add(attribute1);
+                global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
+                attribute2.Name = "tableTypeName";
+                attribute2.FixedValue = "GroupExtrasDataTable";
+                type.Attributes.Add(attribute2);
+                type.Particle = sequence;
+                global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
+                if (xs.Contains(dsSchema.TargetNamespace)) {
+                    global::System.IO.MemoryStream s1 = new global::System.IO.MemoryStream();
+                    global::System.IO.MemoryStream s2 = new global::System.IO.MemoryStream();
+                    try {
+                        global::System.Xml.Schema.XmlSchema schema = null;
+                        dsSchema.Write(s1);
+                        for (global::System.Collections.IEnumerator schemas = xs.Schemas(dsSchema.TargetNamespace).GetEnumerator(); schemas.MoveNext(); ) {
+                            schema = ((global::System.Xml.Schema.XmlSchema)(schemas.Current));
+                            s2.SetLength(0);
+                            schema.Write(s2);
+                            if ((s1.Length == s2.Length)) {
+                                s1.Position = 0;
+                                s2.Position = 0;
+                                for (; ((s1.Position != s1.Length) 
+                                            && (s1.ReadByte() == s2.ReadByte())); ) {
+                                    ;
+                                }
+                                if ((s1.Position == s1.Length)) {
+                                    return type;
+                                }
+                            }
+                        }
+                    }
+                    finally {
+                        if ((s1 != null)) {
+                            s1.Close();
+                        }
+                        if ((s2 != null)) {
+                            s2.Close();
+                        }
+                    }
+                }
+                xs.Add(dsSchema);
+                return type;
+            }
+        }
+        
+        /// <summary>
         ///Represents strongly named DataRow class.
         ///</summary>
         public partial class TestRow : global::System.Data.DataRow {
@@ -1224,30 +1565,13 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public string ID {
+            public int ID {
                 get {
-                    try {
-                        return ((string)(this[this.tableGroupOfTests.IDColumn]));
-                    }
-                    catch (global::System.InvalidCastException e) {
-                        throw new global::System.Data.StrongTypingException("The value for column \'ID\' in table \'GroupOfTests\' is DBNull.", e);
-                    }
+                    return ((int)(this[this.tableGroupOfTests.IDColumn]));
                 }
                 set {
                     this[this.tableGroupOfTests.IDColumn] = value;
                 }
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public bool IsIDNull() {
-                return this.IsNull(this.tableGroupOfTests.IDColumn);
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public void SetIDNull() {
-                this[this.tableGroupOfTests.IDColumn] = global::System.Convert.DBNull;
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -1258,6 +1582,17 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 }
                 else {
                     return ((JoiningTableRow[])(base.GetChildRows(this.Table.ChildRelations["GroupOfTests_JoiningTable"])));
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow[] GetGroupExtrasRows() {
+                if ((this.Table.ChildRelations["GroupOfTests_GroupExtras"] == null)) {
+                    return new GroupExtrasRow[0];
+                }
+                else {
+                    return ((GroupExtrasRow[])(base.GetChildRows(this.Table.ChildRelations["GroupOfTests_GroupExtras"])));
                 }
             }
         }
@@ -1278,14 +1613,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public string Parent {
+            public int Parent {
                 get {
-                    try {
-                        return ((string)(this[this.tableJoiningTable.ParentColumn]));
-                    }
-                    catch (global::System.InvalidCastException e) {
-                        throw new global::System.Data.StrongTypingException("The value for column \'Parent\' in table \'JoiningTable\' is DBNull.", e);
-                    }
+                    return ((int)(this[this.tableJoiningTable.ParentColumn]));
                 }
                 set {
                     this[this.tableJoiningTable.ParentColumn] = value;
@@ -1294,17 +1624,12 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public int ChildTest {
+            public int Child {
                 get {
-                    try {
-                        return ((int)(this[this.tableJoiningTable.ChildTestColumn]));
-                    }
-                    catch (global::System.InvalidCastException e) {
-                        throw new global::System.Data.StrongTypingException("The value for column \'ChildTest\' in table \'JoiningTable\' is DBNull.", e);
-                    }
+                    return ((int)(this[this.tableJoiningTable.ChildColumn]));
                 }
                 set {
-                    this[this.tableJoiningTable.ChildTestColumn] = value;
+                    this[this.tableJoiningTable.ChildColumn] = value;
                 }
             }
             
@@ -1321,30 +1646,6 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public bool IsParentNull() {
-                return this.IsNull(this.tableJoiningTable.ParentColumn);
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public void SetParentNull() {
-                this[this.tableJoiningTable.ParentColumn] = global::System.Convert.DBNull;
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public bool IsChildTestNull() {
-                return this.IsNull(this.tableJoiningTable.ChildTestColumn);
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public void SetChildTestNull() {
-                this[this.tableJoiningTable.ChildTestColumn] = global::System.Convert.DBNull;
-            }
-            
-            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public TestRow[] GetTestRows() {
                 if ((this.Table.ChildRelations["JoiningTable_Test"] == null)) {
                     return new TestRow[0];
@@ -1352,6 +1653,71 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 else {
                     return ((TestRow[])(base.GetChildRows(this.Table.ChildRelations["JoiningTable_Test"])));
                 }
+            }
+        }
+        
+        /// <summary>
+        ///Represents strongly named DataRow class.
+        ///</summary>
+        public partial class GroupExtrasRow : global::System.Data.DataRow {
+            
+            private GroupExtrasDataTable tableGroupExtras;
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            internal GroupExtrasRow(global::System.Data.DataRowBuilder rb) : 
+                    base(rb) {
+                this.tableGroupExtras = ((GroupExtrasDataTable)(this.Table));
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public int ID {
+                get {
+                    return ((int)(this[this.tableGroupExtras.IDColumn]));
+                }
+                set {
+                    this[this.tableGroupExtras.IDColumn] = value;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public string Name {
+                get {
+                    try {
+                        return ((string)(this[this.tableGroupExtras.NameColumn]));
+                    }
+                    catch (global::System.InvalidCastException e) {
+                        throw new global::System.Data.StrongTypingException("The value for column \'Name\' in table \'GroupExtras\' is DBNull.", e);
+                    }
+                }
+                set {
+                    this[this.tableGroupExtras.NameColumn] = value;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupOfTestsRow GroupOfTestsRow {
+                get {
+                    return ((GroupOfTestsRow)(this.GetParentRow(this.Table.ParentRelations["GroupOfTests_GroupExtras"])));
+                }
+                set {
+                    this.SetParentRow(value, this.Table.ParentRelations["GroupOfTests_GroupExtras"]);
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public bool IsNameNull() {
+                return this.IsNull(this.tableGroupExtras.NameColumn);
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public void SetNameNull() {
+                this[this.tableGroupExtras.NameColumn] = global::System.Convert.DBNull;
             }
         }
         
@@ -1443,6 +1809,40 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public JoiningTableRow Row {
+                get {
+                    return this.eventRow;
+                }
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public global::System.Data.DataRowAction Action {
+                get {
+                    return this.eventAction;
+                }
+            }
+        }
+        
+        /// <summary>
+        ///Row event argument class
+        ///</summary>
+        [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+        public class GroupExtrasRowChangeEvent : global::System.EventArgs {
+            
+            private GroupExtrasRow eventRow;
+            
+            private global::System.Data.DataRowAction eventAction;
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRowChangeEvent(GroupExtrasRow row, global::System.Data.DataRowAction action) {
+                this.eventRow = row;
+                this.eventAction = action;
+            }
+            
+            [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+            [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
+            public GroupExtrasRow Row {
                 get {
                     return this.eventRow;
                 }

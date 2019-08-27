@@ -24,7 +24,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
     [global::System.ComponentModel.Design.HelpKeywordAttribute("vs.data.DataSet")]
     public partial class HumanResources : global::System.Data.DataSet {
         
-        private DepartmentDataTable tableDepartment;
+        private _HumanResources_DepartmentDataTable _tableHumanResources_Department;
         
         private global::System.Data.SchemaSerializationMode _schemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
         
@@ -54,8 +54,8 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             if ((this.DetermineSchemaSerializationMode(info, context) == global::System.Data.SchemaSerializationMode.IncludeSchema)) {
                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
                 ds.ReadXmlSchema(new global::System.Xml.XmlTextReader(new global::System.IO.StringReader(strSchema)));
-                if ((ds.Tables["Department"] != null)) {
-                    base.Tables.Add(new DepartmentDataTable(ds.Tables["Department"]));
+                if ((ds.Tables["HumanResources.Department"] != null)) {
+                    base.Tables.Add(new _HumanResources_DepartmentDataTable(ds.Tables["HumanResources.Department"]));
                 }
                 this.DataSetName = ds.DataSetName;
                 this.Prefix = ds.Prefix;
@@ -79,9 +79,9 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
         [global::System.ComponentModel.Browsable(false)]
         [global::System.ComponentModel.DesignerSerializationVisibility(global::System.ComponentModel.DesignerSerializationVisibility.Content)]
-        public DepartmentDataTable Department {
+        public _HumanResources_DepartmentDataTable _HumanResources_Department {
             get {
-                return this.tableDepartment;
+                return this._tableHumanResources_Department;
             }
         }
         
@@ -152,8 +152,8 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 this.Reset();
                 global::System.Data.DataSet ds = new global::System.Data.DataSet();
                 ds.ReadXml(reader);
-                if ((ds.Tables["Department"] != null)) {
-                    base.Tables.Add(new DepartmentDataTable(ds.Tables["Department"]));
+                if ((ds.Tables["HumanResources.Department"] != null)) {
+                    base.Tables.Add(new _HumanResources_DepartmentDataTable(ds.Tables["HumanResources.Department"]));
                 }
                 this.DataSetName = ds.DataSetName;
                 this.Prefix = ds.Prefix;
@@ -188,10 +188,10 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
         internal void InitVars(bool initTable) {
-            this.tableDepartment = ((DepartmentDataTable)(base.Tables["Department"]));
+            this._tableHumanResources_Department = ((_HumanResources_DepartmentDataTable)(base.Tables["HumanResources.Department"]));
             if ((initTable == true)) {
-                if ((this.tableDepartment != null)) {
-                    this.tableDepartment.InitVars();
+                if ((this._tableHumanResources_Department != null)) {
+                    this._tableHumanResources_Department.InitVars();
                 }
             }
         }
@@ -204,13 +204,13 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             this.Namespace = "http://tempuri.org/HumanResources.xsd";
             this.EnforceConstraints = true;
             this.SchemaSerializationMode = global::System.Data.SchemaSerializationMode.IncludeSchema;
-            this.tableDepartment = new DepartmentDataTable();
-            base.Tables.Add(this.tableDepartment);
+            this._tableHumanResources_Department = new _HumanResources_DepartmentDataTable();
+            base.Tables.Add(this._tableHumanResources_Department);
         }
         
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-        private bool ShouldSerializeDepartment() {
+        private bool ShouldSerialize_HumanResources_Department() {
             return false;
         }
         
@@ -270,14 +270,14 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         }
         
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-        public delegate void DepartmentRowChangeEventHandler(object sender, DepartmentRowChangeEvent e);
+        public delegate void _HumanResources_DepartmentRowChangeEventHandler(object sender, _HumanResources_DepartmentRowChangeEvent e);
         
         /// <summary>
         ///Represents the strongly named DataTable class.
         ///</summary>
         [global::System.Serializable()]
         [global::System.Xml.Serialization.XmlSchemaProviderAttribute("GetTypedTableSchema")]
-        public partial class DepartmentDataTable : global::System.Data.TypedTableBase<DepartmentRow> {
+        public partial class _HumanResources_DepartmentDataTable : global::System.Data.TypedTableBase<_HumanResources_DepartmentRow> {
             
             private global::System.Data.DataColumn columnDepartmentID;
             
@@ -289,8 +289,8 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentDataTable() {
-                this.TableName = "Department";
+            public _HumanResources_DepartmentDataTable() {
+                this.TableName = "HumanResources.Department";
                 this.BeginInit();
                 this.InitClass();
                 this.EndInit();
@@ -298,7 +298,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            internal DepartmentDataTable(global::System.Data.DataTable table) {
+            internal _HumanResources_DepartmentDataTable(global::System.Data.DataTable table) {
                 this.TableName = table.TableName;
                 if ((table.CaseSensitive != table.DataSet.CaseSensitive)) {
                     this.CaseSensitive = table.CaseSensitive;
@@ -315,7 +315,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            protected DepartmentDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
+            protected _HumanResources_DepartmentDataTable(global::System.Runtime.Serialization.SerializationInfo info, global::System.Runtime.Serialization.StreamingContext context) : 
                     base(info, context) {
                 this.InitVars();
             }
@@ -363,55 +363,55 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRow this[int index] {
+            public _HumanResources_DepartmentRow this[int index] {
                 get {
-                    return ((DepartmentRow)(this.Rows[index]));
+                    return ((_HumanResources_DepartmentRow)(this.Rows[index]));
                 }
             }
             
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public event DepartmentRowChangeEventHandler DepartmentRowChanging;
+            public event _HumanResources_DepartmentRowChangeEventHandler _HumanResources_DepartmentRowChanging;
             
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public event DepartmentRowChangeEventHandler DepartmentRowChanged;
+            public event _HumanResources_DepartmentRowChangeEventHandler _HumanResources_DepartmentRowChanged;
             
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public event DepartmentRowChangeEventHandler DepartmentRowDeleting;
+            public event _HumanResources_DepartmentRowChangeEventHandler _HumanResources_DepartmentRowDeleting;
             
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public event DepartmentRowChangeEventHandler DepartmentRowDeleted;
+            public event _HumanResources_DepartmentRowChangeEventHandler _HumanResources_DepartmentRowDeleted;
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public void AddDepartmentRow(DepartmentRow row) {
+            public void Add_HumanResources_DepartmentRow(_HumanResources_DepartmentRow row) {
                 this.Rows.Add(row);
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRow AddDepartmentRow(string Name, string GroupName, System.DateTime ModifiedDate) {
-                DepartmentRow rowDepartmentRow = ((DepartmentRow)(this.NewRow()));
+            public _HumanResources_DepartmentRow Add_HumanResources_DepartmentRow(string Name, string GroupName, System.DateTime ModifiedDate) {
+                _HumanResources_DepartmentRow row_HumanResources_DepartmentRow = ((_HumanResources_DepartmentRow)(this.NewRow()));
                 object[] columnValuesArray = new object[] {
                         null,
                         Name,
                         GroupName,
                         ModifiedDate};
-                rowDepartmentRow.ItemArray = columnValuesArray;
-                this.Rows.Add(rowDepartmentRow);
-                return rowDepartmentRow;
+                row_HumanResources_DepartmentRow.ItemArray = columnValuesArray;
+                this.Rows.Add(row_HumanResources_DepartmentRow);
+                return row_HumanResources_DepartmentRow;
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRow FindByDepartmentID(short DepartmentID) {
-                return ((DepartmentRow)(this.Rows.Find(new object[] {
+            public _HumanResources_DepartmentRow FindByDepartmentID(short DepartmentID) {
+                return ((_HumanResources_DepartmentRow)(this.Rows.Find(new object[] {
                             DepartmentID})));
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public override global::System.Data.DataTable Clone() {
-                DepartmentDataTable cln = ((DepartmentDataTable)(base.Clone()));
+                _HumanResources_DepartmentDataTable cln = ((_HumanResources_DepartmentDataTable)(base.Clone()));
                 cln.InitVars();
                 return cln;
             }
@@ -419,7 +419,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override global::System.Data.DataTable CreateInstance() {
-                return new DepartmentDataTable();
+                return new _HumanResources_DepartmentDataTable();
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
@@ -455,32 +455,34 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 this.columnGroupName.AllowDBNull = false;
                 this.columnGroupName.MaxLength = 50;
                 this.columnModifiedDate.AllowDBNull = false;
+                this.ExtendedProperties.Add("Generator_TableVarName", "_tableHumanResources_Department");
+                this.ExtendedProperties.Add("Generator_UserTableName", "HumanResources.Department");
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRow NewDepartmentRow() {
-                return ((DepartmentRow)(this.NewRow()));
+            public _HumanResources_DepartmentRow New_HumanResources_DepartmentRow() {
+                return ((_HumanResources_DepartmentRow)(this.NewRow()));
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override global::System.Data.DataRow NewRowFromBuilder(global::System.Data.DataRowBuilder builder) {
-                return new DepartmentRow(builder);
+                return new _HumanResources_DepartmentRow(builder);
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override global::System.Type GetRowType() {
-                return typeof(DepartmentRow);
+                return typeof(_HumanResources_DepartmentRow);
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override void OnRowChanged(global::System.Data.DataRowChangeEventArgs e) {
                 base.OnRowChanged(e);
-                if ((this.DepartmentRowChanged != null)) {
-                    this.DepartmentRowChanged(this, new DepartmentRowChangeEvent(((DepartmentRow)(e.Row)), e.Action));
+                if ((this._HumanResources_DepartmentRowChanged != null)) {
+                    this._HumanResources_DepartmentRowChanged(this, new _HumanResources_DepartmentRowChangeEvent(((_HumanResources_DepartmentRow)(e.Row)), e.Action));
                 }
             }
             
@@ -488,8 +490,8 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override void OnRowChanging(global::System.Data.DataRowChangeEventArgs e) {
                 base.OnRowChanging(e);
-                if ((this.DepartmentRowChanging != null)) {
-                    this.DepartmentRowChanging(this, new DepartmentRowChangeEvent(((DepartmentRow)(e.Row)), e.Action));
+                if ((this._HumanResources_DepartmentRowChanging != null)) {
+                    this._HumanResources_DepartmentRowChanging(this, new _HumanResources_DepartmentRowChangeEvent(((_HumanResources_DepartmentRow)(e.Row)), e.Action));
                 }
             }
             
@@ -497,8 +499,8 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override void OnRowDeleted(global::System.Data.DataRowChangeEventArgs e) {
                 base.OnRowDeleted(e);
-                if ((this.DepartmentRowDeleted != null)) {
-                    this.DepartmentRowDeleted(this, new DepartmentRowChangeEvent(((DepartmentRow)(e.Row)), e.Action));
+                if ((this._HumanResources_DepartmentRowDeleted != null)) {
+                    this._HumanResources_DepartmentRowDeleted(this, new _HumanResources_DepartmentRowChangeEvent(((_HumanResources_DepartmentRow)(e.Row)), e.Action));
                 }
             }
             
@@ -506,14 +508,14 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             protected override void OnRowDeleting(global::System.Data.DataRowChangeEventArgs e) {
                 base.OnRowDeleting(e);
-                if ((this.DepartmentRowDeleting != null)) {
-                    this.DepartmentRowDeleting(this, new DepartmentRowChangeEvent(((DepartmentRow)(e.Row)), e.Action));
+                if ((this._HumanResources_DepartmentRowDeleting != null)) {
+                    this._HumanResources_DepartmentRowDeleting(this, new _HumanResources_DepartmentRowChangeEvent(((_HumanResources_DepartmentRow)(e.Row)), e.Action));
                 }
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public void RemoveDepartmentRow(DepartmentRow row) {
+            public void Remove_HumanResources_DepartmentRow(_HumanResources_DepartmentRow row) {
                 this.Rows.Remove(row);
             }
             
@@ -540,7 +542,7 @@ namespace Blacksmiths.Tests.Wolf.Schema {
                 type.Attributes.Add(attribute1);
                 global::System.Xml.Schema.XmlSchemaAttribute attribute2 = new global::System.Xml.Schema.XmlSchemaAttribute();
                 attribute2.Name = "tableTypeName";
-                attribute2.FixedValue = "DepartmentDataTable";
+                attribute2.FixedValue = "_HumanResources_DepartmentDataTable";
                 type.Attributes.Add(attribute2);
                 type.Particle = sequence;
                 global::System.Xml.Schema.XmlSchema dsSchema = ds.GetSchemaSerializable();
@@ -584,25 +586,25 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         /// <summary>
         ///Represents strongly named DataRow class.
         ///</summary>
-        public partial class DepartmentRow : global::System.Data.DataRow {
+        public partial class _HumanResources_DepartmentRow : global::System.Data.DataRow {
             
-            private DepartmentDataTable tableDepartment;
+            private _HumanResources_DepartmentDataTable _tableHumanResources_Department;
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            internal DepartmentRow(global::System.Data.DataRowBuilder rb) : 
+            internal _HumanResources_DepartmentRow(global::System.Data.DataRowBuilder rb) : 
                     base(rb) {
-                this.tableDepartment = ((DepartmentDataTable)(this.Table));
+                this._tableHumanResources_Department = ((_HumanResources_DepartmentDataTable)(this.Table));
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public short DepartmentID {
                 get {
-                    return ((short)(this[this.tableDepartment.DepartmentIDColumn]));
+                    return ((short)(this[this._tableHumanResources_Department.DepartmentIDColumn]));
                 }
                 set {
-                    this[this.tableDepartment.DepartmentIDColumn] = value;
+                    this[this._tableHumanResources_Department.DepartmentIDColumn] = value;
                 }
             }
             
@@ -610,10 +612,10 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public string Name {
                 get {
-                    return ((string)(this[this.tableDepartment.NameColumn]));
+                    return ((string)(this[this._tableHumanResources_Department.NameColumn]));
                 }
                 set {
-                    this[this.tableDepartment.NameColumn] = value;
+                    this[this._tableHumanResources_Department.NameColumn] = value;
                 }
             }
             
@@ -621,10 +623,10 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public string GroupName {
                 get {
-                    return ((string)(this[this.tableDepartment.GroupNameColumn]));
+                    return ((string)(this[this._tableHumanResources_Department.GroupNameColumn]));
                 }
                 set {
-                    this[this.tableDepartment.GroupNameColumn] = value;
+                    this[this._tableHumanResources_Department.GroupNameColumn] = value;
                 }
             }
             
@@ -632,10 +634,10 @@ namespace Blacksmiths.Tests.Wolf.Schema {
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
             public System.DateTime ModifiedDate {
                 get {
-                    return ((global::System.DateTime)(this[this.tableDepartment.ModifiedDateColumn]));
+                    return ((global::System.DateTime)(this[this._tableHumanResources_Department.ModifiedDateColumn]));
                 }
                 set {
-                    this[this.tableDepartment.ModifiedDateColumn] = value;
+                    this[this._tableHumanResources_Department.ModifiedDateColumn] = value;
                 }
             }
         }
@@ -644,22 +646,22 @@ namespace Blacksmiths.Tests.Wolf.Schema {
         ///Row event argument class
         ///</summary>
         [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-        public class DepartmentRowChangeEvent : global::System.EventArgs {
+        public class _HumanResources_DepartmentRowChangeEvent : global::System.EventArgs {
             
-            private DepartmentRow eventRow;
+            private _HumanResources_DepartmentRow eventRow;
             
             private global::System.Data.DataRowAction eventAction;
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRowChangeEvent(DepartmentRow row, global::System.Data.DataRowAction action) {
+            public _HumanResources_DepartmentRowChangeEvent(_HumanResources_DepartmentRow row, global::System.Data.DataRowAction action) {
                 this.eventRow = row;
                 this.eventAction = action;
             }
             
             [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
             [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Data.Design.TypedDataSetGenerator", "16.0.0.0")]
-            public DepartmentRow Row {
+            public _HumanResources_DepartmentRow Row {
                 get {
                     return this.eventRow;
                 }

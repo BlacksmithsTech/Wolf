@@ -46,7 +46,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
 		{
-			return this.Add(item, $"[{Target.Namespace}].[{Target.TableName}]");
+			return this.Add(item, $"{Target.TableName}");
 		}
 
 		public DataRequest Add(IDataRequestItem item, string TargetTableName)

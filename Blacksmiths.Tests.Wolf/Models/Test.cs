@@ -5,21 +5,35 @@ using System.Text;
 
 namespace Blacksmiths.Tests.Wolf.Models
 {
-	class Test
-	{
-		public int ID;
-		public string Name;
+    class Test
+    {
+        public int ID;
+        public string Name;
 
-		public Test()
-		{
-		}
+        public Test()
+        {
+        }
 
-		public Test(int id, string name)
-		{
-			this.ID = id;
-			this.Name = name;
-		}
-	}
+        public Test(int id, string name)
+        {
+            this.ID = id;
+            this.Name = name;
+        }
+    }
+
+    public class GroupOfTests
+    {
+        public int ID { get; set; }
+
+        [Relation(nameof(ID))]
+        public GroupExtras Extras { get; set; }
+    }
+
+    public class GroupExtras
+    {
+        public int ID { get; set; }
+        public string Name { get; set; }
+    }
 
 	[Source(From = "uspGetManagerEmployees")]
 	class uspGetManagerEmployeesManuallyWritten

@@ -31,12 +31,14 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			if (null != this.ResultData)
 				for (int i = 0; i < this.ResultData.Tables.Count; i++)
 				{
-					var QualifiedName = Utility.StringHelpers.GetQualifiedSpName(this.WolfRequestItem.TableName);
-					if (!string.IsNullOrEmpty(QualifiedName.Schema))
-						this.ResultData.Tables[i].Namespace = QualifiedName.Schema;
-					if (!string.IsNullOrEmpty(QualifiedName.Name))
-						this.ResultData.Tables[i].TableName = 0 == i ? QualifiedName.Name : $"{QualifiedName.Name}{i}";
-				}
+					//var QualifiedName = Utility.StringHelpers.GetQualifiedSpName(this.WolfRequestItem.TableName);
+					//if (!string.IsNullOrEmpty(QualifiedName.Schema))
+					//	this.ResultData.Tables[i].Namespace = QualifiedName.Schema;
+					//if (!string.IsNullOrEmpty(QualifiedName.Name))
+					//	this.ResultData.Tables[i].TableName = 0 == i ? QualifiedName.Name : $"{QualifiedName.Name}{i}";
+
+                    this.ResultData.Tables[i].TableName = 0 == i ? this.WolfRequestItem.TableName : $"{this.WolfRequestItem.TableName}{i}";
+                }
 
 			if (null != this.Parameters)
 				foreach (var p in this.Parameters)

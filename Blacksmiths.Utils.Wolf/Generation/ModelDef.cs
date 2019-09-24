@@ -16,6 +16,7 @@ namespace Blacksmiths.Utils.Wolf.Generation
 		public int Length;
 		public bool AllowNulls;
 		public string TypeName;
+        public bool Commented;
 	}
 
 	public sealed class ModelDef : System.Collections.ObjectModel.Collection<ModelField>

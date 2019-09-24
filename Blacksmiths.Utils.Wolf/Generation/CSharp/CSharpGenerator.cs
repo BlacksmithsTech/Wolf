@@ -220,15 +220,17 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					const string ADO_COL_TYPE = "DataType";
 					const string ADO_COL_SIZE = "ColumnSize";
 					const string ADO_ALLOW_NULL = "AllowDBNull";
+                    const string ADO_DATA_TYPE_NAME = "DataTypeName";
 
-					foreach (var FieldRow in Schema.Rows.Cast<DataRow>().OrderBy(r => (int)r[ADO_COL_ORDINAL]))
-						Ret.Add(new ModelField()
-						{
-							Name = (string)FieldRow[ADO_COL_NAME],
-							TypeName = ((Type)FieldRow[ADO_COL_TYPE]).FullName,
-							AllowNulls = (bool)FieldRow[ADO_ALLOW_NULL],
-							Length = (int)FieldRow[ADO_COL_SIZE]
-						});
+                    foreach (var FieldRow in Schema.Rows.Cast<DataRow>().OrderBy(r => (int)r[ADO_COL_ORDINAL]))
+                        Ret.Add(new ModelField()
+                        {
+                            Name = (string)FieldRow[ADO_COL_NAME],
+                            TypeName = !FieldRow.IsNull(ADO_COL_TYPE) ? ((Type)FieldRow[ADO_COL_TYPE]).FullName : (string)FieldRow[ADO_DATA_TYPE_NAME],
+                            AllowNulls = (bool)FieldRow[ADO_ALLOW_NULL],
+                            Length = (int)FieldRow[ADO_COL_SIZE],
+                            Commented = FieldRow.IsNull(ADO_COL_TYPE)
+                        });
 				}
 			}
 			return Ret;
@@ -338,6 +340,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 
 				var ValueTypeName = Field.TypeName;
 				var ParamType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
+                var Comment = Field.Commented ? "//" : string.Empty;
 
 				string AttrName = null;
 				string AttrLength = null;
@@ -355,11 +358,11 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 
 				var AttrParamsSource = String.Join(", ", new[] { AttrName }.Where(a => null != a));
 				if (!string.IsNullOrEmpty(AttrParamsSource))
-					sb.AppendLine($@"[Source({AttrParamsSource})]");
+					sb.AppendLine($@"{Comment}[Source({AttrParamsSource})]");
 				var AttrParamsConstraints = String.Join(", ", new[] { AttrLength,AttrNullable }.Where(a => null != a));
 				if (!string.IsNullOrEmpty(AttrParamsConstraints))
-					sb.AppendLine($@"[Constraint({AttrParamsConstraints})]");
-				sb.AppendLine($"public {ParamType} {FieldName} {{ get; set; }}");
+					sb.AppendLine($@"{Comment}[Constraint({AttrParamsConstraints})]");
+				sb.AppendLine($"{Comment}public {ParamType} {FieldName} {{ get; set; }}");
 			}
 			sb.Outdent();
 			sb.AppendLine("}");

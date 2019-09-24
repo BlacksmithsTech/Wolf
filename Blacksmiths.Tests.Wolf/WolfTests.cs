@@ -180,14 +180,28 @@ namespace Blacksmiths.Tests.Wolf
         [TestMethod]
         public void Request_Fetch5_Perf()
         {
-            // 200ms currently alloted for 40,391 rows
+            // 300ms currently alloted for 60,005 rows
             Utility.Perf.Measure(() => {
-                var Result = Connection.NewRequest()
+                var Result = this.GetEntities().Results;
+            }, "uspGetBusinessEntities, uspGetBusinessEntityAddresses, uspGetPersonAddress (Boxed, Related)", 10, 300);
+        }
+
+        [TestMethod]
+        public void Commit_NestedModel()
+        {
+            var Model = this.GetEntities();
+            Model.Results[0].BusinessEntityAddresses[0].Address.AddressLine1 = "Irano";
+            var ds = Connection.WithModel(Model).ToDataSet().GetChanges();
+        }
+
+        private Utils.Wolf.Model.SimpleResultModel<Models.BusinessEntity> GetEntities()
+        {
+            return Connection.NewRequest()
                 .Add(new Sprocs.uspGetBusinessEntities())
                 .Add(new Sprocs.uspGetBusinessEntityAddresses())
+                .Add(new Sprocs.uspGetPersonAddress())
                 .Execute()
-                .ToSimpleModel<Models.BusinessEntity>().Results;
-            }, "uspGetBusinessEntities, uspGetBusinessEntityAddresses (Boxed, Related)", 10, 200);
+                .ToSimpleModel<Models.BusinessEntity>();
         }
 
         [TestMethod]

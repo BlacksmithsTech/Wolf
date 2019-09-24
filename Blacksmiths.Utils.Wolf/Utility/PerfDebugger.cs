@@ -2,17 +2,18 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
 	internal static class PerfDebuggers
 	{
-		public static Dictionary<string, Stopwatch> Debuggers;
+		public static ConcurrentDictionary<string, Stopwatch> Debuggers;
 
 		static PerfDebuggers()
 		{
 #if(TRACE)
-			Debuggers = new Dictionary<string, Stopwatch>();
+			Debuggers = new ConcurrentDictionary<string, Stopwatch>();
 #endif
 		}
 
@@ -21,7 +22,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			var sw = new Stopwatch();
 			sw.Start();
-			Debuggers.Add(Name, sw);
+			Debuggers.TryAdd(Name, sw);
 		}
 
 		[Conditional("TRACE")]
@@ -29,7 +30,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			Trace.WriteLine($"{Name} {Debuggers[Name].ElapsedMilliseconds}ms");
 			Debuggers[Name].Stop();
-			Debuggers.Remove(Name);
+            Stopwatch w;
+			Debuggers.TryRemove(Name, out w);
 		}
 	}
 }

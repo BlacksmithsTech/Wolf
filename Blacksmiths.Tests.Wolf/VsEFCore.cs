@@ -73,16 +73,17 @@ namespace Blacksmiths.Tests.Wolf
 				efContext = new EF.Models.AdventureWorks2016Context();
 				efContext.Set<EF.Models.BusinessEntity>().FromSql("uspGetBusinessEntities").Load();
 				efContext.Set<EF.Models.BusinessEntityAddress>().FromSql("uspGetBusinessEntityAddresses").Load();
+                efContext.Set<EF.Models.Address>().FromSql("uspGetPersonAddress").Load();
 
-				//var Ents = efContext.BusinessEntity.ToList();
-				//var i = 0;
-				//foreach(var e in Ents)
-				//	foreach(var a in e.BusinessEntityAddress)
-				//	{
-				//		i++;
-				//	}
+                //var Ents = efContext.BusinessEntity.ToList();
+                //var i = 0;
+                //foreach(var e in Ents)
+                //	foreach(var a in e.BusinessEntityAddress)
+                //	{
+                //		i++;
+                //	}
 
-			}, "Entity Framework", 10);
+            }, "Entity Framework", 10);
 
 			//var wolfAvg = Utility.Perf.Measure(() =>
 			//{

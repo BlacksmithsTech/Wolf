@@ -75,5 +75,29 @@ namespace Blacksmiths.Tests.Wolf.Models
 		public int AddressTypeID { get; set; }
 		public Guid rowguid { get; set; }
 		public DateTime ModifiedDate { get; set; }
+
+        [Relation(nameof(AddressID))]
+        public PersonAddress Address { get; set; }
 	}
+
+    [Source(From = "uspGetPersonAddress")]
+    public class PersonAddress
+    {
+        [Constraint(Nullable = false)]
+        public int AddressID { get; set; }
+        [Constraint(Length = 60, Nullable = false)]
+        public string AddressLine1 { get; set; }
+        [Constraint(Length = 60)]
+        public string AddressLine2 { get; set; }
+        [Constraint(Length = 30, Nullable = false)]
+        public string City { get; set; }
+        [Constraint(Nullable = false)]
+        public int StateProvinceID { get; set; }
+        [Constraint(Length = 15, Nullable = false)]
+        public string PostalCode { get; set; }
+        [Constraint(Nullable = false)]
+        public Guid rowguid { get; set; }
+        [Constraint(Nullable = false)]
+        public DateTime ModifiedDate { get; set; }
+    }
 }

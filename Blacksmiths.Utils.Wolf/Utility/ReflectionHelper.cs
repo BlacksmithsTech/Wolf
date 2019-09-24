@@ -34,11 +34,23 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		public static void SetValue(MemberInfo Member, object source, object value)
 		{
-			if (Member is FieldInfo fi)
-				fi.SetValue(source, value);
-			else if (Member is PropertyInfo pi)
-				pi.SetValue(source, value);
+            if (Member is FieldInfo fi)
+            {
+                fi.SetValue(source, value);
+            }
+            else if (Member is PropertyInfo pi)
+            {
+                if (pi.CanWrite)
+                    pi.SetValue(source, value);
+                else
+                    throw new FieldAccessException($"Tried writing to {GetMemberDisplayName(Member)} but it was read only");
+            }
 		}
+
+        public static string GetMemberDisplayName(MemberInfo Member)
+        {
+            return $"{Member.DeclaringType.Name}.{Member.Name}";
+        }
 
 		public static Type GetMemberType(MemberInfo Member)
 		{

@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Data;
+using System.Linq;
 
 namespace Blacksmiths.Utils.Wolf.Model
 {
     internal sealed class ModelLink
     {
         private Dictionary<string, MemberLink> memberDict;
-        private DataView _view;
 
         internal MemberLink this[string Name]
         {
@@ -29,19 +29,30 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.memberDict = this.ModelDefinition.TypeDefinition.GetLinkedMembersFor(this.Data);
         }
 
-        internal DataView GetDataView()
+        internal DataView GetDataView(ModelLink parentModelLink, object parent)
         {
-            if (null == this._view)
+            Utility.PerfDebuggers.BeginTrace("Obtaining DataView");
+
+            var Ret = new DataView(this.Data);
+
+            if (null != this.ModelDefinition.ParentModel)
             {
-                this._view = new DataView(this.Data);
+                // ** Apply relationship
+                var Relationship = this.FindFirstValidRelationshipWithParent(parentModelLink);
 
-                if (null != this.ModelDefinition.ParentModel)
+                var sb = new StringBuilder();
+                foreach (var ChildKeyName in Relationship.ChildFieldNames)
                 {
-
+                    if (sb.Length > 0)
+                        sb.Append(" AND ");
+                    sb.Append($"{ChildKeyName} = '{parentModelLink[ChildKeyName].GetValue(parent)}'");//TODO: Encode
                 }
+                Ret.RowFilter = sb.ToString();
             }
 
-            return this._view;
+            Utility.PerfDebuggers.EndTrace("Obtaining DataView");
+
+            return Ret;
         }
 
         internal bool ContainsMember(string Name)
@@ -58,6 +69,20 @@ namespace Blacksmiths.Utils.Wolf.Model
                 default:
                     throw new InvalidOperationException("Unsupported key length");
             }
+        }
+
+        internal Attribution.Relation FindFirstValidRelationshipWithParent(ModelLink parentLink)
+        {
+            foreach (var Relation in this.ModelDefinition.GetAttributes<Attribution.Relation>())
+            {
+                if (Relation.IsSane()
+                    && Relation.ParentFieldNames.All(fn => parentLink.ContainsMember(fn))
+                    && Relation.ChildFieldNames.All(fn => this.ContainsMember(fn)))
+                {
+                    return Relation;
+                }
+            }
+            return null;
         }
     }
 }

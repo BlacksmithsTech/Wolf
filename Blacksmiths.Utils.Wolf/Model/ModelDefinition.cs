@@ -13,29 +13,50 @@ namespace Blacksmiths.Utils.Wolf.Model
         private string[] _sources;
         private ModelLink _target;
         private ModelLink _source;
-        private MemberInfo _member;
+        private Utility.MemberAccessor _memberAccessor;
 
         internal string Name { get; private set; }
         internal Type MemberType { get; private set; }
         internal Type CollectionType { get; private set; }
-        internal ModelDefinition ParentModel { get; private set; }
         internal TypeDefinition TypeDefinition { get; private set; }
+        internal ModelDefinition ParentModel { get; private set; }
+        internal ModelDefinition[] NestedModels { get; private set; }
 
-        internal ModelDefinition(MemberInfo mi, TypeDefinitionCollection typeLinks)
+        internal ModelDefinition(MemberInfo member, TypeDefinitionCollection typeLinks, ModelDefinition parentModel = null)
         {
-            this._member = mi;
-            this.Name = mi.Name;
-            this.MemberType = Utility.ReflectionHelper.GetMemberType(mi);
-            this.CollectionType = Utility.ReflectionHelper.GetCollectionType(mi);
+            this._memberAccessor = Utility.MemberAccessor.Create(member);
+            this.Name = member.Name;
+            this.MemberType = Utility.ReflectionHelper.GetMemberType(member);
+            this.CollectionType = Utility.ReflectionHelper.GetCollectionType(member);
             this._isCollection = null != this.CollectionType;
             if (!this._isCollection)
                 this.CollectionType = this.MemberType;
             this.TypeDefinition = typeLinks.GetOrCreate(this.CollectionType);
+
+            this.ParentModel = parentModel;
+            this.NestedModels = this.TypeDefinition.ComplexMembers.Select(mi => new ModelDefinition(mi, typeLinks, this)).ToArray();
+        }
+
+        internal void Flatten(DataSet ds, object source, Dictionary<Type, FlattenedCollection> Collections)
+        {
+            var thisCollection = this.ToCollection(source);
+            if (Collections.ContainsKey(this.CollectionType))
+            {
+                Collections[this.CollectionType].AddCollection(this, source, thisCollection);
+            }
+            else
+            {
+                Collections.Add(this.CollectionType, new FlattenedCollection(ds, this, source, thisCollection));
+            }
+
+            foreach (var nm in this.NestedModels)
+                foreach (var no in thisCollection)
+                    nm.Flatten(ds, no, Collections);
         }
 
         internal IEnumerable<T> GetAttributes<T>() where T : Attribute
         {
-            return this._member.GetCustomAttributes<T>().Union(this.CollectionType.GetCustomAttributes<T>());
+            return this._memberAccessor.Member.GetCustomAttributes<T>().Union(this.CollectionType.GetCustomAttributes<T>());
         }
 
         internal ModelLink GetModelTarget(DataSet ds)
@@ -69,18 +90,23 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal bool MemberEquals(MemberInfo mi)
         {
-            return this._member.Equals(mi);
+            return this._memberAccessor.Member.Equals(mi);
         }
 
         internal System.Collections.IList ToCollection(object source)
         {
             if (this._isCollection)
-                return (System.Collections.IList)Utility.ReflectionHelper.GetValue(_member, source);
+                return (System.Collections.IList)this.GetValue(source);
             else
             {
-                var Value = Utility.ReflectionHelper.GetValue(_member, source);
+                var Value = this.GetValue(source);
                 return null != Value ? new[] { Value } : new object[0];
             }
+        }
+
+        private object GetValue(object source)
+        {
+            return this._memberAccessor.GetValue(source);
         }
 
         internal void SetValue(object source, IEnumerable<object> value)
@@ -94,9 +120,9 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal void SetValue(object source, System.Collections.IList value)
         {
             if (this._isCollection)
-                Utility.ReflectionHelper.SetValue(this._member, source, value);
+                this._memberAccessor.SetValue(source, value);
             else
-                Utility.ReflectionHelper.SetValue(this._member, source, value.Cast<object>().FirstOrDefault());
+                this._memberAccessor.SetValue(source, value.Cast<object>().FirstOrDefault());
         }
 
         //internal IEnumerable<object> ToEnumerable(object source)
@@ -109,7 +135,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (null == this._sources)
             {
                 // Asc order sensitive.
-                var Ret = this._member.GetCustomAttributes<Attribution.Source>()
+                var Ret = this._memberAccessor.Member.GetCustomAttributes<Attribution.Source>()
                     .Concat(this.CollectionType.GetCustomAttributes<Attribution.Source>())
                     .Select(a => a.From)
                     .ToList();

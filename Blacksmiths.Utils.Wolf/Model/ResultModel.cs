@@ -62,10 +62,16 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == this._data)
 				this._data = new DataSet();
 
-			this._data.EnforceConstraints = false;
-			foreach (var ml in this.GetTopLevelModelMembers())
-				this.UnboxEnumerable(this, ml, this._data);
-			this._data.EnforceConstraints = true;
+            Utility.PerfDebuggers.BeginTrace("Flattening object structure");
+            var Collections = new Dictionary<Type, FlattenedCollection>();
+            foreach (var ml in this.GetTopLevelModelMembers())
+                ml.Flatten(this._data, this, Collections);
+            Utility.PerfDebuggers.EndTrace("Flattening object structure");
+
+            this._data.EnforceConstraints = false;
+            foreach (var collection in Collections.Values)
+                this.UnboxEnumerable(collection);
+            this._data.EnforceConstraints = true;
 		}
 
         /// <summary>
@@ -145,38 +151,42 @@ namespace Blacksmiths.Utils.Wolf.Model
         //    return Ret.ToArray();
         //}
 
-		private void UnboxEnumerable(object source, ModelDefinition modelDef, DataSet ds)
+		private void UnboxEnumerable(FlattenedCollection flattened)
 		{
-            var modelLink = modelDef.GetModelTarget(ds);
-			var collection = modelDef.ToCollection(source).Cast<object>();
-			var UnhandledModels = new List<object>(collection);
-
-			// ** Updates and deletes
-			foreach (DataRowView rowView in modelLink.GetDataView())
-			{
-				var ModelObject = modelDef.TypeDefinition.FindObject(modelLink, rowView.Row, collection);
-
-				if (null != ModelObject)
-				{
-					// ** Update the row and tally off the object.
-					this.UnboxObject(ModelObject, modelLink, rowView.Row);
-					UnhandledModels.Remove(ModelObject);
-				}
-				else
-				{
-					// ** No Model Object, this row is to be deleted
-					rowView.Delete();
-				}
-			}
-
-			// ** Inserts
-			foreach (var ModelObject in UnhandledModels)
-			{
-				var row = modelLink.Data.NewRow();
-				this.UnboxObject(ModelObject, modelLink, row);
-                modelLink.Data.Rows.Add(row);
-			}
+            foreach (var range in flattened)
+                this.UnboxEnumerable(range.ModelLink, flattened.GetCollectionRange(range));
 		}
+
+        private void UnboxEnumerable(ModelLink modelLink, IEnumerable<object> collection)
+        {
+            var UnhandledModels = new List<object>(collection);
+
+            // ** Updates and deletes
+            foreach (DataRow row in modelLink.Data.Rows)
+            {
+                var ModelObject = modelLink.ModelDefinition.TypeDefinition.FindObject(modelLink, row, UnhandledModels);
+
+                if (null != ModelObject)
+                {
+                    // ** Update the row and tally off the object.
+                    this.UnboxObject(ModelObject, modelLink, row);
+                    UnhandledModels.Remove(ModelObject);
+                }
+                else
+                {
+                    // ** No Model Object, this row is to be deleted
+                    row.Delete();
+                }
+            }
+
+            // ** Inserts
+            foreach (var ModelObject in UnhandledModels)
+            {
+                var row = modelLink.Data.NewRow();
+                this.UnboxObject(ModelObject, modelLink, row);
+                modelLink.Data.Rows.Add(row);
+            }
+        }
 
 		private void UnboxObject(object o, ModelLink modelLink, DataRow r)
 		{
@@ -195,10 +205,6 @@ namespace Blacksmiths.Utils.Wolf.Model
                     r[ml.Column] = v;
                 }
 			}
-
-            // ** nested
-            foreach (var childModelDef in modelLink.ModelDefinition.TypeDefinition.NestedModels)
-                this.UnboxEnumerable(o, childModelDef, r.Table.DataSet);
 		}
 
 		private System.Collections.IList BoxEnumerable(ModelDefinition modelDef, DataSet ds, Queue<MemberRelationshipDemand> relationships, System.Collections.IList sourceCollection)
@@ -242,7 +248,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 Result = Utility.ReflectionHelper.ArrayFromList(modelDef.CollectionType, Result);
 
             // ** Relationship demands
-            foreach (var childModelDef in modelDef.TypeDefinition.NestedModels)
+            foreach (var childModelDef in modelDef.NestedModels)
             {
                 var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
                 if (null == Demand)

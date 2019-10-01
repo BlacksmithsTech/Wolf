@@ -13,7 +13,6 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal delegate object ObjectFinder(ModelLink modelLink, DataRow r, IEnumerable<object> collection);
 
         internal MemberInfo[] Members { get; private set; }
-        internal ModelDefinition[] NestedModels { get; private set; }
         internal ObjectFinder FindObject { get; private set; }
         internal Type Type { get; private set; }
 
@@ -26,17 +25,21 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
         }
 
+        internal IEnumerable<MemberInfo> ComplexMembers
+        {
+            get
+            {
+                return this.Members
+                    .Where(m => !Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)));
+            }
+        }
+
         internal TypeDefinition(Type t, TypeDefinitionCollection typeDefinitions)
         {
             this.Type = t;
 
             this.Members = this.Type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
-                .ToArray();
-
-            this.NestedModels = this.Members
-                .Where(m => !Utility.ReflectionHelper.IsPrimitive(Utility.ReflectionHelper.GetMemberType(m)))
-                .Select(m => new ModelDefinition(m, typeDefinitions))
                 .ToArray();
 
             this.FindObject = this.FindObject_FullEquality;
@@ -57,7 +60,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
                 foreach (var ml in modelLink.Members)
                 {
-                    object value = ml.GetValue(o);
+                    object value = ml.GetValue(o) ?? DBNull.Value;
 
                     if (!r[ml.Column].Equals(value))
                     {

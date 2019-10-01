@@ -27,7 +27,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 return;
             }
 
-            var Relation = this.FindFirstValidRelationship(childLink);
+            var Relation = childLink.FindFirstValidRelationshipWithParent(this.ParentModelLink);
 
             if (null != Relation)
             {
@@ -46,20 +46,6 @@ namespace Blacksmiths.Utils.Wolf.Model
                 foreach (var parenti in this.parentCollection)
                     childLink.ModelDefinition.SetValue(parenti, sourceCollection);
             }
-        }
-
-        internal Attribution.Relation FindFirstValidRelationship(ModelLink childLink)
-        {
-            foreach (var Relation in this.ChildModelDefinition.GetAttributes<Attribution.Relation>())
-            {
-                if (Relation.IsSane()
-                    && Relation.ParentFieldNames.All(fn => this.ParentModelLink.ContainsMember(fn))
-                    && Relation.ChildFieldNames.All(fn => childLink.ContainsMember(fn)))
-                {
-                    return Relation;
-                }
-            }
-            return null;
         }
     }
 }

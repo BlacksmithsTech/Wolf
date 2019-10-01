@@ -127,9 +127,7 @@ namespace Blacksmiths.Utils.Wolf
 				{
 					// ** Get a data adapter and fill a dataset
 					var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-					wolfCommand.ResultData = new DataSet();
-					dbAdapter.Fill(wolfCommand.ResultData);
-
+                    dbAdapter.Fill(wolfCommand.ResultData);
 					// ** The data adapter will now have executed the command. Perform binding back to the request objects
 					wolfCommand.Bind();
 				}
@@ -140,11 +138,30 @@ namespace Blacksmiths.Utils.Wolf
 			return Result;
 		}
 
-		// *************************************************
-		// Engine room - Commit
-		// *************************************************
+        internal void FetchSchema(DataTable dt)
+        {
+            Utility.PerfDebuggers.BeginTrace($"Fetching PK information for '{Utility.StringHelpers.GetFullTableName(dt)}'");
 
-		internal CommitResult Commit(ModelProcessor processor)
+            var wolfCommand = dt.ExtendedProperties[Utility.WolfCommandBinding.C_EXTENDED_WOLF_COMMAND] as Utility.WolfCommandBinding;
+            if(null != wolfCommand)
+            {
+                using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+                {
+                    wolfCommand.DbCommand.Connection = dbConnection;
+
+                    var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
+                    dbAdapter.FillSchema(dt, SchemaType.Mapped);
+                }
+            }
+
+            Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.StringHelpers.GetFullTableName(dt)}'");
+        }
+
+        // *************************************************
+        // Engine room - Commit
+        // *************************************************
+
+        internal CommitResult Commit(ModelProcessor processor)
 		{
 			if (null == processor)
 				throw new ArgumentNullException($"{nameof(processor)} may not be null");

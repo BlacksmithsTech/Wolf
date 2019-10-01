@@ -88,10 +88,11 @@ namespace Blacksmiths.Utils.Wolf
 				for(int i = 0; i < cmd.ResultData.Tables.Count; i++)
 				{
 					var sourceTable = cmd.ResultData.Tables[i];
+                    var targetTable = sourceTable;
 
 					if(ds.Tables.Contains(sourceTable.TableName))
 					{
-						var targetTable = ds.Tables[sourceTable.TableName];
+						targetTable = ds.Tables[sourceTable.TableName];
 						if (0 == targetTable.Rows.Count)
 						{
 							// ** No data in the target so perform a higher-performance shallow import/copy of the source rows
@@ -111,6 +112,10 @@ namespace Blacksmiths.Utils.Wolf
 						ds.Tables.Add(sourceTable);
 						i--;
 					}
+
+                    foreach (var key in sourceTable.ExtendedProperties.Keys)
+                        if (!targetTable.ExtendedProperties.ContainsKey(key))
+                            targetTable.ExtendedProperties[key] = sourceTable.ExtendedProperties[key];
 				}
 			}
 

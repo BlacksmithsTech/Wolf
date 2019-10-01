@@ -10,10 +10,10 @@ namespace Blacksmiths.Utils.Wolf.Model
     internal sealed class TypeDefinition
     {
         internal delegate DataRow RowFinder(object o);
-        internal delegate object ObjectFinder(ModelLink modelLink, DataRow r, IEnumerable<object> collection);
+        //internal delegate object ObjectFinder(ModelLink modelLink, DataRow r, IEnumerable<object> collection);
 
         internal MemberInfo[] Members { get; private set; }
-        internal ObjectFinder FindObject { get; private set; }
+        //internal ObjectFinder FindObject { get; private set; }
         internal Type Type { get; private set; }
 
         internal IEnumerable<MemberInfo> PrimitiveMembers
@@ -41,8 +41,6 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.Members = this.Type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
                 .Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
                 .ToArray();
-
-            this.FindObject = this.FindObject_FullEquality;
         }
 
         internal Dictionary<string, MemberLink> GetLinkedMembersFor(DataTable dt)
@@ -52,13 +50,13 @@ namespace Blacksmiths.Utils.Wolf.Model
                 .ToDictionary(k => k.Member.Name);
         }
 
-        internal object FindObject_FullEquality(ModelLink modelLink, DataRow r, IEnumerable<object> collection)
+        internal object FindObject(DataRow r, IEnumerable<object> collection, IEnumerable<MemberLink> keyColumns)
         {
             foreach (var o in collection)
             {
                 bool Equal = true;
 
-                foreach (var ml in modelLink.Members)
+                foreach (var ml in keyColumns)//keyColumns can be the PK or it could be all columns if there's no PK
                 {
                     object value = ml.GetValue(o) ?? DBNull.Value;
 

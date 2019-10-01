@@ -18,10 +18,17 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	/// </summary>
 	public sealed class WolfCommandBinding
 	{
+        internal const string C_EXTENDED_WOLF_COMMAND = "_WolfCommand";
+
 		public DbCommand DbCommand { get; set; }
 		public IDataRequestItem WolfRequestItem { get; set; }
 		public WolfParameterDbBinding[] Parameters { get; set; }
-		public DataSet ResultData { get; set; }
+		internal DataSet ResultData { get; private set; }
+
+        public WolfCommandBinding()
+        {
+            this.ResultData = new DataSet();
+        }
 
 		/// <summary>
 		/// Updates Wolf request values with ADO.NET Values
@@ -38,6 +45,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					//	this.ResultData.Tables[i].TableName = 0 == i ? QualifiedName.Name : $"{QualifiedName.Name}{i}";
 
                     this.ResultData.Tables[i].TableName = 0 == i ? this.WolfRequestItem.TableName : $"{this.WolfRequestItem.TableName}{i}";
+                    this.ResultData.Tables[i].ExtendedProperties[C_EXTENDED_WOLF_COMMAND] = this;
                 }
 
 			if (null != this.Parameters)

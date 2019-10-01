@@ -142,19 +142,13 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return this._modelMembers;
 		}
 
-        //private ModelDefinition[] GetAllModelMembers()
-        //{
-        //    var Ret = new List<ModelDefinition>();
-        //    Ret.AddRange(this.GetTopLevelModelMembers());
-        //    foreach (var td in this._typeDefinitions)
-        //        Ret.AddRange(td.NestedModels);
-        //    return Ret.ToArray();
-        //}
-
 		private void UnboxEnumerable(FlattenedCollection flattened)
 		{
             foreach (var range in flattened)
+            {
+                range.ModelLink.ThrowIfCantUpdate();
                 this.UnboxEnumerable(range.ModelLink, flattened.GetCollectionRange(range));
+            }
 		}
 
         private void UnboxEnumerable(ModelLink modelLink, IEnumerable<object> collection)
@@ -164,7 +158,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             // ** Updates and deletes
             foreach (DataRow row in modelLink.Data.Rows)
             {
-                var ModelObject = modelLink.ModelDefinition.TypeDefinition.FindObject(modelLink, row, UnhandledModels);
+                var ModelObject = modelLink.ModelDefinition.TypeDefinition.FindObject(row, UnhandledModels, modelLink.KeyColumns);
 
                 if (null != ModelObject)
                 {
@@ -225,7 +219,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			// ** Updates and inserts
 			foreach (DataRow row in modelLink.Data.Rows)
 			{
-                var ModelObject = !sourceCollectionIsEmpty ? modelDef.TypeDefinition.FindObject(modelLink, row, castedCollection) : null;
+                var ModelObject = !sourceCollectionIsEmpty ? modelDef.TypeDefinition.FindObject(row, castedCollection, modelLink.KeyColumns) : null;
 
 				if (null != ModelObject)
 				{
@@ -283,6 +277,14 @@ namespace Blacksmiths.Utils.Wolf.Model
             return this._data == ds;
         }
 
+        internal void AutoGetSchema(DataConnection connection)
+        {
+            if (null != this._data)
+                foreach (DataTable dt in this._data.Tables)
+                    if (0 == dt.PrimaryKey.Length)
+                        connection.FetchSchema(dt);
+        }
+
 		internal DataSet GetDataSet()
 		{
 			this.TrackChanges();
@@ -299,12 +301,4 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this._data.AcceptChanges();
 		}
 	}
-
-	
-
-	
-
-	
-
-	
 }

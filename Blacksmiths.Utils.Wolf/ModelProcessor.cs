@@ -62,6 +62,8 @@ namespace Blacksmiths.Utils.Wolf
 
 		protected virtual DataSet GetModelDataSet()
 		{
+            this.Model.AutoGetSchema(this._connection);
+
 			var SourceDs = this.Model.GetDataSet();
 			foreach (DataTable dt in SourceDs.Tables)
 				this.RaisePreCommitActions(dt);

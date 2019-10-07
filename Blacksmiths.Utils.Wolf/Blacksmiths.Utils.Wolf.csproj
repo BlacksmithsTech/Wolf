@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFrameworks>netstandard2.0;net40</TargetFrameworks>
 		<Product>Wolf</Product>
 		<Authors>Blacksmiths Technology Ltd,Alexander Ali</Authors>
 		<Company>Blacksmiths Technology Ltd</Company>
@@ -15,4 +15,8 @@
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)' == 'net40'">
+	  <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+	</ItemGroup>
 </Project>

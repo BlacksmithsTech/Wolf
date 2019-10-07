@@ -119,8 +119,8 @@ namespace Blacksmiths.Utils.Wolf
 
 			public override object Value
 			{
-				get { return this._property.GetValue(this._instance); }
-				set { this._property.SetValue(this._instance, value); }
+				get { return this._property.GetValue(this._instance, null); }
+				set { this._property.SetValue(this._instance, value, null); }
 			}
 
 			public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)

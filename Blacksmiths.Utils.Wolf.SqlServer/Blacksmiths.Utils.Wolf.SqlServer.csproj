@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFrameworks>netstandard2.0;net40</TargetFrameworks>
 		<Product>Wolf</Product>
 		<Authors>Blacksmiths Technology Ltd,Alexander Ali</Authors>
 		<Company>Blacksmiths Technology Ltd</Company>
@@ -17,12 +17,16 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 	
-	<ItemGroup>
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="2.2.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.2.0" />
 		<PackageReference Include="System.Data.SqlClient" Version="4.6.1" />
 	</ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net40'">
+    <Reference Include="System.Configuration"></Reference>
+  </ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\Blacksmiths.Utils.Wolf\Blacksmiths.Utils.Wolf.csproj" />

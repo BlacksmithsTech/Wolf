@@ -53,6 +53,16 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			return new DataConnection(new SqlServerProvider(connectionString));
 		}
 
+        /// <summary>
+        /// Creates a new SQL Server data connection from your application configuration
+        /// </summary>
+        /// <param name="connectionStringName">Optional. The name of a connection string in your configuration to use for this connection.</param>
+        /// <returns>Database connection</returns>
+        public static DataConnection NewSqlServerConnectionFromCfg(string connectionStringName = null)
+        {
+            return new DataConnection(new SqlServerProvider(new Utility.WolfOptionsSqlServer().GetConnectionStringFromCfg(connectionStringName)));
+        }
+
 		// *************************************************
 		// Utility
 		// *************************************************

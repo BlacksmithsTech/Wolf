@@ -27,7 +27,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			if (Member is FieldInfo fi)
 				return fi.GetValue(source);
 			else if (Member is PropertyInfo pi)
-				return pi.GetValue(source);
+				return pi.GetValue(source, null);
 			else
 				return null;
 		}
@@ -41,7 +41,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
             else if (Member is PropertyInfo pi)
             {
                 if (pi.CanWrite)
-                    pi.SetValue(source, value);
+                    pi.SetValue(source, value, null);
                 else
                     throw new FieldAccessException($"Tried writing to {GetMemberDisplayName(Member)} but it was read only");
             }

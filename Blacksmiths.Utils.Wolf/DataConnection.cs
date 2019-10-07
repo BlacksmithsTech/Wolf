@@ -69,7 +69,43 @@ namespace Blacksmiths.Utils.Wolf
 			return new DataRequest(this);
 		}
 
-		public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new()
+        /// <summary>
+        /// Specifies a data model as a Wolf result model to perform an action with
+        /// </summary>
+        /// <param name="dataSet">A Wolf result model</param>
+        /// <returns>Fluent model action</returns>
+        public IFluentModelAction WithModel(Model.ResultModel model)
+        {
+            return this.WithModel<Model.ResultModel>(model);
+        }
+
+        /// <summary>
+        /// Specifies a data model as ADO.NET DataTables to perform an action with
+        /// </summary>
+        /// <param name="dataSet">One or more ADO.NET DataTables which provide the model</param>
+        /// <returns>Fluent model action</returns>
+        public IFluentModelAction WithModel(DataTable[] dataTables)
+        {
+            return this.WithModel<DataTable>(dataTables);
+        }
+
+        /// <summary>
+        /// Specifies a data model as an ADO.NET DataSet to perform an action with
+        /// </summary>
+        /// <param name="dataSet">An ADO.NET DataSet which provides the model</param>
+        /// <returns>Fluent model action</returns>
+        public IFluentModelAction WithModel(DataSet dataSet)
+        {
+            return this.WithModel<DataSet>(dataSet);
+        }
+
+        /// <summary>
+        /// Specifies a data model as objects to perform an action with
+        /// </summary>
+        /// <typeparam name="T">Type of objects which represent the model</typeparam>
+        /// <param name="modelObjects">An object or array of objects which represent the data model</param>
+        /// <returns>Fluent model action</returns>
+        public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new()
 		{
 			if (null == modelObjects)
 				modelObjects = new T[0];
@@ -94,7 +130,17 @@ namespace Blacksmiths.Utils.Wolf
 				else
 					return new ModelProcessor(new Model.ResultModel(), this);
 			}
-			else
+            else if(typeof(DataTable).IsAssignableFrom(typeof(T)))
+            {
+                var ds = new DataSet();
+                foreach (var dt in modelObjects.Cast<DataTable>())
+                    if (null == dt.DataSet)
+                        ds.Tables.Add(dt);
+                    else
+                        throw new ArgumentException($"DataTable '{dt.TableName}' belongs to a DataSet. To work with this model, pass the DataSet to .WithModel() rather than the DataTable");
+                return new ModelProcessor(new Model.ResultModel(ds), this);
+            }
+            else
 			{
 				// ** Loose objects. Create a model to represent them and then use an ad-hoc processor to switch to an overwrite persistance behaviour
 				var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);

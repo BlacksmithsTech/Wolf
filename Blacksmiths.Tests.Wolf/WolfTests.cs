@@ -14,6 +14,9 @@ using System.Linq;
 
 namespace Blacksmiths.Tests.Wolf
 {
+    /// <summary>
+    /// Development test handle - intended as a sandpit for experimenting with the Wolf component rather than as unit tests
+    /// </summary>
 	[TestClass]
 	public class SqlServerTests
 	{
@@ -190,7 +193,7 @@ namespace Blacksmiths.Tests.Wolf
         public void Commit_NestedModel()
         {
             var Model = this.GetEntities();
-            Model.Results[0].BusinessEntityAddresses[0].Address.AddressLine1 = "Irano";
+            Model.Results[0].BusinessEntityAddresses[0].Address.AddressLine1 = "123 Fake Street";
             var ds = Connection.WithModel(Model).ToDataSet().GetChanges();
         }
 

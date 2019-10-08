@@ -95,3 +95,14 @@ A command line tool is available to generate C# code for your stored procedures,
 ```
 wolf -cs="Server=(localdb)\mssqllocaldb;Database=AdventureWorks2016;Integrated Security=true"
 ```
+
+## Documentation
+Further code samples are provided as documentation.
+
+[View code samples](https://github.com/BlacksmithsTech/Wolf/wiki/Samples)
+
+## License and Support
+
+Licensed under the [MIT License](https://github.com/BlacksmithsTech/Wolf/blob/master/LICENSE).
+
+Commercial support is available, please contact the package author on [LinkedIn](https://www.linkedin.com/in/ihttphandler/).

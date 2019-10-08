@@ -24,9 +24,13 @@ namespace Blacksmiths.Utils.Wolf.Generation
 			Generator.Log = this.Log;
 			var EntityCollections = Generator.GenerateCode(options);
 
-			//TODO: Configurable output behaviours
-			foreach (var collection in EntityCollections)
-				File.WriteAllText(Path.Combine(options.Output.Path, collection.Path), collection.Generate());
+            //TODO: Configurable output behaviours
+            foreach (var collection in EntityCollections)
+            {
+                var p = Path.Combine(options.Output.Path, collection.Path);
+                File.WriteAllText(p, collection.Generate());
+                this.Log?.Invoke($"Wrote {collection.Count:N0} entities to '{p}'");
+            }
 		}
 	}
 }

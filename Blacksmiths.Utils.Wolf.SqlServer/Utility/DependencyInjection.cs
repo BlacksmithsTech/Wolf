@@ -41,7 +41,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 {
 	public sealed class SqlServerProviderFactory : IDataConnectionFactory
 	{
-		public IDataConnection NewDataConnection(WolfConnectionOptions options)
+        public bool ConfigurationIsEmpty(WolfConnectionOptions options)
+        {
+            return string.IsNullOrEmpty(options.GetValue(WolfOptionsSqlServer.Key_ConnectionString));
+        }
+
+        public IDataConnection NewDataConnection(WolfConnectionOptions options)
 		{
 			var cs = options.GetValue(WolfOptionsSqlServer.Key_ConnectionString);
 			if (string.IsNullOrWhiteSpace(cs))

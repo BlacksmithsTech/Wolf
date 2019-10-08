@@ -13,6 +13,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	public interface IDataConnectionFactory
 	{
 		IDataConnection NewDataConnection(WolfConnectionOptions options);
+        bool ConfigurationIsEmpty(WolfConnectionOptions options);
 	}
 
 	public sealed class WolfConnectionOptions : Dictionary<string, string>
@@ -28,17 +29,26 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			set { this[Key_Provider] = value; }
 		}
 
+        private IDataConnectionFactory GetDataConnectionFactory()
+        {
+            var FactoryType = Type.GetType(this.Provider);
+            if (null == FactoryType)
+                throw new ArgumentException($"The provider factory type '{this.Provider}' couldn't be located. Check the type name is correct and any required assemblies can be located (are you missing a dependency?)");
+            var Factory = Activator.CreateInstance(FactoryType) as IDataConnectionFactory;
+            if (null == Factory)
+                throw new ArgumentException($"The provider factory type '{this.Provider}' must implement Blacksmiths.Utils.Wolf.Utility.IDataConnectionFactory");
+            return Factory;
+        }
+
 		public IDataConnection NewDataConnection()
 		{
-			var FactoryType = Type.GetType(this.Provider);
-			if (null == FactoryType)
-				throw new ArgumentException($"The provider factory type '{this.Provider}' couldn't be located. Check the type name is correct and any required assemblies can be located (are you missing a dependency?)");
-			var Factory = Activator.CreateInstance(FactoryType) as IDataConnectionFactory;
-			if (null == Factory)
-				throw new ArgumentException($"The provider factory type '{this.Provider}' must implement Blacksmiths.Utils.Wolf.Utility.IDataConnectionFactory");
-
-			return Factory.NewDataConnection(this);
+			return this.GetDataConnectionFactory().NewDataConnection(this);
 		}
+
+        public bool ConfigurationIsEmpty()
+        {
+            return this.GetDataConnectionFactory().ConfigurationIsEmpty(this);
+        }
 
 		public string GetValue(string Key)
 		{

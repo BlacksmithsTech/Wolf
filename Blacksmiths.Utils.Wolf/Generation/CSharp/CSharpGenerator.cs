@@ -70,7 +70,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			using (var connection = dc.Provider.GetConnectionProvider().ToDbConnection())
 			{
 				connection.Open();
-
+                WriteLog($"Querying schema for '{dc.Provider}'...");
 				var procedures = connection.GetSchema("Procedures");
 				var types = connection.GetSchema("DataTypes");
 

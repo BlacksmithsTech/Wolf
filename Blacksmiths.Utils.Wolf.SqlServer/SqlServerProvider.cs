@@ -30,13 +30,19 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		/// <summary>
 		/// Gets the connection string used for this SQL Server connection
 		/// </summary>
-		public string ConnectionString { get; private set; }
+		public SqlConnectionStringBuilder ConnectionString { get; private set; }
 
-		// *************************************************
-		// Constructor & Factory
-		// *************************************************
+        DbConnectionStringBuilder IProvider.ConnectionString => this.ConnectionString;
 
-		public SqlServerProvider(string connectionString)
+        public string DatabaseName { get { return this.ConnectionString.InitialCatalog; } }
+
+        public string Server { get { return this.ConnectionString.DataSource; } }
+
+        // *************************************************
+        // Constructor & Factory
+        // *************************************************
+
+        public SqlServerProvider(string connectionString)
 		{
 			if (null == connectionString)
 				throw new ArgumentNullException("connectionString may not be null");
@@ -67,16 +73,16 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		// Utility
 		// *************************************************
 
-		private string PrepareConnectionString(string cs)
+		private SqlConnectionStringBuilder PrepareConnectionString(string cs)
 		{
-			var csb = new SqlConnectionStringBuilder(cs);
-			if (string.IsNullOrWhiteSpace(csb.ApplicationName) || csb.ApplicationName.Equals(new SqlConnectionStringBuilder().ApplicationName))
-			{
-				var WolfAssembly = System.Reflection.Assembly.GetAssembly(typeof(IProvider));
-				var ProgramAssembly = System.Reflection.Assembly.GetEntryAssembly();
-				csb.ApplicationName = $"{this.GetProductName(WolfAssembly)} {this.GetProductVersion(WolfAssembly)} ({this.GetProductName(ProgramAssembly)} {this.GetProductVersion(ProgramAssembly)})";
-			}
-			return csb.ToString();
+            var csb = new SqlConnectionStringBuilder(cs);
+            if (string.IsNullOrWhiteSpace(csb.ApplicationName) || csb.ApplicationName.Equals(new SqlConnectionStringBuilder().ApplicationName))
+            {
+                var WolfAssembly = System.Reflection.Assembly.GetAssembly(typeof(IProvider));
+                var ProgramAssembly = System.Reflection.Assembly.GetEntryAssembly();
+                csb.ApplicationName = $"{this.GetProductName(WolfAssembly)} {this.GetProductVersion(WolfAssembly)} ({this.GetProductName(ProgramAssembly)} {this.GetProductVersion(ProgramAssembly)})";
+            }
+            return csb;
 		}
 
 		private string GetProductName(System.Reflection.Assembly a)
@@ -156,5 +162,10 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		{
 			return new SqlCommandBuilder((SqlDataAdapter)adapter);
 		}
-	}
+
+        public override string ToString()
+        {
+            return $"{this.DatabaseName} ({this.Server})";
+        }
+    }
 }

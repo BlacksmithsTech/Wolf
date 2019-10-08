@@ -23,7 +23,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		}
 		public DbConnection ToDbConnection()
 		{
-			return new SqlConnection(this._provider.ConnectionString);
+			return new SqlConnection(this._provider.ConnectionString.ToString());
 		}
 	}
 }

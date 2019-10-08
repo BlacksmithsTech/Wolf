@@ -16,10 +16,11 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 {
 	public class SqlServerProvider : IProvider
 	{
-		// *************************************************
-		// Fields
-		// *************************************************
+        // *************************************************
+        // Fields
+        // *************************************************
 
+        private System.Reflection.Assembly _callingAssembly;
 		private StoredProcedureProvider _spProvider;
 		private ConnectionProvider _connectionProvider;
 
@@ -42,10 +43,11 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
         // Constructor & Factory
         // *************************************************
 
-        public SqlServerProvider(string connectionString)
+        internal SqlServerProvider(string connectionString, System.Reflection.Assembly callingAssembly)
 		{
 			if (null == connectionString)
 				throw new ArgumentNullException("connectionString may not be null");
+            this._callingAssembly = callingAssembly;
 			this.ConnectionString = this.PrepareConnectionString(connectionString);
 		}
 
@@ -56,7 +58,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		/// <returns>Database connection</returns>
 		public static DataConnection NewSqlServerConnection(string connectionString)
 		{
-			return new DataConnection(new SqlServerProvider(connectionString));
+			return new DataConnection(new SqlServerProvider(connectionString, System.Reflection.Assembly.GetCallingAssembly()));
 		}
 
         /// <summary>
@@ -66,7 +68,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
         /// <returns>Database connection</returns>
         public static DataConnection NewSqlServerConnectionFromCfg(string connectionStringName = null)
         {
-            return new DataConnection(new SqlServerProvider(new Utility.WolfOptionsSqlServer().GetConnectionStringFromCfg(connectionStringName)));
+            return new DataConnection(new SqlServerProvider(new Utility.WolfOptionsSqlServer().GetConnectionStringFromCfg(connectionStringName), System.Reflection.Assembly.GetCallingAssembly()));
         }
 
 		// *************************************************
@@ -79,8 +81,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
             if (string.IsNullOrWhiteSpace(csb.ApplicationName) || csb.ApplicationName.Equals(new SqlConnectionStringBuilder().ApplicationName))
             {
                 var WolfAssembly = System.Reflection.Assembly.GetAssembly(typeof(IProvider));
-                var ProgramAssembly = System.Reflection.Assembly.GetEntryAssembly();
-                csb.ApplicationName = $"{this.GetProductName(WolfAssembly)} {this.GetProductVersion(WolfAssembly)} ({this.GetProductName(ProgramAssembly)} {this.GetProductVersion(ProgramAssembly)})";
+                csb.ApplicationName = $"{this.GetProductName(WolfAssembly)} {this.GetProductVersion(WolfAssembly)} ({this.GetProductName(this._callingAssembly)} {this.GetProductVersion(this._callingAssembly)})";
             }
             return csb;
 		}

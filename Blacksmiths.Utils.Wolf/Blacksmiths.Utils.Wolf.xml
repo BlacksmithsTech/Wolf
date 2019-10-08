@@ -1,0 +1,315 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Blacksmiths.Utils.Wolf</name>
+    </assembly>
+    <members>
+        <member name="T:Blacksmiths.Utils.Wolf.Attribution.Source">
+            <summary>
+            Configures the source of data population for the given class, property or field. This attribute can be used multiple times if there are multiple possible alternative sources.
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Attribution.Source.From">
+            <summary>
+            For classes specify the exact name of a request item used to fetch the data. 
+            For non-collection properties and fields, specify the exact name of a column to populate the member.
+            For collections can be used to override the source of data used to populate the member.
+            </summary>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.Attribution.Constraint">
+            <summary>
+            Defines database constraints for the given property or field
+            </summary>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.Attribution.Relation">
+            <summary>
+            Configures the relationship of a nested collection or object
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Attribution.Parameter.Name">
+            <summary>
+            Gets or sets the name of the parameter exactly as it is declared on the database
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Attribution.Parameter.Length">
+            <summary>
+            Gets or sets the length, if applicable, of the parameter
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Attribution.Parameter.Direction">
+            <summary>
+            Gets or sets the parameter data direction
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Attribution.Procedure.Name">
+            <summary>
+            Gets or sets the name of the stored procedure exactly as it is declared on the database
+            </summary>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.DataConnection">
+            <summary>
+            Represents a connection to a database
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.DataConnection.Provider">
+            <summary>
+            Gets the underyling provider (e.g. Microsoft SQL Server) used to interact with the DBMS
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.#ctor(Blacksmiths.Utils.Wolf.IProvider)">
+            <summary>
+            Creates a new database connection service using the given underlying provider
+            </summary>
+            <param name="provider">Provider to use. Consider using a convienence factory method, such as Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection()</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.NewRequest">
+            <summary>
+            Creates a new request for data
+            </summary>
+            <returns>A new data request</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.WithModel(Blacksmiths.Utils.Wolf.Model.ResultModel)">
+            <summary>
+            Specifies a data model as a Wolf result model to perform an action with
+            </summary>
+            <param name="dataSet">A Wolf result model</param>
+            <returns>Fluent model action</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.WithModel(System.Data.DataTable[])">
+            <summary>
+            Specifies a data model as ADO.NET DataTables to perform an action with
+            </summary>
+            <param name="dataSet">One or more ADO.NET DataTables which provide the model</param>
+            <returns>Fluent model action</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.WithModel(System.Data.DataSet)">
+            <summary>
+            Specifies a data model as an ADO.NET DataSet to perform an action with
+            </summary>
+            <param name="dataSet">An ADO.NET DataSet which provides the model</param>
+            <returns>Fluent model action</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.DataConnection.WithModel``1(``0[])">
+            <summary>
+            Specifies a data model as objects to perform an action with
+            </summary>
+            <typeparam name="T">Type of objects which represent the model</typeparam>
+            <param name="modelObjects">An object or array of objects which represent the data model</param>
+            <returns>Fluent model action</returns>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.DataConnectionCollection">
+            <summary>
+            An ASP.NET Core scope capable collection of connections
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentResult.ToDataSet">
+            <summary>
+            Creates a new DataSet with the results of the request as tables within it
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentResult.ToDataSet``1">
+            <summary>
+            Creates a new strongly typed DataSet with the results of the request within it
+            </summary>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentResult.ToDataSet``1(``0)">
+            <summary>
+            Merges the results of the request into the provided DataSet
+            </summary>
+            <param name="ds">DataSet to merge the results into</param>
+            <returns></returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentResult.ToSimpleModel``1">
+            <summary>
+            Creates a new model object of the given type and populates it from the request data
+            </summary>
+            <typeparam name="T">Type of model to create</typeparam>
+            <returns></returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentResult.ToSimpleModel``1(``0[])">
+            <summary>
+            Populates the given model object(s) from the request data
+            </summary>
+            <typeparam name="T">Type of the model</typeparam>
+            <param name="model">Existing model collection objects</param>
+            <returns></returns>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.DataResult">
+            <summary>
+            Binds wolf command results to it's associated wolf request
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.GenerationOptions.DefaultSchema">
+            <summary>
+            Specifies the default schema used when connecting to a database. Used to simplify the resulting namespace of classes used.
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.StoredProcedureOptions.Enabled">
+            <summary>
+            Gets or sets if the generation is enabled
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.StoredProcedureOptions.Namespace">
+            <summary>
+            The base namespace to place generated code into
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.ModelOptions.Enabled">
+            <summary>
+            Gets or sets if the generation is enabled
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.ModelOptions.Namespace">
+            <summary>
+            The base namespace to place generated code into
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Generation.OutputOptions.Path">
+            <summary>
+            Output path
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentModelAction.MergeInto(System.Data.DataSet)">
+            <summary>
+            Merges the data model into an existing ADO.NET DataSet. Use this for strongly typed datasets produced using the Visual Studio DataSet designer.
+            </summary>
+            <param name="ds">Existing DataSet with results merged in</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.IFluentModelAction.Commit">
+            <summary>
+            Commits the data model to the database store.
+            </summary>
+            <returns>Commit result information</returns>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Model.ModelLink.KeyColumns">
+            <summary>
+            Gets the PK columns if they are known, or otherwise returns all members as the key
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Model.ResultModel.#ctor">
+            <summary>
+            Creates a new result model with no backing change tracking
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Model.ResultModel.#ctor(System.Data.DataSet)">
+            <summary>
+            Creates a new result model with change tracking from an original source
+            </summary>
+            <param name="source">source data for change tracking</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Model.ResultModel.TrackChanges">
+            <summary>
+            Causes the underlying change tracking provided by a DataSet to be updated from the model
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Model.ResultModel.DataBind(System.Data.DataSet)">
+            <summary>
+            Bind the current model to the data contained in the given DataSet
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.SpParameter.Name">
+            <summary>
+            The name of the parameter, as declared on the database
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.SpParameter.Value">
+            <summary>
+            Gets or sets the value of the parameter
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.SpParameter.ValueType">
+            <summary>
+            Optional. Gets or sets the data type of the parameter. If one is not supplied, a type is inferred from the value where one has been provided. If you expect to handle nulls, this property should be set.
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.ProcedureName">
+            <summary>
+            Gets or sets the stored procedure name
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.DbParameters">
+            <summary>
+            Gets the collection of parameters to be sent to the database
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.ReturnValue">
+            <summary>
+            Gets or sets the current return value of the stored procedure
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.StoredProcedure.Item(System.String)">
+            <summary>
+            Gets the parameter with the given name
+            </summary>
+            <param name="parameterName">Name of the parameter</param>
+            <returns>The database parameter</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.#ctor(System.String)">
+            <summary>
+            Creates new stored procedure
+            </summary>
+            <param name="name">Name of the stored procedure</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.AddOutputParameter``1(System.String)">
+            <summary>
+            Adds an output parameter to the stored procedure by specifying its name
+            </summary>
+            <typeparam name="T">Type of parameter to add</typeparam>
+            <param name="name">Name of parameter</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.AddParameter``1(System.String,``0,System.Data.ParameterDirection)">
+            <summary>
+            Adds a parameter to the stored procedure by specifying its name and initial value
+            </summary>
+            <param name="p">Name of parameter</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.AddParameter(Blacksmiths.Utils.Wolf.StoredProcedure.SpParameter)">
+            <summary>
+            Adds a parameter to the stored procedure
+            </summary>
+            <param name="p">Parameter to add</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.GetParameterValue``1(System.String)">
+            <summary>
+            Gets the value of a parameter of the specified type
+            </summary>
+            <typeparam name="T">Type of the value expected</typeparam>
+            <param name="parameterName">Name of the parameter to fetch</param>
+            <returns>The value of the parameter</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.RemoveParameter(System.String)">
+            <summary>
+            Removes a parameter from the stored procedure
+            </summary>
+            <param name="name">Name of the parameter to remove</param>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.StoredProcedure.Reflect">
+            <summary>
+            Reflect on this instance and discover parameters
+            </summary>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.Utility.WolfCommandBinding">
+            <summary>
+            Binds an ADO.NET data command to it's associated wolf request object, it's parameters, and results
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Utility.WolfCommandBinding.Bind">
+            <summary>
+            Updates Wolf request values with ADO.NET Values
+            </summary>
+        </member>
+        <member name="T:Blacksmiths.Utils.Wolf.Utility.WolfParameterDbBinding">
+            <summary>
+            Binds an ADO.NET data parameter to its associated wolf parameter
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.Utility.WolfParameterDbBinding.Bind">
+            <summary>
+            Updates the Wolf parameter value with the ADO.NET value
+            </summary>
+        </member>
+    </members>
+</doc>

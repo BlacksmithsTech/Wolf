@@ -13,8 +13,39 @@ namespace Blacksmiths.Utils.Wolf
 {
 	public interface IDataConnection
 	{
+        /// <summary>
+        /// Creates a new data request object, which you can use to batch up a number of database commands.
+        /// </summary>
+        /// <returns></returns>
 		DataRequest NewRequest();
-		//IFluentModelAction WithModel(Model.ResultModel model);
+
+        /// <summary>
+        /// Specifies a data model as a Wolf result model to perform an action with
+        /// </summary>
+        /// <param name="model">A Wolf result model</param>
+        /// <returns>Fluent model action</returns>
+        IFluentModelAction WithModel(Model.ResultModel model);
+
+        /// <summary>
+        /// Specifies a data model as ADO.NET DataTables to perform an action with
+        /// </summary>
+        /// <param name="dataTables">One or more ADO.NET DataTables which provide the model</param>
+        /// <returns>Fluent model action</returns>
+        IFluentModelAction WithModel(DataTable[] dataTables);
+
+        /// <summary>
+        /// Specifies a data model as an ADO.NET DataSet to perform an action with
+        /// </summary>
+        /// <param name="dataSet">An ADO.NET DataSet which provides the model</param>
+        /// <returns>Fluent model action</returns>
+        IFluentModelAction WithModel(DataSet dataSet);
+
+        /// <summary>
+        /// Specifies a data model as objects to perform an action with
+        /// </summary>
+        /// <typeparam name="T">Type of objects which represent the model</typeparam>
+        /// <param name="modelObjects">An object or array of objects which represent the data model</param>
+        /// <returns>Fluent model action</returns>
 		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new();
 	}
 

@@ -9,13 +9,13 @@
 		<PackageProjectUrl>https://github.com/BlacksmithsTech/Wolf</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>Database,O/RM,ADO.NET</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
-
 	<ItemGroup Condition="'$(TargetFramework)' == 'net40'">
 	  <PackageReference Include="System.ValueTuple" Version="4.5.0" />
 	</ItemGroup>

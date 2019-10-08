@@ -17,17 +17,19 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IFluentModelAction : IFluentResult
 	{
 		/// <summary>
-		/// Merges the data model into an existing ADO.NET DataSet. Use this for strongly typed datasets produced using the Visual Studio DataSet designer.
-		/// </summary>
-		/// <param name="ds">Existing DataSet with results merged in</param>
-		void MergeInto(DataSet ds);
-
-		/// <summary>
 		/// Commits the data model to the database store.
 		/// </summary>
 		/// <returns>Commit result information</returns>
 		CommitResult Commit();
+        /// <summary>
+        /// Ignores change tracking and will assume every row in your data is an UPDATE. This command disables concurrency protection.
+        /// </summary>
+        /// <returns></returns>
 		IFluentModelAction AsUpdate();
+        /// <summary>
+        /// Ignores change tracking and will assume every row in your data is a DELETE.
+        /// </summary>
+        /// <returns></returns>
 		IFluentModelAction AsDelete();
 	}
 
@@ -68,11 +70,6 @@ namespace Blacksmiths.Utils.Wolf
 			foreach (DataTable dt in SourceDs.Tables)
 				this.RaisePreCommitActions(dt);
 			return SourceDs;
-		}
-
-		public virtual void MergeInto(DataSet ds)
-		{
-			ds.Merge(this.GetModelDataSet());
 		}
 
 		internal virtual DataSet ToDataSetForCommit()

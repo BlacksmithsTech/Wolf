@@ -259,7 +259,7 @@ namespace Blacksmiths.Tests.Wolf
 		{
 			var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
 			var ds = new Schema.TestData();
-			Connection.WithModel(rows).MergeInto(ds);
+            Connection.WithModel(rows).ToDataSet(ds);
 
 			Assert.IsTrue(null != ds.Test);
 			Assert.AreEqual("Alice", ds.Test[0].Name);

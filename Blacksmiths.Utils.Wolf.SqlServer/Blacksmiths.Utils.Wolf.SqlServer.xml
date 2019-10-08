@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Blacksmiths.Utils.Wolf.SqlServer</name>
+    </assembly>
+    <members>
+        <member name="P:Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.ConnectionString">
+            <summary>
+            Gets the connection string used for this SQL Server connection
+            </summary>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(System.String)">
+            <summary>
+            Creates a new SQL Server data connection service
+            </summary>
+            <param name="connectionString">Connection string to use to connect to the database</param>
+            <returns>Database connection</returns>
+        </member>
+        <member name="M:Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnectionFromCfg(System.String)">
+            <summary>
+            Creates a new SQL Server data connection from your application configuration
+            </summary>
+            <param name="connectionStringName">Optional. The name of a connection string in your configuration to use for this connection.</param>
+            <returns>Database connection</returns>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Utility.WolfOptionsSqlServer.ConnectionString">
+            <summary>
+            Gets or sets the SQL Server connection string to use for the connection to the database.
+            </summary>
+        </member>
+        <member name="P:Blacksmiths.Utils.Wolf.Utility.WolfOptionsSqlServer.ConnectionStringName">
+            <summary>
+            Gets or sets the case-sensitive name of a configuration connection string found in the "ConnectionStrings" section to use for the connection to the database. Only used if "ConnectionString" is not set.
+            </summary>
+        </member>
+    </members>
+</doc>

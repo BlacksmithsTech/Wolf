@@ -39,16 +39,33 @@ namespace Blacksmiths.Utils.Wolf
 		// Methods
 		// *************************************************
 
+        /// <summary>
+        /// Adds a new item (command) to the request. It is not executed until you call Execute()
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <returns></returns>
 		public new DataRequest Add(IDataRequestItem item)
 		{
 			return this.Add(item, (string)null);
 		}
 
-		public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
+        /// <summary>
+        /// Adds a new item (command) to the request. It is not executed until you call Execute(). Specifies the name of a DataTable you would like the result data to be applied to.
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="Target">The name of the supplied DataTable will be used when applying the result data</param>
+        /// <returns></returns>
+        public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
 		{
 			return this.Add(item, $"{Target.TableName}");
 		}
 
+        /// <summary>
+        /// Adds a new item (command) to the request. It is not executed until you call Execute(). Specifies the name of the table you would like the result data to be applied to.
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <param name="TargetTableName">The name of a table which will be used when applying the result data</param>
+        /// <returns></returns>
 		public DataRequest Add(IDataRequestItem item, string TargetTableName)
 		{
 			if (!string.IsNullOrEmpty(TargetTableName))
@@ -57,6 +74,10 @@ namespace Blacksmiths.Utils.Wolf
 			return this;
 		}
 
+        /// <summary>
+        /// Executes the items within this request against the database.
+        /// </summary>
+        /// <returns>Result commands</returns>
 		public IFluentResult Execute()
 		{
 			return this.Connection.Fetch(this);

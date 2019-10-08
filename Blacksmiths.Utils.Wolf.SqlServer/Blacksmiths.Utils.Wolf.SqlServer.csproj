@@ -10,6 +10,7 @@
 		<PackageProjectUrl>https://github.com/BlacksmithsTech/Wolf</PackageProjectUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>Database,O/RM,ADO.NET,SQL</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">

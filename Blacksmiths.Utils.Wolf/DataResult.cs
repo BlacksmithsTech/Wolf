@@ -89,10 +89,11 @@ namespace Blacksmiths.Utils.Wolf
 				{
 					var sourceTable = cmd.ResultData.Tables[i];
                     var targetTable = sourceTable;
+					var candidateTable = DataTableHelpers.GetByNormalisedName(ds, sourceTable.TableName);
 
-					if(ds.Tables.Contains(sourceTable.TableName))
+					if (null != candidateTable)
 					{
-						targetTable = ds.Tables[sourceTable.TableName];
+						targetTable = candidateTable;
 						if (0 == targetTable.Rows.Count)
 						{
 							// ** No data in the target so perform a higher-performance shallow import/copy of the source rows

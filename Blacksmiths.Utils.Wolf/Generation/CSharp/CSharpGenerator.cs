@@ -286,7 +286,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		{
 			var sb = new IndentableStringBuilder();
 
-			var SpName = Utility.StringHelpers.GetQualifiedSpName(sp.ProcedureName);
+			var SpName = Utility.StringHelpers.GetQualifiedSqlName(sp.ProcedureName);
 			var ClassName = EncodeSymbol(SpName.Name);
 			if (!SpName.Name.Equals(ClassName) || !string.IsNullOrEmpty(SpName.Schema))
 				sb.AppendLine($@"[Procedure(Name = ""{sp.ProcedureName}"")]");
@@ -326,11 +326,11 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		private string GenerateCode(ModelDef md)
 		{
 			var sb = new IndentableStringBuilder();
-			var MdlName = Utility.StringHelpers.GetQualifiedSpName(md.Name);
+			var MdlName = Utility.StringHelpers.GetQualifiedSqlName(md.Name);
 
 			var ClassName = EncodeSymbol(MdlName.Name);
 			if (!MdlName.Name.Equals(ClassName) || !string.IsNullOrEmpty(MdlName.Schema))
-				sb.AppendLine($@"[Procedure(Name = ""{md.Name}"")]");
+				sb.AppendLine($@"[Source(From = ""{md.Name}"")]");
 			sb.AppendLine($"public class {ClassName}");
 			sb.AppendLine("{");
 			sb.Indent();
@@ -341,6 +341,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				var ValueTypeName = Field.TypeName;
 				var ParamType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
                 var Comment = Field.Commented ? "//" : string.Empty;
+				var TypeDef = Type.GetType(ValueTypeName);
 
 				string AttrName = null;
 				string AttrLength = null;
@@ -352,7 +353,8 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					AttrLength = $@"Length = {Field.Length}";
                 if (!Field.AllowNulls)
                 {
-                    AttrNullable = "Nullable = false";
+					if (!TypeDef.IsValueType)
+						AttrNullable = "Nullable = false";
                     ParamType = ParamType.Trim('?');
                 }
 

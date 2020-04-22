@@ -76,11 +76,11 @@ namespace Blacksmiths.Utils.Wolf.Model
             {
                 DataTable sourceDt = null;
                 foreach (var source in this.GetSources())
-                    if (ds.Tables.Contains(source))
-                    {
-                        sourceDt = ds.Tables[source];
+                {
+                    sourceDt = Utility.DataTableHelpers.GetByNormalisedName(ds, source);
+                    if (null != sourceDt)
                         break;
-                    }
+                }
 
                 if (null != sourceDt)
                     this._source = new ModelLink(this, sourceDt);
@@ -148,7 +148,8 @@ namespace Blacksmiths.Utils.Wolf.Model
                     Ret.Add(this.CollectionType.Name);
                 }
 
-                this._sources = Ret.ToArray();
+                // Normalise the source names into fully qualified SQL names
+                this._sources = Ret.Select(s => Utility.StringHelpers.GetQualifiedSqlName(s).ToString()).ToArray();
             }
             return this._sources;
         }
@@ -183,7 +184,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         private DataTable AutoGenerateTable(DataSet ds)
         {
-            var tn = Utility.StringHelpers.GetQualifiedSpName(this.GetDefaultTableNameForType());
+            var tn = Utility.StringHelpers.GetQualifiedSqlName(this.GetDefaultTableNameForType());
             var dt = new DataTable(tn.Name, tn.Schema);
 
             foreach (var member in this.TypeDefinition.PrimitiveMembers)

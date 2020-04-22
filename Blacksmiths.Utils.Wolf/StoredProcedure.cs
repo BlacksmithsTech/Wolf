@@ -209,7 +209,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		string IDataRequestItem.TableName
 		{
-			get { return Utility.StringHelpers.GetQualifiedSpName(this._targetTableName ?? this.ProcedureName).Name; }
+			get { return Utility.StringHelpers.GetQualifiedSqlName(this._targetTableName ?? this.ProcedureName).ToString(); }
 			set { this._targetTableName = value; }
 		}
 

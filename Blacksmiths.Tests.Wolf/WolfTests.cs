@@ -86,6 +86,23 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
+		public void Request_SimpleModel_New_StrongSproc_NoResults()
+		{
+			var Result = Connection.NewRequest()
+				.Add(
+					new Sprocs.uspGetManagerEmployees()
+					{
+						BusinessEntityID = 444 //no results for this
+					}
+				)
+				.Execute()
+				.ToSimpleModel<Models.uspGetManagerEmployeesManuallyWritten>().Results;
+
+			Assert.IsNotNull(Result);
+			Assert.IsTrue(Result.Length == 0);
+		}
+
+		[TestMethod]
 		public void Request_SimpleModel_New_DoesntCorrelate_StrongSproc()
 		{
 			// When the sprocs used don't correlate to the model, we should expect null

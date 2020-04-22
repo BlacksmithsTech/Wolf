@@ -26,6 +26,12 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class Ignore : Attribute
 	{
+		///// <summary>
+		///// Ignore this property as a parameter for a stored procedure
+		///// </summary>
+		//public bool IgnoreAsParameter { get; set; } = true;
+
+		//public boo
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

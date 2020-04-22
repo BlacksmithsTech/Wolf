@@ -11,15 +11,35 @@ using System.Text.RegularExpressions;
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
+	public sealed class QualifiedSqlName
+	{
+		private const string DEFAULT_SCHEMA = "dbo";
+
+		public string Schema { get; private set; }
+		public string Name { get; private set; }
+
+		public QualifiedSqlName(string Schema, string Name)
+		{
+			this.Schema = Schema;
+			if (string.IsNullOrEmpty(this.Schema))
+				this.Schema = DEFAULT_SCHEMA;
+			this.Name = Name;
+		}
+
+		public override string ToString()
+		{
+			return $"[{Schema}].[{Name}]";
+		}
+	}
 	public static class StringHelpers
 	{
-		public static (string Schema, string Name) GetQualifiedSpName(string Name)
+		public static QualifiedSqlName GetQualifiedSqlName(string Name)
 		{
-			var m = Regex.Match(Name, @"^(?:\[(?<schema>[^\n\r\[\]]+)]\.)*\[(?<name>[^\n\r\[\]]+)]$");
+			var m = Regex.Match(Name, @"^(?:\[?(?<schema>[^\n\r\[\]]+)]?\.)*\[?(?<name>[^\n\r\[\]]+)]?$");
 			if (m.Success)
-				return (m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? Name);
+				return new QualifiedSqlName(m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? Name);
 			else
-				return (string.Empty, Name);
+				return new QualifiedSqlName(string.Empty, Name);
 		}
 
 		public static string GetFullTableName(System.Data.DataTable dt)

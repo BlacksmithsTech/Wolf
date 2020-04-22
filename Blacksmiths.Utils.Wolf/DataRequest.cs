@@ -57,7 +57,7 @@ namespace Blacksmiths.Utils.Wolf
         /// <returns></returns>
         public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
 		{
-			return this.Add(item, $"{Target.TableName}");
+			return this.Add(item, Utility.StringHelpers.GetQualifiedSqlName(Target.TableName).ToString());
 		}
 
         /// <summary>

@@ -99,7 +99,7 @@ namespace Blacksmiths.Tests.Wolf
 				.ToSimpleModel<Models.uspGetManagerEmployeesManuallyWritten>().Results;
 
 			Assert.IsNotNull(Result);
-			Assert.IsTrue(Result.Length == 0);
+			Assert.IsTrue(Result.Count == 0);
 		}
 
 		[TestMethod]

@@ -20,6 +20,18 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 	}
 
 	/// <summary>
+	/// Configures the target of where on the database data should be persisted for the given class.
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]//TODO: Targets for properties and fields
+	public class Target : Attribute
+	{
+		/// <summary>
+		/// For classes specify the exact name of table in your database where data should be stored.
+		/// </summary>
+		public string To { get; set; }
+	}
+
+	/// <summary>
 	/// Defines database constraints for the given property or field
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]

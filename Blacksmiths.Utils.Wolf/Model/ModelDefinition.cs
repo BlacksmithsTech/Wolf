@@ -11,6 +11,7 @@ namespace Blacksmiths.Utils.Wolf.Model
     {
         private bool _isCollection;
         private string[] _sources;
+        private string[] _targets;
         private ModelLink _target;
         private ModelLink _source;
         private Utility.MemberAccessor _memberAccessor;
@@ -63,10 +64,20 @@ namespace Blacksmiths.Utils.Wolf.Model
         {
             if(null == this._target)
             {
-                this._target =
-                    this.GetModelSource(ds)
-                    ?? new ModelLink(this, this.AutoGenerateTable(ds)); //No target or source - automatically generate a table for the model
+                DataTable targetDt = null;
+                foreach (var target in this.GetTargets())
+                {
+                    targetDt = Utility.DataTableHelpers.GetByNormalisedName(ds, target);
+                    if (null != targetDt)
+                        break;
+                }
+
+                if (null != targetDt)
+                    this._target = new ModelLink(this, targetDt);
+                else
+                    this._target = new ModelLink(this, this.AutoGenerateTable(ds)); //No target or source - automatically generate a table for the model
             }
+
             return this._target;
         }
 
@@ -138,6 +149,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 var Ret = this._memberAccessor.Member.GetCustomAttributes<Attribution.Source>()
                     .Concat(this.CollectionType.GetCustomAttributes<Attribution.Source>())
                     .Select(a => a.From)
+                    .Distinct() //inheritance causes duplicates
                     .ToList();
 
                 // When no sources have been defined programatically or via decoration, the type name is used
@@ -154,6 +166,32 @@ namespace Blacksmiths.Utils.Wolf.Model
             return this._sources;
         }
 
+        internal string[] GetTargets()
+        {
+            if (null == this._targets)
+            {
+                // ASC prioritised elsewhere in the code, want Target[0] to be the default, so the member should take priority over the collection type etc.
+                var Ret = this._memberAccessor.Member.GetCustomAttributes<Attribution.Target>()
+                    .Concat(this.CollectionType.GetCustomAttributes<Attribution.Target>())
+                    .Select(a => a.To)
+                    .Distinct() //inheritance causes duplicates
+                    .ToList();
+
+                // When no targets have been defined programatically or via decoration, the sources are used instead as a fall back
+                if (0 == Ret.Count)
+                {
+                    var sources = this.GetSources();
+                    if(sources.Length > 1)
+                        throw new InvalidOperationException($"The model member '{this.Name}' ({this.MemberType}) specifies multiple sources and no target. A target table to commit changes into can't be determined.");
+                    Ret.AddRange(sources);
+                }
+
+                // Normalise the source names into fully qualified SQL names
+                this._targets = Ret.Select(s => Utility.StringHelpers.GetQualifiedSqlName(s).ToString()).ToArray();
+            }
+            return this._targets;
+        }
+
         private static bool CheckIfAnonymousType(Type type)
         {
             if (type == null)
@@ -168,18 +206,13 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         private string GetDefaultTableNameForType()
         {
-            // ** Try to obtain a default source
-            var Sources = this.GetSources();
+            // ** Try to obtain a default target
+            var Targets = this.GetTargets();
 
-            if (1 == Sources.Length)
-                return Sources[0]; // Single source, assume this is the table name
+            if (Targets.Length > 0)
+                return Targets[0];
 
-            //TODO: Default via further attribution?
-
-            if (Sources.Length > 1)
-                throw new InvalidOperationException($"The model member '{this.Name}' ({this.MemberType}) specifies multiple sources. A target table to commit changes into can't be determined.");
-            else
-                throw new InvalidOperationException($"A target table for the model member '{this.Name}' ({this.MemberType}) couldn't be determined.");
+            throw new InvalidOperationException($"A target table for the model member '{this.Name}' ({this.MemberType}) couldn't be determined.");
         }
 
         private DataTable AutoGenerateTable(DataSet ds)
@@ -189,7 +222,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
             foreach (var member in this.TypeDefinition.PrimitiveMembers)
                 if (!dt.Columns.Contains(member.Name))
-                    dt.Columns.Add(member.Name, Utility.ReflectionHelper.GetMemberType(member));
+                    dt.Columns.Add(member.Name, Utility.ReflectionHelper.GetMemberTypeOrGenericType(member));
 
             ds.Tables.Add(dt);
             return dt;

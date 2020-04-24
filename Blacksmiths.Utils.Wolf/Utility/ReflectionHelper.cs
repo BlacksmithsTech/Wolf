@@ -62,7 +62,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return null;
 		}
 
-		public static Type GetCollectionType(MemberInfo Member)
+        public static Type GetMemberTypeOrGenericType(MemberInfo Member)
+        {
+            var t = GetMemberType(Member);
+            if (t.IsGenericType)
+                return t.GetGenericArguments()[0];
+            else
+                return t;
+        }
+
+        public static Type GetCollectionType(MemberInfo Member)
 		{
 			var mt = GetMemberType(Member);
 			if (mt.IsArray)

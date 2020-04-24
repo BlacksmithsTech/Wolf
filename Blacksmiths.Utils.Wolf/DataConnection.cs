@@ -143,35 +143,40 @@ namespace Blacksmiths.Utils.Wolf
 
 			modelObjects = modelObjects.Where(o => null != o).ToArray();
 
-			if (typeof(Model.ResultModel).IsAssignableFrom(typeof(T)))
+			if (modelObjects.Length > 0)
 			{
-				if (1 == modelObjects.Length && modelObjects[0] is Model.ResultModel model)
-					return new ModelProcessor(model, this);
-				else if (modelObjects.Length > 1)
-					throw new ArgumentException("When using a strongly typed model, only 1 strongly typed model must be supplied");
-				else
-					return new ModelProcessor(new Model.ResultModel(), this);
+				if (modelObjects[0] is Model.ResultModel model)
+				{
+					if (1 == modelObjects.Length)
+						return new ModelProcessor(model, this);
+					else
+						throw new ArgumentException("When using a strongly typed model, only 1 strongly typed model must be supplied");
+				}
+				else if (modelObjects[0] is DataSet ds)
+				{
+					if (1 == modelObjects.Length)
+						return new ModelProcessor(new Model.ResultModel(ds), this);
+					else
+						throw new ArgumentException("When using a DataSet as a model, only 1 DataSet must be supplied");
+				}
+				else if (modelObjects[0] is DataTable dt)
+				{
+					var dtds = new DataSet();
+					foreach (var mdt in modelObjects.Cast<DataTable>())
+						if (null == mdt.DataSet)
+							dtds.Tables.Add(dt);
+						else
+							throw new ArgumentException($"DataTable '{dt.TableName}' belongs to a DataSet. To work with this model, pass the DataSet to .WithModel() rather than the DataTable");
+					return new ModelProcessor(new Model.ResultModel(dtds), this);
+				}
 			}
-			else if (typeof(DataSet).IsAssignableFrom(typeof(T)))
+
+			if(typeof(DataSet).IsAssignableFrom(typeof(T)) || typeof(DataTable).IsAssignableFrom(typeof(T)))
 			{
-				if (1 == modelObjects.Length && modelObjects[0] is DataSet ds)
-					return new ModelProcessor(new Model.ResultModel(ds), this);
-				else if (modelObjects.Length > 1)
-					throw new ArgumentException("When using a DataSet as a model, only 1 DataSet must be supplied");
-				else
-					return new ModelProcessor(new Model.ResultModel(), this);
+				// ** Empty model returned for datasets
+				return new ModelProcessor(new Model.ResultModel(), this);
 			}
-            else if(typeof(DataTable).IsAssignableFrom(typeof(T)))
-            {
-                var ds = new DataSet();
-                foreach (var dt in modelObjects.Cast<DataTable>())
-                    if (null == dt.DataSet)
-                        ds.Tables.Add(dt);
-                    else
-                        throw new ArgumentException($"DataTable '{dt.TableName}' belongs to a DataSet. To work with this model, pass the DataSet to .WithModel() rather than the DataTable");
-                return new ModelProcessor(new Model.ResultModel(ds), this);
-            }
-            else
+			else
 			{
 				// ** Loose objects. Create a model to represent them and then use an ad-hoc processor to switch to an overwrite persistance behaviour
 				var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);

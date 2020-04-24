@@ -28,7 +28,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		public override string ToString()
 		{
-			return $"[{Schema}].[{Name}]";
+			return $"{Schema}.{Name}";
 		}
 	}
 	public static class StringHelpers

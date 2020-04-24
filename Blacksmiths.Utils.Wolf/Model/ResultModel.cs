@@ -16,14 +16,15 @@ namespace Blacksmiths.Utils.Wolf.Model
 {
 	public sealed class SimpleResultModel<T> : ResultModel
 	{
-		public T[] Results;
+		public List<T> Results;
 
         public SimpleResultModel()
             : this(null) { }
 
         public SimpleResultModel(params T[] model)
 		{
-			this.Results = model;
+			if (null != model)
+				this.Results = new List<T>(model);
 		}
 	}
 
@@ -201,6 +202,12 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 		}
 
+		private System.Collections.IList CreateListOfType(Type collectionType)
+		{
+			var t = typeof(List<>).MakeGenericType(collectionType);
+			return (System.Collections.IList)Activator.CreateInstance(t);
+		}
+
 		private System.Collections.IList BoxEnumerable(ModelDefinition modelDef, DataSet ds, Queue<MemberRelationshipDemand> relationships, System.Collections.IList sourceCollection)
 		{
             var modelLink = modelDef.GetModelSource(ds);
@@ -209,7 +216,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == modelLink)
 				return sourceCollection; //No table data source, return original source as presented unchanged
 			else if (null == sourceCollection)
-				sourceCollection = new List<object>(); // Null original data, forge an empty array
+				sourceCollection = this.CreateListOfType(modelLink.ModelDefinition.CollectionType); // Null original data, forge an empty array
 
 			castedCollection = sourceCollection.Cast<object>();
 			var Result = modelDef.MemberType.IsArray ? new List<object>(castedCollection) : sourceCollection;

@@ -311,7 +311,7 @@ namespace Blacksmiths.Tests.Wolf
 			//var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
 			//var result1 = Connection.WithModel(rows).AsUpdate().Commit();
 			//Assert.AreEqual(rows.Length, result1.AffectedRowCount);
-			var newRow = new Test() { Name = $"New single object row created at {now}" };
+			var newRow = new Test() { ID = 44, Name = $"New single object row created at {now}" };
 			var result2 = Connection.WithModel(newRow).Commit();
 			Assert.AreEqual(1, result2.AffectedRowCount);
 			Assert.IsTrue(newRow.ID > 0);

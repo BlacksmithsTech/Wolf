@@ -40,10 +40,10 @@ namespace Blacksmiths.Utils.Wolf.Model
             return ret;
         }
 
-        internal void ApplyIdentityValue(object identity, object model)
+        internal void ApplyIdentityValue(DataRow row)
         {
-            if (this._links.Count > 0)
-                this._links[0].ApplyIdentityValue(identity, model);//TODO: there's a code structure problem here I think
+            foreach (var ml in this._links)
+                ml.ApplyIdentityValue(row);
         }
     }
 }

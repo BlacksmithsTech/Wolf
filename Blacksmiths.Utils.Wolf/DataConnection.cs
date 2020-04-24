@@ -277,7 +277,7 @@ namespace Blacksmiths.Utils.Wolf
 
 						if (syncFlags.HasFlag(SyncResultFlags.HasIdentity))
 						{
-							this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, modelLinkCollection.FlushAddedRows(), modelLinkCollection.ApplyIdentityValue);
+							this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, modelLinkCollection.ApplyIdentityValue);
 						}
 
 						// ** Run processor actions

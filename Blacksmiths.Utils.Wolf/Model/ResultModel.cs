@@ -164,7 +164,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 if (null != ModelObject)
                 {
                     // ** Update the row and tally off the object.
-                    this.UnboxObject(ModelObject, modelLink, row);
+                    UnboxObject(ModelObject, modelLink, row);
                     UnhandledModels.Remove(ModelObject);
                 }
                 else
@@ -178,13 +178,13 @@ namespace Blacksmiths.Utils.Wolf.Model
             foreach (var ModelObject in UnhandledModels)
             {
                 var row = modelLink.Data.NewRow();
-                this.UnboxObject(ModelObject, modelLink, row);
+                UnboxObject(ModelObject, modelLink, row);
                 modelLink.Data.Rows.Add(row);
 				modelLink.RememberAddedRow(row, ModelObject);
             }
         }
 
-		private void UnboxObject(object o, ModelLink modelLink, DataRow r)
+		internal static void UnboxObject(object o, ModelLink modelLink, DataRow r)
 		{
             // ** Primitives
 			foreach (var ml in modelLink.Members)
@@ -232,13 +232,13 @@ namespace Blacksmiths.Utils.Wolf.Model
 				if (null != ModelObject)
 				{
 					// ** Update the row and tally off the object.
-					this.BoxObject(ModelObject, modelLink, row, relationships);
+					BoxObject(ModelObject, modelLink, row);
 					UnhandledModels.Remove(ModelObject);
 				}
 				else
 				{
 					// ** No Model Object, this row is to be inserted
-					Result.Add(this.BoxObject(Activator.CreateInstance(modelDef.CollectionType), modelLink, row, relationships));//TODO: sensible errors for objects which can't be activated simply
+					Result.Add(BoxObject(Activator.CreateInstance(modelDef.CollectionType), modelLink, row));//TODO: sensible errors for objects which can't be activated simply
 				}
 			}
 
@@ -263,17 +263,17 @@ namespace Blacksmiths.Utils.Wolf.Model
             return Result;
         }
 
-		private object BoxObject(object o, ModelLink modelLink, DataRow r, Queue<MemberRelationshipDemand> relationships)
+		internal static object BoxObject(object o, ModelLink modelLink, DataRow r)
 		{
 			foreach (var ml in modelLink.Members)
 				if (r.IsNull(ml.Column))
-					this.SetModelValue(ml, o, null);
+					SetModelValue(ml, o, null);
 				else
-					this.SetModelValue(ml, o, r[ml.Column]);
+					SetModelValue(ml, o, r[ml.Column]);
 			return o;
 		}
 
-		private void SetModelValue(MemberLink ml, object model, object value)
+		internal static void SetModelValue(MemberLink ml, object model, object value)
 		{
 			if (!Utility.ReflectionHelper.IsAssignable(ml.Column.DataType, ml.MemberType))
 				throw new ArgumentException($"Incompatible type '{ml.Column.DataType.FullName}'->'{ml.MemberType.FullName}' whilst assigning '{Utility.StringHelpers.GetFullColumnName(ml.Column)}'->'{Utility.StringHelpers.GetFullMemberName(ml.Member)}'");

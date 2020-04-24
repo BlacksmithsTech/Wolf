@@ -125,12 +125,14 @@ namespace Blacksmiths.Utils.Wolf.Model
             return ret;
         }
 
-        internal void ApplyIdentityValue(object identity, object model)
+        internal void ApplyIdentityValue(DataRow row)
         {
-            foreach (var member in this.Members.Where(m => Utility.DataTableHelpers.IsIdentityColumn(m.Column)))
-                if(typeof(int).Equals(member.MemberType))
-                member.SetValue(model, Convert.ToInt32(identity));
-            //TODO: Children
+            /*
+             * During the commit, ADO.NET retrieves updated field values, such as the identity, from INSERT commands.
+             * This re-applies those changes back to the source object model.
+             */
+            if (this._addedRows.ContainsKey(row))
+                ResultModel.BoxObject(this._addedRows[row], this, row);
         }
     }
 }

@@ -183,10 +183,10 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
             return $"{this.DatabaseName} ({this.Server})";
         }
 
-		public void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, Dictionary<DataRow, object> addedRows, IdentitySyncAction identitySyncAction)
+		public void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, IdentitySyncAction identitySyncAction)
 		{
 			var sqlAdapter = (SqlDataAdapter)dbAdapter;
-			var ic = sqlAdapter.InsertCommand.Clone();
+			var ic = sqlAdapter.InsertCommand.Clone();//Workaround for .NET ignoring command changes without having the clone
 			ic.CommandText += ";SET @Id = SCOPE_IDENTITY();";
 			ic.UpdatedRowSource = UpdateRowSource.OutputParameters;
 			ic.Parameters.Add("@Id", SqlDbType.Int, 0, "ID").Direction = ParameterDirection.Output;
@@ -194,12 +194,8 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 
 			((SqlDataAdapter)dbAdapter).RowUpdated += (sender, e) =>
 			{
-				if(e.StatementType == StatementType.Insert && DataTableHelpers.HasIdentityColumn(e.Row.Table))
-				{
-					var o = addedRows[e.Row];
-					var identityCommand = new SqlCommand("SELECT @@IDENTITY", (SqlConnection)connection, (SqlTransaction)transaction);
-					identitySyncAction(identityCommand.ExecuteScalar(), o);
-				}
+				if(e.StatementType == StatementType.Insert)
+					identitySyncAction(e.Row);
 			};
 		}
 	}

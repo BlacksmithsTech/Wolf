@@ -10,7 +10,12 @@ using System.Data.Common;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public delegate void IdentitySyncAction(object identity, object model);
+	/// <summary>
+	/// Handler responsible for receiving changes to a row that occured during a commit. Usually for identity columns.
+	/// </summary>
+	/// <param name="row"></param>
+	/// <param name="model"></param>
+	public delegate void IdentitySyncAction(System.Data.DataRow row);
 
 	public interface IProvider
 	{
@@ -23,7 +28,7 @@ namespace Blacksmiths.Utils.Wolf
 		System.Data.Common.DbDataAdapter GetDataAdapter(System.Data.Common.DbCommand selectCommand);
 		System.Data.Common.DbDataAdapter GetDataAdapter(System.Data.DataTable sourceTable, System.Data.Common.DbConnection connection, System.Data.Common.DbTransaction transaction);
 		System.Data.Common.DbCommandBuilder GetCommandBuilder(System.Data.Common.DbDataAdapter adapter);
-		void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, System.Collections.Generic.Dictionary<System.Data.DataRow, object> addedRows, IdentitySyncAction identitySyncAction);
+		void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, IdentitySyncAction identitySyncAction);
 	}
 
 	public interface IConnectionProvider

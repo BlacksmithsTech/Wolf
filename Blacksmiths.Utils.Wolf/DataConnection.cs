@@ -222,7 +222,7 @@ namespace Blacksmiths.Utils.Wolf
 
         internal void FetchSchema(DataTable dt)
         {
-            Utility.PerfDebuggers.BeginTrace($"Fetching PK information for '{Utility.StringHelpers.GetFullTableName(dt)}'");
+            Utility.PerfDebuggers.BeginTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
 
             var wolfCommand = dt.ExtendedProperties[Utility.WolfCommandBinding.C_EXTENDED_WOLF_COMMAND] as Utility.WolfCommandBinding;
             if(null != wolfCommand)
@@ -236,7 +236,7 @@ namespace Blacksmiths.Utils.Wolf
                 }
             }
 
-            Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.StringHelpers.GetFullTableName(dt)}'");
+            Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
         }
 
         // *************************************************

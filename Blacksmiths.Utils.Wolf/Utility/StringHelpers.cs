@@ -26,6 +26,14 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			this.Name = Name;
 		}
 
+		public static QualifiedSqlName From(System.Data.DataTable dt)
+		{
+			var fqName = QualifiedSqlName.Parse(dt.TableName);
+			if (!string.IsNullOrEmpty(dt.Namespace) && !dt.Namespace.StartsWith("http:", StringComparison.CurrentCultureIgnoreCase))
+				fqName.Schema = dt.Namespace;
+			return fqName;
+		}
+
 		public static QualifiedSqlName Parse(string fqName)
 		{
 			var m = Regex.Match(fqName, @"^(?:\[?(?<schema>[^\n\r\[\]]+)]?\.)*\[?(?<name>[^\n\r\[\]]+)]?$");
@@ -39,20 +47,21 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			return $"[{Schema}].[{Name}]";
 		}
+
+		public string ToDisplayString()
+		{
+			if (DEFAULT_SCHEMA.Equals(this.Schema))
+				return this.Name;
+			else
+				return $"{this.Schema}.{this.Name}";
+		}
 	}
+
 	public static class StringHelpers
 	{
-		public static string GetFullTableName(System.Data.DataTable dt)
-		{
-			if (!string.IsNullOrEmpty(dt.Namespace))
-				return $"{dt.Namespace}.{dt.TableName}";
-			else
-				return dt.TableName;
-		}
-
 		public static string GetFullColumnName(System.Data.DataColumn dc)
 		{
-			return $"{GetFullTableName(dc.Table)}.{dc.ColumnName}";
+			return $"{QualifiedSqlName.From(dc.Table).ToDisplayString()}.{dc.ColumnName}";
 		}
 
         internal static string GetFullMemberName(Utility.MemberAccessor ma)

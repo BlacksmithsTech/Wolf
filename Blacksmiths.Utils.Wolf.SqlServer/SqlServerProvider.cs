@@ -150,7 +150,8 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 				if (i + 1 < sourceTable.Columns.Count)
 					selectCommand.Append(", ");
 			}
-			selectCommand.Append($" FROM [{sourceTable.TableName}]");
+			
+			selectCommand.Append($" FROM {Utility.QualifiedSqlName.From(sourceTable)}");
 
 			var cmd = connection.CreateCommand();
 			cmd.CommandText = selectCommand.ToString();

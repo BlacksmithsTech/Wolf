@@ -5,11 +5,20 @@ using System.Text;
 
 namespace Blacksmiths.Tests.Wolf.Models
 {
+    class TestCat
+    {
+        public int MyId;
+        public string Name;
+
+        [Relation("MyId", "Category")]
+        public List<Test> Records = new List<Test>();
+    }
+
     class Test
     {
         public int ID;
         public string Name;
-
+        public int? Category;
         public Test()
         {
         }

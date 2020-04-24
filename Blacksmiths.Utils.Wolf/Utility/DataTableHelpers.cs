@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
+using System.Linq;
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
@@ -42,17 +43,23 @@ namespace Blacksmiths.Utils.Wolf.Utility
                 col.ExtendedProperties.Add(C_EXTENDED_WOLF_IDENTITY, true);
         }
 
-        public static bool IsIdentityColumn(DataColumn col)
-        {
-            return col.ExtendedProperties.Contains(C_EXTENDED_WOLF_IDENTITY);
-        }
-
-        public static bool HasIdentityColumn(DataTable dt)
+        public static DataColumn GetIdentityColumn(DataTable dt)
         {
             foreach (DataColumn col in dt.Columns)
                 if (col.ExtendedProperties.Contains(C_EXTENDED_WOLF_IDENTITY) && (bool)col.ExtendedProperties[C_EXTENDED_WOLF_IDENTITY])
-                    return true;
-            return false;
+                    return col;
+            return null;
+        }
+
+        public static ForeignKeyConstraint GetForeignKey(DataTable dt, string Key, string[] parentColumns, string[] childColumns)
+        {
+            foreach(var constraint in dt.Constraints)
+                if(constraint is ForeignKeyConstraint fk)
+                {
+                    if (parentColumns.All(c => fk.Columns.Any(pc => pc.ColumnName.Equals(c))) && childColumns.All(childCol => fk.RelatedColumns.Any(rc => rc.ColumnName.Equals(childCol))))
+                        return fk;
+                }
+            return null;
         }
     }
 }

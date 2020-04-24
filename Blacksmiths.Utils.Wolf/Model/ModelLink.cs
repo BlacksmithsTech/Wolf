@@ -55,31 +55,31 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
         }
 
-        internal DataView GetDataView(ModelLink parentModelLink, object parent)
-        {
-            Utility.PerfDebuggers.BeginTrace("Obtaining DataView");
+        //internal DataView GetDataView(ModelLink parentModelLink, object parent)
+        //{
+        //    Utility.PerfDebuggers.BeginTrace("Obtaining DataView");
 
-            var Ret = new DataView(this.Data);
+        //    var Ret = new DataView(this.Data);
 
-            if (null != this.ModelDefinition.ParentModel)
-            {
-                // ** Apply relationship
-                var Relationship = this.FindFirstValidRelationshipWithParent(parentModelLink);
+        //    if (null != this.ModelDefinition.ParentModel)
+        //    {
+        //        // ** Apply relationship
+        //        var Relationship = this.FindFirstValidRelationshipWithParent(parentModelLink);
 
-                var sb = new StringBuilder();
-                foreach (var ChildKeyName in Relationship.ChildFieldNames)
-                {
-                    if (sb.Length > 0)
-                        sb.Append(" AND ");
-                    sb.Append($"{ChildKeyName} = '{parentModelLink[ChildKeyName].GetValue(parent)}'");//TODO: Encode
-                }
-                Ret.RowFilter = sb.ToString();
-            }
+        //        var sb = new StringBuilder();
+        //        foreach (var ChildKeyName in Relationship.ChildFieldNames)
+        //        {
+        //            if (sb.Length > 0)
+        //                sb.Append(" AND ");
+        //            sb.Append($"{ChildKeyName} = '{parentModelLink[ChildKeyName].GetValue(parent)}'");//TODO: Encode
+        //        }
+        //        Ret.RowFilter = sb.ToString();
+        //    }
 
-            Utility.PerfDebuggers.EndTrace("Obtaining DataView");
+        //    Utility.PerfDebuggers.EndTrace("Obtaining DataView");
 
-            return Ret;
-        }
+        //    return Ret;
+        //}
 
         internal bool ContainsMember(string Name)
         {
@@ -99,7 +99,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal Attribution.Relation FindFirstValidRelationshipWithParent(ModelLink parentLink)
         {
-            foreach (var Relation in this.ModelDefinition.GetAttributes<Attribution.Relation>())
+            foreach (var Relation in this.ModelDefinition.Relationships)
             {
                 if (Relation.IsSane()
                     && Relation.ParentFieldNames.All(fn => parentLink.ContainsMember(fn))
@@ -109,6 +109,14 @@ namespace Blacksmiths.Utils.Wolf.Model
                 }
             }
             return null;
+        }
+
+        internal IEnumerable<MemberLink> GetAllMembers(string[] memberNames)
+        {
+            if (memberNames.All(mn => this.ContainsMember(mn)))
+                return this._members.Where(mkvp => memberNames.Contains(mkvp.Key)).Select(mkvp => mkvp.Value);
+            else
+                return null;
         }
 
         internal void RememberAddedRow(DataRow r, object o)

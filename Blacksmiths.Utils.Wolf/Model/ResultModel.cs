@@ -69,15 +69,33 @@ namespace Blacksmiths.Utils.Wolf.Model
                 ml.Flatten(this._data, this, Collections);
             Utility.PerfDebuggers.EndTrace("Flattening object structure");
 
-            this._data.EnforceConstraints = false;
-            foreach (var collection in Collections.Values)
-                this.UnboxEnumerable(collection);
-            this._data.EnforceConstraints = true;
+			Utility.PerfDebuggers.BeginTrace("Unboxing");
+			var Relationships = new Queue<MemberRelationshipDemand>();
+			this._data.EnforceConstraints = false;
+			foreach (var collection in Collections.Values)
+			{
+				this.UnboxEnumerable(collection, Relationships);
+			}
+
+			Utility.PerfDebuggers.EndTrace("Unboxing");
+			Utility.PerfDebuggers.BeginTrace("Creating and enabling constraints");
+
+			// ** Create the FKs
+			while(Relationships.Count > 0)
+			{
+				var relationship = Relationships.Dequeue();
+				var childModelLink = relationship.ChildModelDefinition.GetModelTarget(this._data);
+				var formalRelationship = childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
+				formalRelationship.CreateForeignKey(relationship.ParentModelLink, childModelLink);
+			}
+
+			this._data.EnforceConstraints = true;
+			Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
 		}
 
-        /// <summary>
-        /// Bind the current model to the data contained in the given DataSet
-        /// </summary>
+		/// <summary>
+		/// Bind the current model to the data contained in the given DataSet
+		/// </summary>
 		internal void DataBind(DataSet ds)
 		{
 			Utility.PerfDebuggers.BeginTrace("Model databinding");
@@ -143,16 +161,17 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return this._modelMembers;
 		}
 
-		private void UnboxEnumerable(FlattenedCollection flattened)
+		private void UnboxEnumerable(FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
 		{
             foreach (var range in flattened)
             {
+				// ** update data
                 range.ModelLink.ThrowIfCantUpdate();
-                this.UnboxEnumerable(range.ModelLink, flattened.GetCollectionRange(range));
-            }
+                this.UnboxEnumerable(range.ModelLink, flattened.GetCollectionRange(range), relationships);
+			}
 		}
 
-        private void UnboxEnumerable(ModelLink modelLink, IEnumerable<object> collection)
+        private void UnboxEnumerable(ModelLink modelLink, IEnumerable<object> collection, Queue<MemberRelationshipDemand> relationships)
         {
             var UnhandledModels = new List<object>(collection);
 
@@ -182,7 +201,18 @@ namespace Blacksmiths.Utils.Wolf.Model
                 modelLink.Data.Rows.Add(row);
 				modelLink.RememberAddedRow(row, ModelObject);
             }
-        }
+
+			// ** Relationship demands
+			foreach (var childModelDef in modelLink.ModelDefinition.NestedModels)
+			{
+				var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
+				if (null == Demand)
+				{
+					Demand = new MemberRelationshipDemand(modelLink, childModelDef, null);
+					relationships.Enqueue(Demand);
+				}
+			}
+		}
 
 		internal static void UnboxObject(object o, ModelLink modelLink, DataRow r)
 		{

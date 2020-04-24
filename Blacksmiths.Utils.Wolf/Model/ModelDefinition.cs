@@ -22,6 +22,7 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal TypeDefinition TypeDefinition { get; private set; }
         internal ModelDefinition ParentModel { get; private set; }
         internal ModelDefinition[] NestedModels { get; private set; }
+        internal IEnumerable<Attribution.Relation> Relationships => this.GetAttributes<Attribution.Relation>();
 
         internal ModelDefinition(MemberInfo member, TypeDefinitionCollection typeLinks, ModelDefinition parentModel = null)
         {

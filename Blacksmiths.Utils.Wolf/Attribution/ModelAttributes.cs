@@ -74,5 +74,22 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 
 			return this.ParentFieldNames.Length == this.ChildFieldNames.Length;
 		}
+
+		internal System.Data.ForeignKeyConstraint CreateForeignKey(Model.ModelLink parentModelLink, Model.ModelLink childModelLink)
+		{
+			var parentColumns = parentModelLink.GetAllMembers(this.ParentFieldNames);
+			var childColumns = childModelLink.GetAllMembers(this.ChildFieldNames);
+			if (parentColumns.Any() && childColumns.Any())
+			{
+				var constraint = new System.Data.ForeignKeyConstraint(parentColumns.Select(pc => pc.Column).ToArray(), childColumns.Select(cc => cc.Column).ToArray());
+				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
+				childModelLink.Data.Constraints.Add(constraint);
+				return constraint;
+			}
+			else
+			{
+				return null;
+			}
+		}
 	}
 }

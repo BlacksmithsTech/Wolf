@@ -183,13 +183,13 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
             return $"{this.DatabaseName} ({this.Server})";
         }
 
-		public void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, IdentitySyncAction identitySyncAction)
+		public void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, string identityColumnName, IdentitySyncAction identitySyncAction)
 		{
 			var sqlAdapter = (SqlDataAdapter)dbAdapter;
 			var ic = sqlAdapter.InsertCommand.Clone();//Workaround for .NET ignoring command changes without having the clone
 			ic.CommandText += ";SET @Id = SCOPE_IDENTITY();";
 			ic.UpdatedRowSource = UpdateRowSource.OutputParameters;
-			ic.Parameters.Add("@Id", SqlDbType.Int, 0, "ID").Direction = ParameterDirection.Output;
+			ic.Parameters.Add("@Id", SqlDbType.Int, 0, identityColumnName).Direction = ParameterDirection.Output;
 			sqlAdapter.InsertCommand = ic;
 
 			((SqlDataAdapter)dbAdapter).RowUpdated += (sender, e) =>

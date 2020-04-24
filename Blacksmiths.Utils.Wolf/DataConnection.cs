@@ -265,6 +265,7 @@ namespace Blacksmiths.Utils.Wolf
 					foreach (var table in this.OrderTablesForCommit(ds))
 					{
 						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
+						var modelLinkCollection = Model.ModelLinkCollection.FromDataTable(table);
 
 						//TODO: DbCommandBuilder is paid for by an additional meta query to the DB. Probably can generate these commands by hand.
 						var dbBuilder = processor.GetCommandBuilder(dbAdapter);
@@ -272,7 +273,12 @@ namespace Blacksmiths.Utils.Wolf
 						dbAdapter.UpdateCommand = this.PrepCommand(dbBuilder.GetUpdateCommand(), dbTransaction);
 						dbAdapter.DeleteCommand = this.PrepCommand(dbBuilder.GetDeleteCommand(), dbTransaction);
 
-						this.SyncSchemaInfo(table, dbBuilder);
+						var syncFlags = this.SyncSchemaInfo(table, dbBuilder);
+
+						if (syncFlags.HasFlag(SyncResultFlags.HasIdentity))
+						{
+							this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, modelLinkCollection.FlushAddedRows(), modelLinkCollection.ApplyIdentityValue);
+						}
 
 						// ** Run processor actions
 						processor.RaisePreCommitActions(table);
@@ -305,8 +311,16 @@ namespace Blacksmiths.Utils.Wolf
 			return cmd;
 		}
 
-		private void SyncSchemaInfo(DataTable table, System.Data.Common.DbCommandBuilder dbBuilder)
+		[Flags]
+		private enum SyncResultFlags
 		{
+			None= 0,
+			HasIdentity = 1,
+		}
+
+		private SyncResultFlags SyncSchemaInfo(DataTable table, System.Data.Common.DbCommandBuilder dbBuilder)
+		{
+			var ret = SyncResultFlags.None;
 			if (null == table.PrimaryKey || 0 == table.PrimaryKey.Length)
 			{
 				// ** dbCommand builder knows about the table schema. If the source datatable doesn't know any PK info, sync it up so the adapter can work out how to do the commit
@@ -314,17 +328,26 @@ namespace Blacksmiths.Utils.Wolf
 
 				const string ColumnName = "ColumnName";
 				const string IsKey = "IsKey";
+				const string IsIdentity = "IsIdentity";
+				const string IsAutoIncrement = "IsAutoIncrement";
 				var PKcols = new List<DataColumn>();
 
 				foreach (DataRow row in schemaDt.Rows)
 				{
 					var col = table.Columns[(string)row[ColumnName]];
+					if ((bool)row[IsIdentity] && (bool)row[IsAutoIncrement])
+					{
+						Utility.DataTableHelpers.MarkIdentityColumn(col);
+						ret |= SyncResultFlags.HasIdentity;
+					}
 					if ((bool)row[IsKey])
 						PKcols.Add(col);
 				}
 
 				table.PrimaryKey = PKcols.ToArray();
 			}
+
+			return ret;
 		}
 
 		private void CreateTableMappings(System.Data.Common.DataTableMapping mapping, DataTable table)

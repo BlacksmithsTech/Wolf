@@ -22,6 +22,7 @@ namespace Blacksmiths.Tests.Wolf
 	{
 		internal const string ConnectionString = @"Server=(localdb)\mssqllocaldb;Database=AdventureWorks2016;Integrated Security=true";
 		private Utils.Wolf.DataConnection Connection = Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection(ConnectionString);
+		private DateTime now = DateTime.Now;
 
 		[TestMethod]
 		public void Request_Fetch_LooseSproc_LooseDs()
@@ -307,8 +308,13 @@ namespace Blacksmiths.Tests.Wolf
 		[TestMethod]
 		public void Commit_SimpleModel()
 		{
-			var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
-			var ds = Connection.WithModel(rows).AsUpdate().Commit();
+			//var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };
+			//var result1 = Connection.WithModel(rows).AsUpdate().Commit();
+			//Assert.AreEqual(rows.Length, result1.AffectedRowCount);
+			var newRow = new Test() { Name = $"New single object row created at {now}" };
+			var result2 = Connection.WithModel(newRow).Commit();
+			Assert.AreEqual(1, result2.AffectedRowCount);
+			Assert.IsTrue(newRow.ID > 0);
 		}
 
 		[TestMethod]

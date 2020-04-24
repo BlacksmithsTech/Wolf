@@ -180,6 +180,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 var row = modelLink.Data.NewRow();
                 this.UnboxObject(ModelObject, modelLink, row);
                 modelLink.Data.Rows.Add(row);
+				modelLink.RememberAddedRow(row, ModelObject);
             }
         }
 

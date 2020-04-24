@@ -132,11 +132,23 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			return this._spProvider;
 		}
 
+		/// <summary>
+		/// This overload is used during the fetch
+		/// </summary>
+		/// <param name="selectCommand"></param>
+		/// <returns></returns>
 		public DbDataAdapter GetDataAdapter(DbCommand selectCommand)
 		{
 			return new SqlDataAdapter((SqlCommand)selectCommand);
 		}
 
+		/// <summary>
+		/// This overload is used during the commit
+		/// </summary>
+		/// <param name="sourceTable"></param>
+		/// <param name="connection"></param>
+		/// <param name="transaction"></param>
+		/// <returns></returns>
 		public DbDataAdapter GetDataAdapter(DataTable sourceTable, DbConnection connection, DbTransaction transaction = null)
 		{
 			if (null == sourceTable || 0 == sourceTable.Columns.Count)
@@ -157,7 +169,8 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			cmd.CommandText = selectCommand.ToString();
 			cmd.Transaction = transaction;
 
-			return new SqlDataAdapter((SqlCommand)cmd);
+			var adapter = new SqlDataAdapter((SqlCommand)cmd);
+			return adapter;
 		}
 
 		public DbCommandBuilder GetCommandBuilder(DbDataAdapter adapter)
@@ -169,5 +182,25 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
         {
             return $"{this.DatabaseName} ({this.Server})";
         }
-    }
+
+		public void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, Dictionary<DataRow, object> addedRows, IdentitySyncAction identitySyncAction)
+		{
+			var sqlAdapter = (SqlDataAdapter)dbAdapter;
+			var ic = sqlAdapter.InsertCommand.Clone();
+			ic.CommandText += ";SET @Id = SCOPE_IDENTITY();";
+			ic.UpdatedRowSource = UpdateRowSource.OutputParameters;
+			ic.Parameters.Add("@Id", SqlDbType.Int, 0, "ID").Direction = ParameterDirection.Output;
+			sqlAdapter.InsertCommand = ic;
+
+			((SqlDataAdapter)dbAdapter).RowUpdated += (sender, e) =>
+			{
+				if(e.StatementType == StatementType.Insert && DataTableHelpers.HasIdentityColumn(e.Row.Table))
+				{
+					var o = addedRows[e.Row];
+					var identityCommand = new SqlCommand("SELECT @@IDENTITY", (SqlConnection)connection, (SqlTransaction)transaction);
+					identitySyncAction(identityCommand.ExecuteScalar(), o);
+				}
+			};
+		}
+	}
 }

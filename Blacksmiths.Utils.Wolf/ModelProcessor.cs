@@ -74,11 +74,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		internal virtual DataSet ToDataSetForCommit()
 		{
-			var ds = new DataSet();
-			var SourceDs = this.Model.GetDataSet().GetChanges();
-			if (null != SourceDs)
-				ds.Merge(SourceDs);
-			return ds;
+			return this.Model.GetDataSet();
 		}
 
 		public IFluentModelAction AsUpdate()

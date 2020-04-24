@@ -7,6 +7,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
 {
     public static class DataTableHelpers
     {
+        private const string C_EXTENDED_WOLF_IDENTITY = "_WolfIdentity";
+
         //public static bool ContainsByNormalisedName(DataSet ds, string name)
         //{
         //    return null != GetByNormalisedName(ds, name);
@@ -32,6 +34,25 @@ namespace Blacksmiths.Utils.Wolf.Utility
                     return dt;
 
             return null;
+        }
+
+        public static void MarkIdentityColumn(DataColumn col)
+        {
+            if (!col.ExtendedProperties.Contains(C_EXTENDED_WOLF_IDENTITY))
+                col.ExtendedProperties.Add(C_EXTENDED_WOLF_IDENTITY, true);
+        }
+
+        public static bool IsIdentityColumn(DataColumn col)
+        {
+            return col.ExtendedProperties.Contains(C_EXTENDED_WOLF_IDENTITY);
+        }
+
+        public static bool HasIdentityColumn(DataTable dt)
+        {
+            foreach (DataColumn col in dt.Columns)
+                if (col.ExtendedProperties.Contains(C_EXTENDED_WOLF_IDENTITY) && (bool)col.ExtendedProperties[C_EXTENDED_WOLF_IDENTITY])
+                    return true;
+            return false;
         }
     }
 }

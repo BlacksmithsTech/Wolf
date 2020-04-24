@@ -8,8 +8,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 {
     internal sealed class ModelLink
     {
+
         private Dictionary<string, MemberLink> _members;
         private List<MemberLink> _keyColumns;
+        private Dictionary<DataRow, object> _addedRows;
 
         internal MemberLink this[string Name]
         {
@@ -31,6 +33,7 @@ namespace Blacksmiths.Utils.Wolf.Model
         {
             this.ModelDefinition = md;
             this.Data = dt;
+            ModelLinkCollection.AttachModelLink(this, this.Data);
             this._members = this.ModelDefinition.TypeDefinition.GetLinkedMembersFor(this.Data);
             this.IdentifyKeyColumns();
         }
@@ -106,6 +109,28 @@ namespace Blacksmiths.Utils.Wolf.Model
                 }
             }
             return null;
+        }
+
+        internal void RememberAddedRow(DataRow r, object o)
+        {
+            if (null == this._addedRows)
+                this._addedRows = new Dictionary<DataRow, object>();
+            this._addedRows.Add(r, o);
+        }
+
+        internal Dictionary<DataRow, object> FlushAddedRows()
+        {
+            var ret = this._addedRows ?? new Dictionary<DataRow, object>();
+            this._addedRows = null;
+            return ret;
+        }
+
+        internal void ApplyIdentityValue(object identity, object model)
+        {
+            foreach (var member in this.Members.Where(m => Utility.DataTableHelpers.IsIdentityColumn(m.Column)))
+                if(typeof(int).Equals(member.MemberType))
+                member.SetValue(model, Convert.ToInt32(identity));
+            //TODO: Children
         }
     }
 }

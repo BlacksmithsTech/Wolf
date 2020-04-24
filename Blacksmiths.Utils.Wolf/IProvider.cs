@@ -34,7 +34,7 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IDataRequestItem
 	{
-		string TableName { get; set; }
+		Utility.QualifiedSqlName TableName { get; set; }
 
 		Utility.WolfCommandBinding GetDbCommand(IProvider provider, System.Data.Common.DbConnection connection);
 	}

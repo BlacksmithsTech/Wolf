@@ -44,7 +44,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					//if (!string.IsNullOrEmpty(QualifiedName.Name))
 					//	this.ResultData.Tables[i].TableName = 0 == i ? QualifiedName.Name : $"{QualifiedName.Name}{i}";
 
-                    this.ResultData.Tables[i].TableName = 0 == i ? this.WolfRequestItem.TableName : $"{this.WolfRequestItem.TableName}{i}";
+					this.ResultData.Tables[i].Namespace = this.WolfRequestItem.TableName.Schema;
+                    this.ResultData.Tables[i].TableName = 0 == i ? this.WolfRequestItem.TableName.Name : $"{this.WolfRequestItem.TableName.Name}{i}";
                     this.ResultData.Tables[i].ExtendedProperties[C_EXTENDED_WOLF_COMMAND] = this;
                 }
 

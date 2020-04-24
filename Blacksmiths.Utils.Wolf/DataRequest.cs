@@ -57,7 +57,12 @@ namespace Blacksmiths.Utils.Wolf
         /// <returns></returns>
         public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
 		{
-			return this.Add(item, Utility.StringHelpers.GetQualifiedSqlName(Target.TableName).ToString());
+			var fqName = Utility.QualifiedSqlName.Parse(Target.TableName);
+			if (!Target.TableName.Equals(fqName.Name))
+				Target.TableName = fqName.Name;
+			if (!Target.Namespace.Equals(fqName.Schema))
+				Target.Namespace = fqName.Schema;
+			return this.Add(item, fqName.ToString());
 		}
 
         /// <summary>
@@ -69,7 +74,7 @@ namespace Blacksmiths.Utils.Wolf
 		public DataRequest Add(IDataRequestItem item, string TargetTableName)
 		{
 			if (!string.IsNullOrEmpty(TargetTableName))
-				item.TableName = TargetTableName;
+				item.TableName = Utility.QualifiedSqlName.Parse(TargetTableName);
 			base.Add(item);
 			return this;
 		}

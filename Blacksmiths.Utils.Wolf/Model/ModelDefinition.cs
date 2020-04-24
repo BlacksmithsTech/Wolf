@@ -161,7 +161,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 }
 
                 // Normalise the source names into fully qualified SQL names
-                this._sources = Ret.Select(s => Utility.StringHelpers.GetQualifiedSqlName(s).ToString()).ToArray();
+                this._sources = Ret.Select(s => Utility.QualifiedSqlName.Parse(s).ToString()).ToArray();
             }
             return this._sources;
         }
@@ -187,7 +187,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 }
 
                 // Normalise the source names into fully qualified SQL names
-                this._targets = Ret.Select(s => Utility.StringHelpers.GetQualifiedSqlName(s).ToString()).ToArray();
+                this._targets = Ret.Select(s => Utility.QualifiedSqlName.Parse(s).ToString()).ToArray();
             }
             return this._targets;
         }
@@ -217,7 +217,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         private DataTable AutoGenerateTable(DataSet ds)
         {
-            var tn = Utility.StringHelpers.GetQualifiedSqlName(this.GetDefaultTableNameForType());
+            var tn = Utility.QualifiedSqlName.Parse(this.GetDefaultTableNameForType());
             var dt = new DataTable(tn.Name, tn.Schema);
 
             foreach (var member in this.TypeDefinition.PrimitiveMembers)

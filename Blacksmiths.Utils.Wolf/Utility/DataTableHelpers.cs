@@ -19,10 +19,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
                 return ds.Tables[name];
 
             // ** Now normalise all ds table names
-            var normalisedName = StringHelpers.GetQualifiedSqlName(name).ToString();
+            var normalisedName = QualifiedSqlName.Parse(name).ToString();
 
             foreach (DataTable dt in ds.Tables)
-                if (StringHelpers.GetQualifiedSqlName(dt.TableName).ToString().Equals(normalisedName))
+                if (QualifiedSqlName.Parse(dt.TableName).ToString().Equals(normalisedName))
                     return dt;
 
             return null;

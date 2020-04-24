@@ -156,7 +156,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		private List<SpParameter> _dbParameters;
 		private string _procedureName;
-		private string _targetTableName;
+		private Utility.QualifiedSqlName _targetTableName;
 
 		// *************************************************
 		// Properties
@@ -207,9 +207,9 @@ namespace Blacksmiths.Utils.Wolf
 		[Attribution.Parameter(Direction = System.Data.ParameterDirection.ReturnValue)]
 		public int? ReturnValue { get; set; }
 
-		string IDataRequestItem.TableName
+		QualifiedSqlName IDataRequestItem.TableName
 		{
-			get { return Utility.StringHelpers.GetQualifiedSqlName(this._targetTableName ?? this.ProcedureName).ToString(); }
+			get { return this._targetTableName ?? Utility.QualifiedSqlName.Parse(this.ProcedureName); }
 			set { this._targetTableName = value; }
 		}
 

@@ -286,7 +286,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		{
 			var sb = new IndentableStringBuilder();
 
-			var SpName = Utility.StringHelpers.GetQualifiedSqlName(sp.ProcedureName);
+			var SpName = Utility.QualifiedSqlName.Parse(sp.ProcedureName);
 			var ClassName = EncodeSymbol(SpName.Name);
 			if (!SpName.Name.Equals(ClassName) || !string.IsNullOrEmpty(SpName.Schema))
 				sb.AppendLine($@"[Procedure(Name = ""{sp.ProcedureName}"")]");
@@ -326,7 +326,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		private string GenerateCode(ModelDef md)
 		{
 			var sb = new IndentableStringBuilder();
-			var MdlName = Utility.StringHelpers.GetQualifiedSqlName(md.Name);
+			var MdlName = Utility.QualifiedSqlName.Parse(md.Name);
 
 			var ClassName = EncodeSymbol(MdlName.Name);
 			if (!MdlName.Name.Equals(ClassName) || !string.IsNullOrEmpty(MdlName.Schema))

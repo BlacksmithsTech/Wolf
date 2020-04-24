@@ -26,22 +26,22 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			this.Name = Name;
 		}
 
+		public static QualifiedSqlName Parse(string fqName)
+		{
+			var m = Regex.Match(fqName, @"^(?:\[?(?<schema>[^\n\r\[\]]+)]?\.)*\[?(?<name>[^\n\r\[\]]+)]?$");
+			if (m.Success)
+				return new QualifiedSqlName(m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? fqName);
+			else
+				return new QualifiedSqlName(string.Empty, fqName);
+		}
+
 		public override string ToString()
 		{
-			return $"{Schema}.{Name}";
+			return $"[{Schema}].[{Name}]";
 		}
 	}
 	public static class StringHelpers
 	{
-		public static QualifiedSqlName GetQualifiedSqlName(string Name)
-		{
-			var m = Regex.Match(Name, @"^(?:\[?(?<schema>[^\n\r\[\]]+)]?\.)*\[?(?<name>[^\n\r\[\]]+)]?$");
-			if (m.Success)
-				return new QualifiedSqlName(m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? Name);
-			else
-				return new QualifiedSqlName(string.Empty, Name);
-		}
-
 		public static string GetFullTableName(System.Data.DataTable dt)
 		{
 			if (!string.IsNullOrEmpty(dt.Namespace))

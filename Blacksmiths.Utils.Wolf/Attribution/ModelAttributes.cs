@@ -77,13 +77,16 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 
 		internal System.Data.ForeignKeyConstraint CreateForeignKey(Model.ModelLink parentModelLink, Model.ModelLink childModelLink)
 		{
-			var parentColumns = parentModelLink.GetAllMembers(this.ParentFieldNames);
-			var childColumns = childModelLink.GetAllMembers(this.ChildFieldNames);
+			var parentColumns = parentModelLink.GetAllMembers(this.ParentFieldNames).ToArray();
+			var childColumns = childModelLink.GetAllMembers(this.ChildFieldNames).ToArray();
 			if (parentColumns.Any() && childColumns.Any())
 			{
+				// ** Relationship and constraints
 				var constraint = new System.Data.ForeignKeyConstraint(parentColumns.Select(pc => pc.Column).ToArray(), childColumns.Select(cc => cc.Column).ToArray());
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
 				childModelLink.Data.Constraints.Add(constraint);
+				childModelLink.Data.DataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
+
 				return constraint;
 			}
 			else

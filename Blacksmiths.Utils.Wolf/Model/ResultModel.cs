@@ -86,6 +86,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 				var relationship = Relationships.Dequeue();
 				var childModelLink = relationship.ChildModelDefinition.GetModelTarget(this._data);
 				var formalRelationship = childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
+
+				// ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
 				formalRelationship.CreateForeignKey(relationship.ParentModelLink, childModelLink);
 			}
 

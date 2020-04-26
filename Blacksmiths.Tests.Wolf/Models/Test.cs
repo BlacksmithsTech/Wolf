@@ -18,7 +18,7 @@ namespace Blacksmiths.Tests.Wolf.Models
     {
         public int ID;
         public string Name;
-        public int? Category;
+        public int Category;
         public Test()
         {
         }

@@ -73,6 +73,24 @@ namespace Blacksmiths.Utils.Wolf.Model
                         break;
                 }
 
+                if(null == targetDt)
+                {
+                    // ** did the table originate from a source?
+                    var source = this.GetModelSource(ds);
+                    if (null != source)
+                    {
+                        var attributedTargets = this.GetAttributedTargets();
+                        if (attributedTargets.Count > 0)
+                        {
+                            // ** Found a source and a target attribute - apply the table name
+                            targetDt = source.Data;
+                            var fqName = Utility.QualifiedSqlName.Parse(attributedTargets[0]);
+                            targetDt.Namespace = fqName.Schema;
+                            targetDt.TableName = fqName.Name;
+                        }
+                    }
+                }
+
                 if (null != targetDt)
                     this._target = new ModelLink(this, targetDt);
                 else
@@ -126,7 +144,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (this.MemberType.IsArray)
                 this.SetValue(source, Utility.ReflectionHelper.ArrayFromList(this.CollectionType, value.ToArray()));
             else
-                this.SetValue(source, (System.Collections.IList)value.ToArray());
+                this.SetValue(source, Utility.ReflectionHelper.ListFromList(this.CollectionType, value));
         }
 
         internal void SetValue(object source, System.Collections.IList value)
@@ -172,25 +190,38 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (null == this._targets)
             {
                 // ASC prioritised elsewhere in the code, want Target[0] to be the default, so the member should take priority over the collection type etc.
-                var Ret = this._memberAccessor.Member.GetCustomAttributes<Attribution.Target>()
-                    .Concat(this.CollectionType.GetCustomAttributes<Attribution.Target>())
-                    .Select(a => a.To)
-                    .Distinct() //inheritance causes duplicates
-                    .ToList();
+                var Ret = this.GetAttributedTargets();
 
-                // When no targets have been defined programatically or via decoration, the sources are used instead as a fall back
+                //// When no targets have been defined programatically or via decoration, the sources are used instead as a fall back
                 if (0 == Ret.Count)
                 {
                     var sources = this.GetSources();
-                    if(sources.Length > 1)
+                    if (sources.Length > 1)
                         throw new InvalidOperationException($"The model member '{this.Name}' ({this.MemberType}) specifies multiple sources and no target. A target table to commit changes into can't be determined.");
                     Ret.AddRange(sources);
                 }
+
+                //// When no targets have been defined programatically or via decoration, the type name is used
+                //if (0 == Ret.Count)
+                //{
+                //    if (ModelDefinition.CheckIfAnonymousType(this.CollectionType))
+                //        throw new ArgumentException($"The type '{this.CollectionType}' couldn't participate in the database model because it is anonymous and defines no target.");
+                //    Ret.Add(this.CollectionType.Name);
+                //}
 
                 // Normalise the source names into fully qualified SQL names
                 this._targets = Ret.Select(s => Utility.QualifiedSqlName.Parse(s).ToString()).ToArray();
             }
             return this._targets;
+        }
+
+        private List<string> GetAttributedTargets()
+        {
+            return this._memberAccessor.Member.GetCustomAttributes<Attribution.Target>()
+                    .Concat(this.CollectionType.GetCustomAttributes<Attribution.Target>())
+                    .Select(a => a.To)
+                    .Distinct() //inheritance causes duplicates
+                    .ToList();
         }
 
         private static bool CheckIfAnonymousType(Type type)

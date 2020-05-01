@@ -22,6 +22,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
             return a;
 		}
 
+        public static System.Collections.IList ListFromList(Type collectionType, IEnumerable<object> collection = null)
+        {
+            var t = typeof(List<>).MakeGenericType(collectionType);
+            var l = (System.Collections.IList)Activator.CreateInstance(t);
+            if (null != collection)
+                foreach (var value in collection)
+                    l.Add(value);
+            return l;
+        }
+
         public static object GetValue(MemberInfo Member, object source)
 		{
 			if (Member is FieldInfo fi)

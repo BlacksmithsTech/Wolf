@@ -35,21 +35,26 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.Data = dt;
             ModelLinkCollection.AttachModelLink(this, this.Data);
             this._members = this.ModelDefinition.TypeDefinition.GetLinkedMembersFor(this.Data);
-            this.IdentifyKeyColumns();
+            this.IdentifyKeyColumns(null);
         }
 
-        private void IdentifyKeyColumns()
+        private void IdentifyKeyColumns(DataConnection connection)
         {
             // ** Identify the key columns
             this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column)));//Attribution based PKs?
+            if (0 == this._keyColumns.Count && null != connection)
+            {
+                connection.FetchSchema(this.Data); // If a connection has been provided, go to the database to identify the key columns
+                this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column))); //use the new schema data to populate
+            }
         }
 
-        internal void ThrowIfCantUpdate()
+        internal void ThrowIfCantUpdate(DataConnection connection)
         {
             if (this.Data.Rows.Count > 0)
             {
                 if (0 == this._keyColumns.Count) //Re-identify. Key information is loaded late for perf reasons (may not need PK info if the user is only doing a read)
-                    this.IdentifyKeyColumns();
+                    this.IdentifyKeyColumns(connection);
                 if (0 == this._keyColumns.Count) //This will prevent commits to keyless tables for now, but will see if anyone needs this before allowing users to accidentally express their UPDATEs as DELETE+INSERT.
                     throw new InvalidOperationException("Your model contains existing data which potentially to UPDATE, but there is no primary key defined.");
             }
@@ -126,12 +131,12 @@ namespace Blacksmiths.Utils.Wolf.Model
             this._addedRows.Add(r, o);
         }
 
-        internal Dictionary<DataRow, object> FlushAddedRows()
-        {
-            var ret = this._addedRows ?? new Dictionary<DataRow, object>();
-            this._addedRows = null;
-            return ret;
-        }
+        //internal Dictionary<DataRow, object> FlushAddedRows()
+        //{
+        //    var ret = this._addedRows ?? new Dictionary<DataRow, object>();
+        //    this._addedRows = null;
+        //    return ret;
+        //}
 
         internal void ApplyIdentityValue(DataRow row)
         {
@@ -139,7 +144,7 @@ namespace Blacksmiths.Utils.Wolf.Model
              * During the commit, ADO.NET retrieves updated field values, such as the identity, from INSERT commands.
              * This re-applies those changes back to the source object model.
              */
-            if (this._addedRows.ContainsKey(row))
+            if (null != this._addedRows && this._addedRows.ContainsKey(row))
                 ResultModel.BoxObject(this._addedRows[row], this, row);
         }
     }

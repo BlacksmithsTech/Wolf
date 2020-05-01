@@ -28,17 +28,17 @@ namespace Blacksmiths.Utils.Wolf.Model
             return (ModelLinkCollection)dt.ExtendedProperties[C_EXTENDED_WOLF_MODELLINKS];
         }
 
-        internal Dictionary<DataRow, object> FlushAddedRows()
-        {
-            if (this._links.Count == 1)
-                return this._links[0].FlushAddedRows();
+        //internal Dictionary<DataRow, object> FlushAddedRows()
+        //{
+        //    if (this._links.Count == 1)
+        //        return this._links[0].FlushAddedRows();
 
-            var ret = new Dictionary<DataRow, object>();
-            foreach (var ml in this._links)
-                foreach (var flush in ml.FlushAddedRows())
-                    ret.Add(flush.Key, flush.Value);
-            return ret;
-        }
+        //    var ret = new Dictionary<DataRow, object>();
+        //    foreach (var ml in this._links)
+        //        foreach (var flush in ml.FlushAddedRows())
+        //            ret.Add(flush.Key, flush.Value);
+        //    return ret;
+        //}
 
         internal void ApplyIdentityValue(DataRow row)
         {

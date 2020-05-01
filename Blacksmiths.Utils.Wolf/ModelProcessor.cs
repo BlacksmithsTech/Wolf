@@ -64,9 +64,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		protected virtual DataSet GetModelDataSet()
 		{
-            this.Model.AutoGetSchema(this._connection);
-
-			var SourceDs = this.Model.GetDataSet();
+			var SourceDs = this.Model.GetDataSet(this._connection);
 			foreach (DataTable dt in SourceDs.Tables)
 				this.RaisePreCommitActions(dt);
 			return SourceDs;
@@ -74,7 +72,7 @@ namespace Blacksmiths.Utils.Wolf
 
 		internal virtual DataSet ToDataSetForCommit()
 		{
-			return this.Model.GetDataSet();
+			return this.Model.GetDataSet(this._connection);
 		}
 
 		public IFluentModelAction AsUpdate()

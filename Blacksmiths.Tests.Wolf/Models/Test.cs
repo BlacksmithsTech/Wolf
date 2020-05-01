@@ -18,7 +18,7 @@ namespace Blacksmiths.Tests.Wolf.Models
     {
         public int ID;
         public string Name;
-        public int Category;
+        public int? Category;
         public Test()
         {
         }
@@ -66,6 +66,7 @@ namespace Blacksmiths.Tests.Wolf.Models
 	}
 
 	[Source(From = "uspGetBusinessEntities")]
+    [Target(To = "Person.BusinessEntity")]
 	class BusinessEntity
 	{
 		public int BusinessEntityID { get; set; }
@@ -76,8 +77,21 @@ namespace Blacksmiths.Tests.Wolf.Models
 		public BusinessEntityAddress[] BusinessEntityAddresses { get; set; }
 	}
 
-	[Source(From = "uspGetBusinessEntityAddresses")]
-	class BusinessEntityAddress
+    [Source(From = "uspGetBusinessEntities")]
+    [Target(To = "Person.BusinessEntity")]
+    public class BusinessEntityList
+    {
+        public int BusinessEntityID { get; set; }
+        public Guid rowguid { get; set; }
+        public DateTime ModifiedDate { get; set; }
+
+        [Relation(nameof(BusinessEntityID))]
+        public List<BusinessEntityAddress> BusinessEntityAddresses { get; set; }
+    }
+
+    [Source(From = "uspGetBusinessEntityAddresses")]
+    [Target(To = "Person.BusinessEntityAddress")]
+    public class BusinessEntityAddress
 	{
 		public int BusinessEntityID { get; set; }
 		public int AddressID { get; set; }

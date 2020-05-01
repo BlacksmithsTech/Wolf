@@ -139,13 +139,29 @@ namespace Blacksmiths.Tests.Wolf
 		}
 
 		[TestMethod]
-		public void Request_SimpleModel_New_Related_StrongSproc()
+		public void Request_SimpleModel_New_Related_Array_StrongSproc()
 		{
 			var Result = Connection.NewRequest()
 				.Add(new Sprocs.uspGetBusinessEntities())
 				.Add(new Sprocs.uspGetBusinessEntityAddresses())
 				.Execute()
 				.ToSimpleModel<Models.BusinessEntity>().Results;
+			Assert.IsNotNull(Result);
+			Assert.IsTrue(Result.All(r => null != r.BusinessEntityAddresses));
+		}
+
+		[TestMethod]
+		public Utils.Wolf.Model.SimpleResultModel<Models.BusinessEntityList> Request_SimpleModel_New_Related_List_StrongSproc()
+		{
+			var model = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntityList>();
+			var Result = model.Results;
+			Assert.IsNotNull(Result);
+			Assert.IsTrue(Result.All(r => null != r.BusinessEntityAddresses));
+			return model;
 		}
 
 		[TestMethod]
@@ -228,15 +244,25 @@ namespace Blacksmiths.Tests.Wolf
 
 			// ** Insert new category
 			var Cat = new TestCat();
+			Cat.MyId = 0;
 			Cat.Name = $"New category object row created at {now}";
-			Cat.Records.Add(new Test() { Name = $"Child of cat created at {now}" });
+			Cat.Records.Add(new Test() { Name = $"Child of cat created at {now}", Category = 0 });
+			Cat.Records.Add(new Test() { Name = $"Child 2 of cat created at {now}", Category = 0 });
 			Connection.WithModel(Cat).Commit();
 			Assert.IsTrue(Cat.MyId > 0);
 			Assert.IsTrue(Cat.Records[0].ID > 0);
 			Assert.IsTrue(Cat.Records[0].Category == Cat.MyId);
 		}
 
-        private Utils.Wolf.Model.SimpleResultModel<Models.BusinessEntity> GetEntities()
+		[TestMethod]
+		public void Commit_NestedModel_Update()
+		{
+			var model = Request_SimpleModel_New_Related_List_StrongSproc();
+			model.Results[0].ModifiedDate = DateTime.Now;
+			Connection.WithModel(model).Commit();
+		}
+
+		private Utils.Wolf.Model.SimpleResultModel<Models.BusinessEntity> GetEntities()
         {
             return Connection.NewRequest()
                 .Add(new Sprocs.uspGetBusinessEntities())

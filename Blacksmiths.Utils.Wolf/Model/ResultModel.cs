@@ -58,7 +58,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		/// <summary>
 		/// Causes the underlying change tracking provided by a DataSet to be updated from the model
 		/// </summary>
-		internal void TrackChanges()
+		internal void TrackChanges(DataConnection connection)
 		{
 			if (null == this._data)
 				this._data = new DataSet();
@@ -74,7 +74,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this._data.EnforceConstraints = false;
 			foreach (var collection in Collections.Values)
 			{
-				this.UnboxEnumerable(collection, Relationships);
+				this.UnboxEnumerable(connection, collection, Relationships);
 			}
 
 			Utility.PerfDebuggers.EndTrace("Unboxing");
@@ -163,12 +163,12 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return this._modelMembers;
 		}
 
-		private void UnboxEnumerable(FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
+		private void UnboxEnumerable(DataConnection connection, FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
 		{
             foreach (var range in flattened)
             {
 				// ** update data
-                range.ModelLink.ThrowIfCantUpdate();
+                range.ModelLink.ThrowIfCantUpdate(connection);
                 this.UnboxEnumerable(range.ModelLink, flattened.GetCollectionRange(range), relationships);
 			}
 		}
@@ -235,12 +235,6 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 		}
 
-		private System.Collections.IList CreateListOfType(Type collectionType)
-		{
-			var t = typeof(List<>).MakeGenericType(collectionType);
-			return (System.Collections.IList)Activator.CreateInstance(t);
-		}
-
 		private System.Collections.IList BoxEnumerable(ModelDefinition modelDef, DataSet ds, Queue<MemberRelationshipDemand> relationships, System.Collections.IList sourceCollection)
 		{
             var modelLink = modelDef.GetModelSource(ds);
@@ -249,7 +243,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == modelLink)
 				return sourceCollection; //No table data source, return original source as presented unchanged
 			else if (null == sourceCollection)
-				sourceCollection = this.CreateListOfType(modelLink.ModelDefinition.CollectionType); // Null original data, forge an empty array
+				sourceCollection = Utility.ReflectionHelper.ListFromList(modelLink.ModelDefinition.CollectionType); // Null original data, forge an empty array
 
 			castedCollection = sourceCollection.Cast<object>();
 			var Result = modelDef.MemberType.IsArray ? new List<object>(castedCollection) : sourceCollection;
@@ -325,15 +319,15 @@ namespace Blacksmiths.Utils.Wolf.Model
                         connection.FetchSchema(dt);
         }
 
-		internal DataSet GetDataSet()
+		internal DataSet GetDataSet(DataConnection connection)
 		{
-			this.TrackChanges();
+			this.TrackChanges(connection);
 			return this._data;
 		}
 
-		internal DataSet GetCopiedDataSet()
+		internal DataSet GetCopiedDataSet(DataConnection connection)
 		{
-			return this.GetDataSet().Copy();
+			return this.GetDataSet(connection).Copy();
 		}
 
 		internal void AcceptChanges()

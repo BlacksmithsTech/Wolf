@@ -224,19 +224,27 @@ namespace Blacksmiths.Utils.Wolf
         {
             Utility.PerfDebuggers.BeginTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
 
-            var wolfCommand = dt.ExtendedProperties[Utility.WolfCommandBinding.C_EXTENDED_WOLF_COMMAND] as Utility.WolfCommandBinding;
-            if(null != wolfCommand)
-            {
-                using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
-                {
-                    wolfCommand.DbCommand.Connection = dbConnection;
+			//var wolfCommand = dt.ExtendedProperties[Utility.WolfCommandBinding.C_EXTENDED_WOLF_COMMAND] as Utility.WolfCommandBinding;
+			//if(null != wolfCommand)
+			//{
+			//    using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+			//    {
+			//        wolfCommand.DbCommand.Connection = dbConnection;
 
-                    var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-                    dbAdapter.FillSchema(dt, SchemaType.Mapped);
-                }
-            }
+			//        var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand); 
+			//        dbAdapter.FillSchema(dt, SchemaType.Mapped);
+			//    }
+			//}
 
-            Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
+			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+			{
+				var dbAdapter = this.Provider.GetDataAdapter(dt, dbConnection, null);
+				var dbBuilder = this.Provider.GetCommandBuilder(dbAdapter);
+				dbBuilder.GetInsertCommand();
+				this.SyncSchemaInfo(dt, dbBuilder);
+			}
+
+			Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
         }
 
         // *************************************************
@@ -339,7 +347,18 @@ namespace Blacksmiths.Utils.Wolf
 					{
 						Utility.DataTableHelpers.MarkIdentityColumn(col);
 						ret |= SyncResultFlags.HasIdentity;
+
+						col.AutoIncrement = true;
+						// ** Re-index existing rows
+						long reindexer = 0;
+						foreach(DataRow existingRow in table.Rows)
+							if(existingRow.RowState == DataRowState.Added)
+							{
+								existingRow[col] = reindexer;
+								reindexer++;
+							}
 					}
+
 					if ((bool)row[IsKey])
 						PKcols.Add(col);
 				}

@@ -39,7 +39,15 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.Type = t;
 
             this.Members = this.Type.GetMembers(BindingFlags.Public | BindingFlags.Instance)
-                .Where(m => new[] { MemberTypes.Property, MemberTypes.Field }.Contains(m.MemberType))
+                .Where(m =>
+                {
+                    if (m.MemberType == MemberTypes.Property)
+                        return ((PropertyInfo)m).CanWrite; //only writable properties are considered
+                    else if (m.MemberType == MemberTypes.Field)
+                        return true;
+                    else
+                        return false;
+                })
                 .ToArray();
         }
 

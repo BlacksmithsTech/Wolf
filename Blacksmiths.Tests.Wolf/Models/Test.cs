@@ -54,6 +54,7 @@ namespace Blacksmiths.Tests.Wolf.Models
 		public int BusinessEntityId { get; set; }
 		public string FirstName { get; set; }
 		public string LastName { get; set; }
+        public string FullName => $"{FirstName} {LastName}";
 	}
 
 	[Source(From = "uspGetBusinessEntities")]

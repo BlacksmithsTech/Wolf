@@ -28,10 +28,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		[Conditional("TRACE")]
 		public static void EndTrace(string Name)
 		{
-			Trace.WriteLine($"{Name} {Debuggers[Name].ElapsedMilliseconds}ms");
-			Debuggers[Name].Stop();
-            Stopwatch w;
-			Debuggers.TryRemove(Name, out w);
+			if (Debuggers.TryGetValue(Name, out var sw))
+			{
+				Trace.WriteLine($"{Name} {sw.ElapsedMilliseconds}ms");
+				sw.Stop();
+			}
+			Debuggers.TryRemove(Name, out var swr);
 		}
 	}
 }

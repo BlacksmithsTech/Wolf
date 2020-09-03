@@ -349,6 +349,9 @@ namespace Blacksmiths.Utils.Wolf
 						ret |= SyncResultFlags.HasIdentity;
 
 						col.AutoIncrement = true;
+						col.AutoIncrementSeed = -1;
+						col.AutoIncrementStep = -1;
+
 						// ** Re-index existing rows
 						long reindexer = 0;
 						foreach(DataRow existingRow in table.Rows)

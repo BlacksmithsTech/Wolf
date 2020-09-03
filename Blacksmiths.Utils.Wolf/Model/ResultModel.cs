@@ -221,7 +221,10 @@ namespace Blacksmiths.Utils.Wolf.Model
             // ** Primitives
 			foreach (var ml in modelLink.Members)
 			{
-                var v = ml.GetValue(o);
+				if (ml.Column.AutoIncrement && r.RowState == DataRowState.Detached)
+					continue; //Leave the ADO.NET AutoIncrement value alone
+
+				var v = ml.GetValue(o);
 
                 if(r.IsNull(ml.Column))
                 {

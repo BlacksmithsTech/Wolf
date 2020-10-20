@@ -93,7 +93,13 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		public static bool IsAssignable(Type x, Type y)
 		{
 			y = Nullable.GetUnderlyingType(y) ?? y;
-			return x.IsAssignableFrom(y);
+			var assignable = x.IsAssignableFrom(y);
+            if(!assignable)
+			{
+                // ** .NET can't automatically make the assignment. Can Wolf assist?
+                assignable |= typeof(string) == x && y.IsEnum;
+			}
+            return assignable;
 		}
 
 		public static bool IsPrimitive(Type x)
@@ -121,6 +127,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				typeof(decimal),
 				typeof(TimeSpan),
 				typeof(DateTimeOffset),
+                typeof(Enum),
 			};
 
 			return PrimitiveTypes.Any(t => IsAssignable(t, x));

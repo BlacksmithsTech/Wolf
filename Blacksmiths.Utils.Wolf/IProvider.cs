@@ -38,14 +38,14 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IStoredProcedureProvider
 	{
-		Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, System.Data.Common.DbConnection connection);
-		Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.SpParameter p, System.Data.Common.DbCommand command);
+		Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null);
+		Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.SpParameter p, DbCommand command);
 	}
 
 	public interface IDataRequestItem
 	{
 		Utility.QualifiedSqlName TableName { get; set; }
 
-		Utility.WolfCommandBinding GetDbCommand(IProvider provider, System.Data.Common.DbConnection connection);
+		Utility.WolfCommandBinding GetDbCommand(IProvider provider, DbConnection connection, DbTransaction transaction);
 	}
 }

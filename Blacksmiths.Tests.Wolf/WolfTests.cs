@@ -224,6 +224,18 @@ namespace Blacksmiths.Tests.Wolf
         }
 
 		[TestMethod]
+		public void Request_Fetch_Transaction()
+		{
+			var result = Connection.NewRequest(options =>
+			{
+				options.UseTransaction = true;
+			})
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute();
+		}
+
+		[TestMethod]
 		public void Commit_SimpleModel()
 		{
 			//var rows = new Test[] { new Test(1, "Alice"), new Test(2, "Bob") };

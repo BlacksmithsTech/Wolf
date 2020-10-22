@@ -11,7 +11,15 @@ using System.Text;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public sealed class DataRequest : Collection<IDataRequestItem>
+	public interface IDataRequestOptions
+	{
+		/// <summary>
+		/// Gets or sets if the data request will execute all queries within the scope of a database transaction. Defaults to false.
+		/// </summary>
+		bool UseTransaction { get; set; }
+	}
+
+	public sealed class DataRequest : Collection<IDataRequestItem>, IDataRequestOptions
 	{
 		// *************************************************
 		// Fields
@@ -23,6 +31,8 @@ namespace Blacksmiths.Utils.Wolf
 		// *************************************************
 
 		public DataConnection Connection { get; private set; }
+
+		public bool UseTransaction { get; set; }
 
 		// *************************************************
 		// Constructor

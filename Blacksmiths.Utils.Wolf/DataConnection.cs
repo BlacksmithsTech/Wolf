@@ -17,7 +17,7 @@ namespace Blacksmiths.Utils.Wolf
         /// Creates a new data request object, which you can use to batch up a number of database commands.
         /// </summary>
         /// <returns></returns>
-		DataRequest NewRequest();
+		DataRequest NewRequest(Action<IDataRequestOptions> setOptions = null);
 
         /// <summary>
         /// Specifies a data model as a Wolf result model to perform an action with
@@ -95,9 +95,12 @@ namespace Blacksmiths.Utils.Wolf
 		/// Creates a new request for data
 		/// </summary>
 		/// <returns>A new data request</returns>
-		public DataRequest NewRequest()
+		public DataRequest NewRequest(Action<IDataRequestOptions> setOptions = null)
 		{
-			return new DataRequest(this);
+			var ret = new DataRequest(this);
+			if (null != setOptions)
+				setOptions(ret);
+			return ret;
 		}
 
         /// <summary>
@@ -201,17 +204,35 @@ namespace Blacksmiths.Utils.Wolf
 
 			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
 			{
-				var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection)));
+				System.Data.Common.DbTransaction dbTransaction = null;
+				if (request.UseTransaction)
+				{
+					dbConnection.Open();
+					dbTransaction = dbConnection.BeginTransaction();
+				}
+
+				var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
 				Result.Commands = wolfWork.ToArray();
 
-				// ** Process the commands
-				foreach (var wolfCommand in wolfWork)
+				try
 				{
-					// ** Get a data adapter and fill a dataset
-					var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-                    dbAdapter.Fill(wolfCommand.ResultData);
-					// ** The data adapter will now have executed the command. Perform binding back to the request objects
-					wolfCommand.Bind();
+
+					// ** Process the commands
+					foreach (var wolfCommand in wolfWork)
+					{
+						// ** Get a data adapter and fill a dataset
+						var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
+						dbAdapter.Fill(wolfCommand.ResultData);
+						// ** The data adapter will now have executed the command. Perform binding back to the request objects
+						wolfCommand.Bind();
+					}
+
+					dbTransaction?.Commit();
+				}
+				catch
+				{
+					dbTransaction?.Rollback();
+					throw;
 				}
 			}
 

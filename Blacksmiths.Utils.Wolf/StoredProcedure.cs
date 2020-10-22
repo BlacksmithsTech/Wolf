@@ -314,9 +314,9 @@ namespace Blacksmiths.Utils.Wolf
 		// Contract (IDataRequestItem)
 		// *************************************************
 
-		public Utility.WolfCommandBinding GetDbCommand(IProvider provider, DbConnection connection)
+		public Utility.WolfCommandBinding GetDbCommand(IProvider provider, DbConnection connection, DbTransaction transaction)
 		{
-			return provider.GetStoredProcedureProvider().ToDbCommand(this, connection);
+			return provider.GetStoredProcedureProvider().ToDbCommand(this, connection, transaction);
 		}
 
 		// *************************************************

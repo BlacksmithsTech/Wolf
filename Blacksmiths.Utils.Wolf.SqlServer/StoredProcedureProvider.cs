@@ -12,11 +12,12 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 {
 	public class StoredProcedureProvider : IStoredProcedureProvider
 	{
-		public Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, System.Data.Common.DbConnection connection)
+		public Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null)
 		{
 			var cmd = connection.CreateCommand();
 			cmd.CommandText = sp.ProcedureName;
 			cmd.CommandType = System.Data.CommandType.StoredProcedure;
+			cmd.Transaction = transaction;
 
 			var boundParams = sp.Select(p => this.ToDbParameter(p, cmd)).ToArray();
 			cmd.Parameters.AddRange(boundParams.Select(bp => bp.DbParameter).ToArray());

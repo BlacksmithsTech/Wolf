@@ -206,7 +206,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		public ModelDef CreateModelDef(IProvider provider, DbConnection connection, StoredProcedure sp)
 		{
 			ModelDef Ret = null;
-			var Cmd = sp.GetDbCommand(provider, connection);
+			var Cmd = sp.GetDbCommand(provider, connection, null);
 			using (var Reader = Cmd.DbCommand.ExecuteReader(CommandBehavior.SchemaOnly))
 			{
 				var Schema = Reader.GetSchemaTable();

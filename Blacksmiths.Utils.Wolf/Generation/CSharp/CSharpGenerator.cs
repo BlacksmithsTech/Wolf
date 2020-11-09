@@ -35,6 +35,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			{ "System.String", "string" },
 			{ "System.DateTime", "DateTime?" },
 			{ "System.Guid", "Guid?" },
+			{ "System.DateTimeOffset", "DateTimeOffset?" }
 		};
 
 		public Action<string> Log { get; set; }

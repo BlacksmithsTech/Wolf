@@ -11,6 +11,7 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal Utility.MemberAccessor Member;
         internal DataColumn Column;
         internal Type MemberType;
+        internal Type MemberElementType;//gets the underlying element type from nullables, lists etc. i.e. the "T" from MemberType<T>
 
         private string[] _enumNames;
 
@@ -18,6 +19,7 @@ namespace Blacksmiths.Utils.Wolf.Model
         {
             this.Member = Utility.MemberAccessor.Create(m);
             this.MemberType = Utility.ReflectionHelper.GetMemberType(m);
+            this.MemberElementType = Utility.ReflectionHelper.GetMemberTypeOrGenericType(m);
             this.Column = c;
         }
 
@@ -28,15 +30,15 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal void SetValue(object source, object value)
         {
-			if (value is string && this.MemberType.IsEnum)
+			if (value is string && this.MemberElementType.IsEnum)
 			{
                 if (null == this._enumNames)
-                    this._enumNames = Enum.GetNames(this.MemberType);
+                    this._enumNames = Enum.GetNames(this.MemberElementType);
                 var enumValue = this._enumNames.FirstOrDefault(ev => ev.Equals((string)value, StringComparison.CurrentCultureIgnoreCase));
                 if (null != enumValue)
-                    value = Enum.Parse(this.MemberType, enumValue);
+                    value = Enum.Parse(this.MemberElementType, enumValue);
                 else
-                    throw new ArgumentException($"Database value '{value}' not found within enumeration of type '{this.MemberType}' at '{Utility.StringHelpers.GetFullMemberName(this.Member)}'");
+                    throw new ArgumentException($"Database value '{value}' not found within enumeration of type '{this.MemberElementType}' at '{Utility.StringHelpers.GetFullMemberName(this.Member)}'");
             }
 
 			this.Member.SetValue(source, value);

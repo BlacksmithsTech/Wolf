@@ -55,6 +55,7 @@ namespace Blacksmiths.Utils.Wolf.Model
         {
             return this.PrimitiveMembers
                 .Select(m => new MemberLink(m, dt.Columns[m.Name]))
+                .Where(m => null != m.Column)
                 .ToDictionary(k => k.Member.Name);
         }
 

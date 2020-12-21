@@ -189,7 +189,12 @@ namespace Blacksmiths.Utils.Wolf
         {
             return DataResult.ToSimpleModel<T>(this.ToDataSet(), model);
         }
-    }
+
+		public T ToModel<T>() where T : ResultModel, new()
+		{
+			return DataResult.ToModel<T>(this.ToDataSet());
+		}
+	}
 
 	public class AdHocModelProcessor : ModelProcessor
 	{

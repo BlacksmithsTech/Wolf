@@ -49,6 +49,13 @@ namespace Blacksmiths.Utils.Wolf
 		/// <param name="model">Existing model collection objects</param>
 		/// <returns></returns>
 		Model.SimpleResultModel<T> ToSimpleModel<T>(params T[] model) where T : class, new();
+
+		/// <summary>
+		/// Populates the given result model from the request data
+		/// </summary>
+		/// <typeparam name="T">Type of the model</typeparam>
+		/// <returns>Result model</returns>
+		T ToModel<T>() where T : Model.ResultModel, new();
 	}
 
 	/// <summary>
@@ -137,6 +144,11 @@ namespace Blacksmiths.Utils.Wolf
             return DataResult.ToSimpleModel<T>(this.ToDataSet(), model);
 		}
 
+		public T ToModel<T>() where T : Model.ResultModel, new()
+		{
+			return DataResult.ToModel<T>(this.ToDataSet());
+		}
+
         internal static Model.SimpleResultModel<T> ToSimpleModel<T>(DataSet source, params T[] model) where T : class, new()
         {
             // ** Sanity checks
@@ -149,6 +161,13 @@ namespace Blacksmiths.Utils.Wolf
             simpleModel.DataBind(source);
             return simpleModel;
         }
+
+		internal static T ToModel<T>(DataSet source) where T : Model.ResultModel, new()
+		{
+			var model = new T();
+			model.DataBind(source);
+			return model;
+		}
 	}
 
 	public interface IFluentResultSp<T> : IFluentResult where T : StoredProcedure

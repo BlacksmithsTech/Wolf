@@ -20,11 +20,11 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal Type MemberType { get; private set; }
         internal Type CollectionType { get; private set; }
         internal TypeDefinition TypeDefinition { get; private set; }
-        internal ModelDefinition ParentModel { get; private set; }
-        internal ModelDefinition[] NestedModels { get; private set; }
+        //internal ModelDefinition ParentModel { get; private set; }
+        //internal ModelDefinition[] NestedModels { get; private set; }
         internal IEnumerable<Attribution.Relation> Relationships => this.GetAttributes<Attribution.Relation>();
 
-        internal ModelDefinition(MemberInfo member, TypeDefinitionCollection typeLinks, ModelDefinition parentModel = null)
+        internal ModelDefinition(MemberInfo member, TypeDefinitionCollection typeLinks)
         {
             this._memberAccessor = Utility.MemberAccessor.Create(member);
             this.Name = member.Name;
@@ -34,9 +34,6 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (!this._isCollection)
                 this.CollectionType = this.MemberType;
             this.TypeDefinition = typeLinks.GetOrCreate(this.CollectionType);
-
-            this.ParentModel = parentModel;
-            this.NestedModels = this.TypeDefinition.ComplexMembers.Select(mi => new ModelDefinition(mi, typeLinks, this)).ToArray();
         }
 
         internal void Flatten(DataSet ds, object source, Dictionary<Type, FlattenedCollection> Collections)
@@ -51,9 +48,10 @@ namespace Blacksmiths.Utils.Wolf.Model
                 Collections.Add(this.CollectionType, new FlattenedCollection(ds, this, source, thisCollection));
             }
 
-            foreach (var nm in this.NestedModels)
-                foreach (var no in thisCollection)
-                    nm.Flatten(ds, no, Collections);
+            foreach (var nm in this.TypeDefinition.NestedModels)
+                if (nm.CollectionType != this.CollectionType)
+                    foreach (var no in thisCollection)
+                        nm.Flatten(ds, no, Collections);
         }
 
         internal IEnumerable<T> GetAttributes<T>() where T : Attribute

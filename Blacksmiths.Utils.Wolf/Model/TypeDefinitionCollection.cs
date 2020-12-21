@@ -12,8 +12,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             var Ret = this.FirstOrDefault(tl => tl.Type.Equals(t));
             if(null == Ret)
             {
-                Ret = new TypeDefinition(t, this);
-                this.Add(Ret);
+                Ret = TypeDefinition.CreateAndAdd(t, this);
             }
             return Ret;
         }

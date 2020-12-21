@@ -86,9 +86,14 @@ namespace Blacksmiths.Tests.Wolf.Models
         public Guid rowguid { get; set; }
         public DateTime ModifiedDate { get; set; }
 
+        public int? ParentId { get; set; }
+
         [Relation(nameof(BusinessEntityID))]
         public List<BusinessEntityAddress> BusinessEntityAddresses { get; set; }
-    }
+
+		[Relation(nameof(ParentId), nameof(BusinessEntityID))]
+		public BusinessEntityList Parent { get; set; }
+	}
 
     [Source(From = "uspGetBusinessEntityAddresses")]
     [Target(To = "Person.BusinessEntityAddress")]

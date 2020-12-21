@@ -16,6 +16,8 @@ namespace Blacksmiths.Utils.Wolf.Model
         //internal ObjectFinder FindObject { get; private set; }
         internal Type Type { get; private set; }
 
+        internal ModelDefinition[] NestedModels { get; private set; }
+
         internal IEnumerable<MemberInfo> PrimitiveMembers
         {
             get
@@ -34,7 +36,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
         }
 
-        internal TypeDefinition(Type t, TypeDefinitionCollection typeDefinitions)
+        private TypeDefinition(Type t)
         {
             this.Type = t;
 
@@ -49,6 +51,14 @@ namespace Blacksmiths.Utils.Wolf.Model
                         return false;
                 })
                 .ToArray();
+        }
+
+        internal static TypeDefinition CreateAndAdd(Type t, TypeDefinitionCollection typeDefinitions)
+		{
+            var td = new TypeDefinition(t);
+            typeDefinitions.Add(td);
+            td.NestedModels = td.ComplexMembers.Select(mi => new ModelDefinition(mi, typeDefinitions)).ToArray();
+            return td;
         }
 
         internal Dictionary<string, MemberLink> GetLinkedMembersFor(DataTable dt)

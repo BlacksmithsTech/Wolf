@@ -88,7 +88,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 				var formalRelationship = childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
 
 				// ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
-				formalRelationship.CreateForeignKey(relationship.ParentModelLink, childModelLink);
+				formalRelationship?.CreateForeignKey(relationship.ParentModelLink, childModelLink);
 			}
 
 			this._data.EnforceConstraints = true;
@@ -205,7 +205,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
 
 			// ** Relationship demands
-			foreach (var childModelDef in modelLink.ModelDefinition.NestedModels)
+			foreach (var childModelDef in modelLink.ModelDefinition.TypeDefinition.NestedModels)
 			{
 				var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
 				if (null == Demand)
@@ -279,7 +279,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 Result = Utility.ReflectionHelper.ArrayFromList(modelDef.CollectionType, Result);
 
             // ** Relationship demands
-            foreach (var childModelDef in modelDef.NestedModels)
+            foreach (var childModelDef in modelDef.TypeDefinition.NestedModels)
             {
                 var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
                 if (null == Demand)

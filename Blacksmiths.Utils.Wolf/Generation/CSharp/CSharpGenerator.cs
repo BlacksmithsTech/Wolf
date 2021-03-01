@@ -223,7 +223,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					const string ADO_ALLOW_NULL = "AllowDBNull";
                     const string ADO_DATA_TYPE_NAME = "DataTypeName";
 
-                    foreach (var FieldRow in Schema.Rows.Cast<DataRow>().OrderBy(r => (int)r[ADO_COL_ORDINAL]))
+                    foreach (var FieldRow in Schema.Rows.Cast<DataRow>().Where(r => !string.IsNullOrEmpty((string)r[ADO_COL_NAME])).OrderBy(r => (int)r[ADO_COL_ORDINAL]))
                         Ret.Add(new ModelField()
                         {
                             Name = (string)FieldRow[ADO_COL_NAME],

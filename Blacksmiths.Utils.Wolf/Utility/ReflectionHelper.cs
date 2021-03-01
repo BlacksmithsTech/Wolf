@@ -97,8 +97,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
             if(!assignable)
 			{
                 // ** .NET can't automatically make the assignment. Can Wolf assist?
-                assignable |= typeof(string) == x && y.IsEnum;
-			}
+                assignable = (typeof(string) == x && y.IsEnum)
+                || (typeof(byte) == x && new[] { typeof(short), typeof(int), typeof(long) }.Contains(y))
+                || (typeof(short) == x && new[] { typeof(int), typeof(long) }.Contains(y))
+                || (typeof(int) == x && new[] { typeof(long) }.Contains(y));
+            }
             return assignable;
 		}
 

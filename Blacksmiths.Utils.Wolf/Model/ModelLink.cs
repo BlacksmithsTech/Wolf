@@ -97,6 +97,10 @@ namespace Blacksmiths.Utils.Wolf.Model
             {
                 case 1:
                     return new Tuple<object>(this[KeyNames[0]].GetValue(source));
+                case 2:
+                    return new Tuple<object, object>(this[KeyNames[0]].GetValue(source), this[KeyNames[1]].GetValue(source));
+                case 3:
+                    return new Tuple<object, object, object>(this[KeyNames[0]].GetValue(source), this[KeyNames[1]].GetValue(source), this[KeyNames[2]].GetValue(source));
                 default:
                     throw new InvalidOperationException("Unsupported key length");
             }

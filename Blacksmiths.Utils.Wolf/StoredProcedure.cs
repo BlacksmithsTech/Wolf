@@ -172,7 +172,7 @@ namespace Blacksmiths.Utils.Wolf
 			{
 				if(null == this._procedureName)
 				{
-					this.Reflect();
+					this.ReflectProcedureName();
 				}
 
 				return this._procedureName;
@@ -195,7 +195,7 @@ namespace Blacksmiths.Utils.Wolf
 				if(null == this._dbParameters)
 				{
 					this._dbParameters = new List<SpParameter>();
-					this.Reflect();
+					this.ReflectMembers();
 				}
 				return this._dbParameters;
 			}
@@ -340,43 +340,47 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Reflect on this instance and discover parameters
 		/// </summary>
-		private void Reflect()
+		private void ReflectMembers()
+		{
+			var thisType = this.GetType();
+
+			foreach (var member in thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
+			{
+				if (member.GetCustomAttributes(typeof(Attribution.Ignore), true).Length > 0)
+					continue;
+
+				var ParamName = member.Name;
+				var ParamType = member.PropertyType;
+				var ParamDirection = System.Data.ParameterDirection.Input;
+				int? ParamLength = null;
+
+				var ParamAttrib = member.GetCustomAttributes(typeof(Attribution.Parameter), true).Cast<Attribution.Parameter>().FirstOrDefault();
+				if (null != ParamAttrib)
+				{
+					ParamName = ParamAttrib.Name ?? ParamName;
+					ParamLength = ParamAttrib.Length;
+					ParamDirection = ParamAttrib.Direction;
+				}
+
+				var p = new BoundSpParameter(ParamName, this, member);
+				p.Direction = ParamDirection;
+				p.Length = ParamLength.GetValueOrDefault(-1);
+				this.AddParameter(p);
+			}
+		}
+
+		private void ReflectProcedureName()
 		{
 			var thisType = this.GetType();
 
 			var ProcAttrib = thisType.GetCustomAttributes(typeof(Attribution.Procedure), true).Cast<Attribution.Procedure>().FirstOrDefault();
-			if(null != ProcAttrib)
+			if (null != ProcAttrib)
 			{
 				this._procedureName = ProcAttrib.Name;
 			}
 
 			if (null == this._procedureName)
 				this._procedureName = $"[{thisType.Name}]";
-
-			if (null == this._dbParameters)
-				foreach (var member in thisType.GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public))
-				{
-					if (member.GetCustomAttributes(typeof(Attribution.Ignore), true).Length > 0)
-						continue;
-
-					var ParamName = member.Name;
-					var ParamType = member.PropertyType;
-					var ParamDirection = System.Data.ParameterDirection.Input;
-					int? ParamLength = null;
-
-					var ParamAttrib = member.GetCustomAttributes(typeof(Attribution.Parameter), true).Cast<Attribution.Parameter>().FirstOrDefault();
-					if (null != ParamAttrib)
-					{
-						ParamName = ParamAttrib.Name ?? ParamName;
-						ParamLength = ParamAttrib.Length;
-						ParamDirection = ParamAttrib.Direction;
-					}
-
-					var p = new BoundSpParameter(ParamName, this, member);
-					p.Direction = ParamDirection;
-					p.Length = ParamLength.GetValueOrDefault(-1);
-					this.AddParameter(p);
-				}
 		}
 	}
 

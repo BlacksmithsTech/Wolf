@@ -294,7 +294,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			sb.AppendLine($"public class {ClassName} : StoredProcedure");
 			sb.AppendLine("{");
 			sb.Indent();
-			foreach (StoredProcedure.CodeGenSpParameter Param in sp)
+			foreach (var Param in sp.OfType<StoredProcedure.CodeGenSpParameter>())
 			{
 				var ParamName = EncodeSymbol(Param.Name);
 

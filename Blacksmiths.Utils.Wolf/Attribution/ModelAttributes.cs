@@ -96,4 +96,12 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 			}
 		}
 	}
+
+	/// <summary>
+	/// Specifies that the given enum value will be used as a fallback if the database value cannot be deserialised (for example, when application is older than database)
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+	public sealed class FallbackEnum : Attribute
+	{
+	}
 }

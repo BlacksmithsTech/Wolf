@@ -76,5 +76,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
                 }
             return null;
         }
-    }
+
+		internal static bool HasChanges(DataTable table)
+		{
+            return table.Rows.Cast<DataRow>().Any(dr => dr.RowState != DataRowState.Unchanged);
+		}
+	}
 }

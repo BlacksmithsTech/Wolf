@@ -310,6 +310,9 @@ namespace Blacksmiths.Utils.Wolf
 				{
 					foreach (var table in this.OrderTablesForCommit(ds))
 					{
+						if (!Utility.DataTableHelpers.HasChanges(table))
+							continue;
+
 						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
 						var modelLinkCollection = Model.ModelLinkCollection.FromDataTable(table);
 						var tableTarget = Utility.DataTableHelpers.GetTarget(table);

@@ -51,6 +51,10 @@ namespace Blacksmiths.Utils.Wolf.Generation
 		/// </summary>
 		public bool Enabled { get; set; } = true;
 
+		/// <summary>
+		/// Gets or sets if model members will be virtual
+		/// </summary>
+		public bool VirtualMembers { get; set; } = false;
 
 		/// <summary>
 		/// The base namespace to place generated code into

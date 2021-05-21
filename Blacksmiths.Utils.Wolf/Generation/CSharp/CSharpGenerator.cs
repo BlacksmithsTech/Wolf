@@ -104,7 +104,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 									Name = (string)spRow[ADO_NAME],
 									Schema = (string)spRow[ADO_SCHEMA],
 									Type = EntityType.Model,
-									Generate = () => this.GenerateCode(ModelDef)
+									Generate = () => this.GenerateCode(ModelDef, options)
 								});
 						}
 					}
@@ -324,7 +324,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			return sb.ToString();
 		}
 
-		private string GenerateCode(ModelDef md)
+		private string GenerateCode(ModelDef md, GenerationOptions options)
 		{
 			var sb = new IndentableStringBuilder();
 			var MdlName = Utility.QualifiedSqlName.Parse(md.Name);
@@ -365,7 +365,8 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				var AttrParamsConstraints = String.Join(", ", new[] { AttrLength,AttrNullable }.Where(a => null != a));
 				if (!string.IsNullOrEmpty(AttrParamsConstraints))
 					sb.AppendLine($@"{Comment}[Constraint({AttrParamsConstraints})]");
-				sb.AppendLine($"{Comment}public {ParamType} {FieldName} {{ get; set; }}");
+				var Virtual = options.Models.VirtualMembers ? "virtual " : string.Empty;
+				sb.AppendLine($"{Comment}public {Virtual}{ParamType} {FieldName} {{ get; set; }}");
 			}
 			sb.Outdent();
 			sb.AppendLine("}");

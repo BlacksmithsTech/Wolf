@@ -62,6 +62,17 @@ namespace Blacksmiths.Tests.Wolf.Sprocs
         }
     }
 
+    namespace Person
+	{
+        [Procedure(Name = "Person.uspUpdateBusinessEntity")]
+        public class uspUpdateBusinessEntity : StoredProcedure
+		{
+            public int? BusinessEntityID { get; set; }
+            public DateTime? ModifiedDate { get; set; }
+        }
+	}
+
+
     public class uspAdd : StoredProcedure
     {
         public int? Value1 { get; set; }
@@ -147,4 +158,6 @@ namespace Blacksmiths.Tests.Wolf.Sprocs
         [Parameter(Length = 20)]
         public string Password { get; set; }
     }
+
+
 }

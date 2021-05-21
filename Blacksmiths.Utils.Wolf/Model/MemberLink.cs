@@ -24,6 +24,11 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.Column = c;
         }
 
+        internal bool IsKey(Attribution.Key.KeyType keyType)
+		{
+            return this.Member.Member.GetCustomAttributes<Attribution.Key>().Any(ka => keyType.Equals(ka.Type));
+		}
+
         internal object GetValue(object source)
         {
             return this.Member.GetValue(source);

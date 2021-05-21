@@ -4,6 +4,7 @@ using System.Text;
 using System.Reflection;
 using System.Data;
 using System.Linq;
+using Blacksmiths.Utils.Wolf;
 
 namespace Blacksmiths.Utils.Wolf.Model
 {
@@ -22,7 +23,12 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal TypeDefinition TypeDefinition { get; private set; }
         //internal ModelDefinition ParentModel { get; private set; }
         //internal ModelDefinition[] NestedModels { get; private set; }
-        internal IEnumerable<Attribution.Relation> Relationships => this.GetAttributes<Attribution.Relation>();
+
+        internal Lazy<IEnumerable<Attribution.Relation>> RelationshipAttributes { get; }
+        private Lazy<IEnumerable<Attribution.Ignore>> IgnoreAttributes { get; }
+        private Lazy<IEnumerable<Attribution.Target>> TargetAttributes { get; }
+
+        private bool isIgnoredDuringCommit => this.IgnoreAttributes.Value.Any(ia => ia.IgnoreDuringCommit);
 
         internal ModelDefinition(MemberInfo member, TypeDefinitionCollection typeLinks)
         {
@@ -34,10 +40,17 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (!this._isCollection)
                 this.CollectionType = this.MemberType;
             this.TypeDefinition = typeLinks.GetOrCreate(this.CollectionType);
+
+            this.RelationshipAttributes = new Lazy<IEnumerable<Attribution.Relation>>(() => this.GetAttributes<Attribution.Relation>());
+            this.IgnoreAttributes = new Lazy<IEnumerable<Attribution.Ignore>>(() => this.GetAttributes<Attribution.Ignore>());
+            this.TargetAttributes = new Lazy<IEnumerable<Attribution.Target>>(() => this.GetAttributes<Attribution.Target>());
         }
 
         internal void Flatten(DataSet ds, object source, Dictionary<Type, FlattenedCollection> Collections)
         {
+            if (this.isIgnoredDuringCommit)
+                return;
+
             var thisCollection = this.ToCollection(source);
             if (Collections.ContainsKey(this.CollectionType))
             {
@@ -56,7 +69,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal IEnumerable<T> GetAttributes<T>() where T : Attribute
         {
-            return this._memberAccessor.Member.GetCustomAttributes<T>().Union(this.CollectionType.GetCustomAttributes<T>());
+            return this._memberAccessor.Member.GetCustomAttributes<T>().Concat(this.CollectionType.GetCustomAttributes<T>());
         }
 
         internal ModelLink GetModelTarget(DataSet ds)
@@ -77,14 +90,19 @@ namespace Blacksmiths.Utils.Wolf.Model
                     var source = this.GetModelSource(ds);
                     if (null != source)
                     {
-                        var attributedTargets = this.GetAttributedTargets();
-                        if (attributedTargets.Count > 0)
+                        var attributedTarget = this.TargetAttributes.Value.FirstOrDefault();
+                        if (null != attributedTarget)
                         {
                             // ** Found a source and a target attribute - apply the table name
                             targetDt = source.Data;
-                            var fqName = Utility.QualifiedSqlName.Parse(attributedTargets[0]);
-                            targetDt.Namespace = fqName.Schema;
-                            targetDt.TableName = fqName.Name;
+                            if (!string.IsNullOrEmpty(attributedTarget.To))
+                            {
+                                var fqName = Utility.QualifiedSqlName.Parse(attributedTarget.To);
+                                targetDt.Namespace = fqName.Schema;
+                                targetDt.TableName = fqName.Name;
+                            }
+
+                            Utility.DataTableHelpers.SetTarget(targetDt, attributedTarget);
                         }
                     }
                 }
@@ -188,7 +206,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (null == this._targets)
             {
                 // ASC prioritised elsewhere in the code, want Target[0] to be the default, so the member should take priority over the collection type etc.
-                var Ret = this.GetAttributedTargets();
+                var Ret = this.GetAttributedTargetNames();
 
                 //// When no targets have been defined programatically or via decoration, the sources are used instead as a fall back
                 if (0 == Ret.Count)
@@ -213,11 +231,11 @@ namespace Blacksmiths.Utils.Wolf.Model
             return this._targets;
         }
 
-        private List<string> GetAttributedTargets()
+        private List<string> GetAttributedTargetNames()
         {
-            return this._memberAccessor.Member.GetCustomAttributes<Attribution.Target>()
-                    .Concat(this.CollectionType.GetCustomAttributes<Attribution.Target>())
+            return this.TargetAttributes.Value
                     .Select(a => a.To)
+                    .Where(to => null != to)
                     .Distinct() //inheritance causes duplicates
                     .ToList();
         }

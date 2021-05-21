@@ -39,7 +39,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                     childLink.ModelDefinition.SetValue(parenti, Lookup[ParentKey]);
                 }
             }
-            else if(!childLink.ModelDefinition.Relationships.Any())
+            else if(!childLink.ModelDefinition.RelationshipAttributes.Value.Any())
             {
                 // ** No relationship. Cross join all children with a reference to the same collection
                 //var Values = this.Relationship.MemberType.IsArray ? Utility.ReflectionHelper.ArrayFromList(this.Relationship.CollectionType, sourceCollection) : sourceCollection;

@@ -27,9 +27,42 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 	{
 		/// <summary>
 		/// For classes specify the exact name of table in your database where data should be stored.
-		/// For collections, specify the exact name of the table in your database where data should be stroed
+		/// For collections, specify the exact name of the table in your database where data should be stored.
+		/// 
+		/// This approach should be used when Wolf is responsible for generating CRUD database commands.
 		/// </summary>
 		public string To { get; set; }
+
+		/// <summary>
+		/// Specifies the type of a stored procedure that can be used for inserts
+		/// </summary>
+		public Type InsertUsing { get; set; }
+
+		/// <summary>
+		/// Specifies the type of a stored procedure that can be used for updates
+		/// </summary>
+		public Type UpdateUsing { get; set; }
+
+		/// <summary>
+		/// Specifies the type of a stored procedure that can be used for deletes
+		/// </summary>
+		public Type DeleteUsing { get; set; }
+
+		internal bool CommitUsingSprocs => null != this.InsertUsing || null != this.UpdateUsing || null != this.DeleteUsing;
+	}
+
+	/// <summary>
+	/// Defines that a property or field is a key
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = false)]
+	public class Key : Attribute
+	{
+		public enum KeyType
+		{
+			PrimaryKey,
+		}
+
+		public KeyType Type { get; set; } = KeyType.PrimaryKey;
 	}
 
 	/// <summary>

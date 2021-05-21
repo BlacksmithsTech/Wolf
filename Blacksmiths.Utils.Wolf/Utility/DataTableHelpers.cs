@@ -9,6 +9,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
     public static class DataTableHelpers
     {
         private const string C_EXTENDED_WOLF_IDENTITY = "_WolfIdentity";
+        private const string C_EXTENDED_WOLF_TARGET = "_WolfTarget";
 
         //public static bool ContainsByNormalisedName(DataSet ds, string name)
         //{
@@ -36,6 +37,20 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
             return null;
         }
+
+        public static void SetTarget(DataTable dt, Attribution.Target target)
+		{
+            if (!dt.ExtendedProperties.Contains(C_EXTENDED_WOLF_TARGET))
+                dt.ExtendedProperties.Add(C_EXTENDED_WOLF_TARGET, target);
+		}
+
+        public static Attribution.Target GetTarget(DataTable dt)
+		{
+            if (dt.ExtendedProperties.Contains(C_EXTENDED_WOLF_TARGET))
+                return dt.ExtendedProperties[C_EXTENDED_WOLF_TARGET] as Attribution.Target;
+            else
+                return null;
+		}
 
         public static void MarkIdentityColumn(DataColumn col)
         {

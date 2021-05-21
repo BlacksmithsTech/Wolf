@@ -274,6 +274,21 @@ namespace Blacksmiths.Tests.Wolf
 			Connection.WithModel(model).Commit();
 		}
 
+		[TestMethod]
+		public void Commit_NestedModel_Update_UsingSprocs()
+		{
+			var model = Connection.NewRequest()
+				.Add(new Sprocs.uspGetBusinessEntities())
+				.Add(new Sprocs.uspGetBusinessEntityAddresses())
+				.Execute()
+				.ToSimpleModel<Models.BusinessEntitySprocCommit>();
+
+			model.Results[0].ModifiedDate = DateTime.Now;
+			Connection.WithModel(model)
+				.WithParameter("ModifiedDate", DateTime.Now.AddDays(1))
+				.Commit();
+		}
+
 		private Utils.Wolf.Model.SimpleResultModel<Models.BusinessEntity> GetEntities()
         {
             return Connection.NewRequest()

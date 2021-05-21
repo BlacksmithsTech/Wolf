@@ -31,6 +31,11 @@ namespace Blacksmiths.Utils.Wolf
         /// </summary>
         /// <returns></returns>
 		IFluentModelAction AsDelete();
+
+		/// <summary>
+		/// Provides fixed parameter values into stored procedures that are being used for CUD operations
+		/// </summary>
+		IFluentModelAction WithParameter(string parameterName, object value);
 	}
 
 	public class CommitResult
@@ -47,6 +52,8 @@ namespace Blacksmiths.Utils.Wolf
 		protected Func<DbDataAdapter, DbCommandBuilder> _GetCommandBuilder;
 
 		protected List<DataTableProcess> PreCommitActions { get; } = new List<DataTableProcess>();
+
+		public Dictionary<string, object> ParameterValues { get; } = new Dictionary<string, object>(StringComparer.CurrentCultureIgnoreCase);
 
 		public ModelProcessor(Model.ResultModel model, DataConnection connection)
 		{
@@ -194,6 +201,16 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			return DataResult.ToModel<T>(this.ToDataSet());
 		}
+
+		public IFluentModelAction WithParameter(string parameterName, object value)
+		{
+			if (!this.ParameterValues.ContainsKey(parameterName))
+				this.ParameterValues.Add(parameterName, value);
+			else
+				this.ParameterValues[parameterName] = value;
+
+			return this;
+		}
 	}
 
 	public class AdHocModelProcessor : ModelProcessor
@@ -204,5 +221,10 @@ namespace Blacksmiths.Utils.Wolf
 			// ** Ad hoc models have no tracking history. Commits won't use any concurrency checking and will simply overwrite database values using the PK.
 			this._GetCommandBuilder = this.GetCommandBuilder_Overwriting;
 		}
+	}
+
+	public interface IModelReviewer
+	{
+		void ReviewModel(IFluentModelAction model);
 	}
 }

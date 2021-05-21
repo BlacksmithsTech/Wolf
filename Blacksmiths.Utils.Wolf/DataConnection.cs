@@ -49,10 +49,15 @@ namespace Blacksmiths.Utils.Wolf
 		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new();
 	}
 
+	public interface IServiceLocator
+	{
+		IServiceProvider ServiceProvider { get; set; }
+	}
+
 	/// <summary>
 	/// Represents a connection to a database
 	/// </summary>
-	public sealed class DataConnection : IDataConnection
+	public sealed class DataConnection : IDataConnection, IServiceLocator
 	{
 		// *************************************************
 		// Properties
@@ -62,6 +67,11 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets the underyling provider (e.g. Microsoft SQL Server) used to interact with the DBMS
 		/// </summary>
 		public IProvider Provider { get; private set; }
+
+		/// <summary>
+		/// Gets or sets a DI service provider to be used during data operations
+		/// </summary>
+		public IServiceProvider ServiceProvider { get; set; }
 
 		// *************************************************
 		// Constructor & Factory
@@ -277,6 +287,13 @@ namespace Blacksmiths.Utils.Wolf
 			if (null == processor)
 				throw new ArgumentNullException($"{nameof(processor)} may not be null");
 
+			if(null != this.ServiceProvider)
+			{
+				var modelReviewer = this.ServiceProvider.GetService(typeof(IModelReviewer)) as IModelReviewer;
+				if (null != modelReviewer)
+					modelReviewer.ReviewModel(processor);
+			}
+
 			var ds = processor.ToDataSetForCommit();
 			CommitResult ret = new CommitResult();
 
@@ -295,18 +312,31 @@ namespace Blacksmiths.Utils.Wolf
 					{
 						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
 						var modelLinkCollection = Model.ModelLinkCollection.FromDataTable(table);
+						var tableTarget = Utility.DataTableHelpers.GetTarget(table);
 
-						//TODO: DbCommandBuilder is paid for by an additional meta query to the DB. Probably can generate these commands by hand.
-						var dbBuilder = processor.GetCommandBuilder(dbAdapter);
-						dbAdapter.InsertCommand = this.PrepCommand(dbBuilder.GetInsertCommand(), dbTransaction);
-						dbAdapter.UpdateCommand = this.PrepCommand(dbBuilder.GetUpdateCommand(), dbTransaction);
-						dbAdapter.DeleteCommand = this.PrepCommand(dbBuilder.GetDeleteCommand(), dbTransaction);
-
-						var syncFlags = this.SyncSchemaInfo(table, dbBuilder);
-
-						if (syncFlags.HasFlag(SyncResultFlags.HasIdentity))
+						if ((tableTarget?.CommitUsingSprocs).GetValueOrDefault())
 						{
-							this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, Utility.DataTableHelpers.GetIdentityColumn(table).ColumnName, modelLinkCollection.ApplyIdentityValue);
+							if (null != tableTarget.InsertUsing)
+								dbAdapter.InsertCommand = this.PrepCommand(tableTarget.InsertUsing, processor.ParameterValues, dbConnection, dbTransaction);
+							if (null != tableTarget.UpdateUsing)
+								dbAdapter.UpdateCommand = this.PrepCommand(tableTarget.UpdateUsing, processor.ParameterValues, dbConnection, dbTransaction);
+							if (null != tableTarget.DeleteUsing)
+								dbAdapter.DeleteCommand = this.PrepCommand(tableTarget.DeleteUsing, processor.ParameterValues, dbConnection, dbTransaction);
+						}
+						else
+						{
+							//TODO: DbCommandBuilder is paid for by an additional meta query to the DB. Probably can generate these commands by hand.
+							var dbBuilder = processor.GetCommandBuilder(dbAdapter);
+							dbAdapter.InsertCommand = this.PrepCommand(dbBuilder.GetInsertCommand(), dbTransaction);
+							dbAdapter.UpdateCommand = this.PrepCommand(dbBuilder.GetUpdateCommand(), dbTransaction);
+							dbAdapter.DeleteCommand = this.PrepCommand(dbBuilder.GetDeleteCommand(), dbTransaction);
+
+							var syncFlags = this.SyncSchemaInfo(table, dbBuilder);
+
+							if (syncFlags.HasFlag(SyncResultFlags.HasIdentity))
+							{
+								this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, Utility.DataTableHelpers.GetIdentityColumn(table).ColumnName, modelLinkCollection.ApplyIdentityValue);
+							}
 						}
 
 						// ** Run processor actions
@@ -332,6 +362,24 @@ namespace Blacksmiths.Utils.Wolf
 			}
 
 			return ret;
+		}
+
+		private System.Data.Common.DbCommand PrepCommand(Type commandSprocType, IDictionary<string, object> parameters, System.Data.Common.DbConnection connection, System.Data.Common.DbTransaction trans)
+		{
+			if (!typeof(StoredProcedure).IsAssignableFrom(commandSprocType))
+				throw new ArgumentException("When using InsertUsing, UpdateUsing or DeleteUsing, the type specified must be a StoredProcedure");
+			var sproc = Activator.CreateInstance(commandSprocType) as StoredProcedure;
+			var command = sproc.GetDbCommand(this.Provider, connection, trans);
+			foreach (var param in command.Parameters)
+				if (new[] { ParameterDirection.InputOutput, ParameterDirection.Input }.Contains(param.DbParameter.Direction)) //input params need binding to the source dt
+				{
+					if (!parameters.Keys.Contains(param.DbParameter.ParameterName))
+						param.DbParameter.SourceColumn = param.DbParameter.ParameterName;
+					else
+						param.DbParameter.Value = parameters[param.DbParameter.ParameterName];
+				}
+
+			return command.DbCommand;
 		}
 
 		private System.Data.Common.DbCommand PrepCommand(System.Data.Common.DbCommand cmd, System.Data.Common.DbTransaction trans)

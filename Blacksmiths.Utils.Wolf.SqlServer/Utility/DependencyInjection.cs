@@ -33,7 +33,11 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 sqlOptions.AutoConfigureFromConfiguration();
 
-                return DataConnection.FromOptions(sqlOptions.Options);
+                var connection = DataConnection.FromOptions(sqlOptions.Options);
+                if (connection is IServiceLocator serviceLocatorConnection)
+                    serviceLocatorConnection.ServiceProvider = provider;
+
+                return connection;
             });
 
             return services;

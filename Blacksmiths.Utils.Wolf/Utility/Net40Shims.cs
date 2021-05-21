@@ -9,6 +9,10 @@ namespace Blacksmiths.Utils.Wolf
 {
     internal static class Net40Shims
     {
+        internal static IEnumerable<T> GetCustomAttributes<T>(this MemberInfo member, bool inherit)
+        {
+            return member.GetCustomAttributes(typeof(T), inherit).Cast<T>();
+        }
 
         internal static IEnumerable<T> GetCustomAttributes<T>(this MemberInfo member)
         {

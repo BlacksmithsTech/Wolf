@@ -78,6 +78,11 @@ namespace Blacksmiths.Tests.Wolf.Models
 		public BusinessEntityAddress[] BusinessEntityAddresses { get; set; }
 	}
 
+    [Target(To = "Person.BusinessEntity", UpdateUsing = typeof(Sprocs.Person.uspUpdateBusinessEntity))]
+    class BusinessEntitySprocCommit : BusinessEntity
+	{
+	}
+
     [Source(From = "uspGetBusinessEntities")]
     [Target(To = "Person.BusinessEntity")]
     public class BusinessEntityList

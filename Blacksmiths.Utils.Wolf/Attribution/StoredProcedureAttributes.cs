@@ -23,7 +23,12 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		public System.Data.ParameterDirection Direction { get; set; }
 	}
 
-	[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+	/// <summary>
+	/// On stored procedure members, ignores the member as being a stored procedure parameter.
+	/// On models, ignores the model during reads (todo) and commits
+	/// On model members, ignores the member during reads (todo) and commits
+	/// </summary>
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class Ignore : Attribute
 	{
 		///// <summary>
@@ -31,7 +36,12 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		///// </summary>
 		//public bool IgnoreAsParameter { get; set; } = true;
 
-		//public boo
+		/// <summary>
+		/// Non functional. Reserved.
+		/// </summary>
+		public bool IgnoreDuringRequest { get; set; } = true;
+
+		public bool IgnoreDuringCommit { get; set; } = true;
 	}
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]

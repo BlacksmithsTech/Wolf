@@ -35,6 +35,18 @@ namespace Blacksmiths.Utils.Wolf.Model
             return this.Collection.Cast<object>().Skip(r.StartIndex).Take(r.Length);
         }
 
+        //internal object FindObject(DataRow row)
+        //{
+        //    object result = null;
+        //    foreach (var range in this)
+        //    {
+        //        result = range.ModelLink.ModelDefinition.TypeDefinition.FindObject(row, this.GetCollectionRange(range), range.ModelLink.KeyColumns);
+        //        if (null != result)
+        //            break;
+        //    }
+        //    return result;
+        //}
+
         internal void AddCollection(ModelDefinition md, object source, System.Collections.IList collection)
         {
             int startIndex;

@@ -92,5 +92,30 @@ namespace Blacksmiths.Utils.Wolf.Model
 
             return null;
         }
+
+        internal IEnumerable<object> FindObjects(DataRow r, IEnumerable<object> collection, IEnumerable<MemberLink> keyColumns)
+        {
+            List<object> result = new List<object>();
+            foreach (var o in collection)
+            {
+                bool Equal = true;
+
+                foreach (var ml in keyColumns)//keyColumns can be the PK or it could be all columns if there's no PK
+                {
+                    object value = ml.GetValue(o) ?? DBNull.Value;
+
+                    if (!r[ml.Column].Equals(value))
+                    {
+                        Equal = false;
+                        break;
+                    }
+                }
+
+                if (Equal)
+                    result.Add(o);
+            }
+
+            return result;
+        }
     }
 }

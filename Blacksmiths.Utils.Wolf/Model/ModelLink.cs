@@ -52,6 +52,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 					connection.FetchSchema(this.Data); // If a connection has been provided, go to the database to identify the key columns
 					this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column))); //use the new schema data to populate
 				}
+				else if(null == this.Data.PrimaryKey || 0 == this.Data.PrimaryKey.Length)
+				{
+					foreach (var keyColumn in this._keyColumns)
+						this.Data.PrimaryKey = this._keyColumns.Select(kc => kc.Column).ToArray();
+				}
 			}
 		}
 
@@ -110,6 +115,13 @@ namespace Blacksmiths.Utils.Wolf.Model
 				default:
 					throw new InvalidOperationException("Unsupported key length");
 			}
+		}
+
+		internal object[] GetKeyValues(object source, string[] keyNames = null)
+		{
+			if (null == keyNames)
+				keyNames = this._keyColumns.Select(kc => kc.Member.Name).ToArray();
+			return keyNames.Select(kn => this[kn].GetValue(source)).ToArray();
 		}
 
 		internal Attribution.Relation FindFirstValidRelationshipWithParent(ModelLink parentLink)

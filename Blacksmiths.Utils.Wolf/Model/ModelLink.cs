@@ -62,10 +62,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		internal void ThrowIfCantUpdate(DataConnection connection)
 		{
+			if (0 == this._keyColumns.Count) //Re-identify. Key information is loaded late for perf reasons (may not need PK info if the user is only doing a read)
+				this.IdentifyKeyColumns(connection);
+
 			if (this.Data.Rows.Count > 0)
 			{
-				if (0 == this._keyColumns.Count) //Re-identify. Key information is loaded late for perf reasons (may not need PK info if the user is only doing a read)
-					this.IdentifyKeyColumns(connection);
 				if (0 == this._keyColumns.Count) //This will prevent commits to keyless tables for now, but will see if anyone needs this before allowing users to accidentally express their UPDATEs as DELETE+INSERT.
 					throw new InvalidOperationException("Your model contains existing data which potentially to UPDATE, but there is no primary key defined.");
 			}

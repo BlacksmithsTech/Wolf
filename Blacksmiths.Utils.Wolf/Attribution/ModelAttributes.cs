@@ -83,6 +83,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 	{
 		public string[] ParentFieldNames { get; set; }
 		public string[] ChildFieldNames { get; set; }
+		public bool isParentTable { get; set; } = true;
 
 		public Relation(string SharedParentChildFieldName)
 			: this(SharedParentChildFieldName, SharedParentChildFieldName) { }
@@ -116,10 +117,24 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 			if (parentColumns.Any() && childColumns.Any())
 			{
 				// ** Relationship and constraints
-				var constraint = new System.Data.ForeignKeyConstraint(parentColumns.Select(pc => pc.Column).ToArray(), childColumns.Select(cc => cc.Column).ToArray());
+				System.Data.ForeignKeyConstraint constraint;
+				System.Data.DataTable data;
+
+				if (this.isParentTable)
+				{
+					data = childModelLink.Data;
+					constraint = new System.Data.ForeignKeyConstraint(parentColumns.Select(pc => pc.Column).ToArray(), childColumns.Select(cc => cc.Column).ToArray());
+				}
+				else
+				{
+					data = parentModelLink.Data;
+					constraint = new System.Data.ForeignKeyConstraint(childColumns.Select(cc => cc.Column).ToArray(), parentColumns.Select(pc => pc.Column).ToArray());
+				}
+
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
-				childModelLink.Data.Constraints.Add(constraint);
-				childModelLink.Data.DataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
+
+				data.Constraints.Add(constraint);
+				data.DataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
 
 				return constraint;
 			}

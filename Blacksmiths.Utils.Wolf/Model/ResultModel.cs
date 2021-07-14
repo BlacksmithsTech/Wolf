@@ -71,7 +71,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			Utility.PerfDebuggers.BeginTrace("Unboxing");
 			var Relationships = new Queue<MemberRelationshipDemand>();
-			this._data.EnforceConstraints = false;
+			//this._data.EnforceConstraints = false;
 			foreach (var collection in Collections.Values)
 			{
 				this.UnboxEnumerable(connection, collection, Relationships);
@@ -176,44 +176,41 @@ namespace Blacksmiths.Utils.Wolf.Model
 			foreach (var dataTable in flattened.Select(r => r.ModelLink.Data).Distinct())
 			{
 				var rangesInThisDataTable = flattened.Where(r => r.ModelLink.Data == dataTable);
-				var modelsInThisDataTable = rangesInThisDataTable.SelectMany(r => flattened.GetCollectionRange(r)).ToList();
+				var modelsInThisDataTable = rangesInThisDataTable.SelectMany(r => flattened.GetCollectionRange(r));
+				var rowsInThisDataTable = dataTable.Rows.Cast<DataRow>().ToList();
 
-				foreach (DataRow row in dataTable.Rows)
+				foreach (var range in rangesInThisDataTable)
 				{
-					// ** Updates and deletes
-					bool rowFound = false;
-
-					foreach (var range in rangesInThisDataTable)
+					foreach (var model in flattened.GetCollectionRange(range))
 					{
-						//var row = range.ModelLink.Data.Rows.Find(range.ModelLink.GetKeyValues(obj));
-						var modelObjects = range.ModelLink.ModelDefinition.TypeDefinition.FindObjects(row, modelsInThisDataTable, range.ModelLink.KeyColumns);
-
-						foreach(var modelObject in modelObjects)
+						var row = dataTable.Rows.Find(range.ModelLink.GetKeyValues(model));
+						if (null != row)
 						{
-							// ** Update the row and tally off the object.
-							UnboxObject(modelObject, range.ModelLink, row);
-							modelsInThisDataTable.Remove(modelObject);
-							rowFound = true;
+							UnboxObject(model, range.ModelLink, row);
+							rowsInThisDataTable.Remove(row);
+						}
+						else
+						{
+							row = range.ModelLink.Data.NewRow();
+							UnboxObject(model, range.ModelLink, row);
+							range.ModelLink.Data.Rows.Add(row);
+							range.ModelLink.RememberAddedRow(row, model);
 						}
 					}
 
-					if (!rowFound)
-						row.Delete();
-				}
-
-
-				// ** Inserts
-				foreach (var obj in modelsInThisDataTable)
-				{
-					foreach (var range in rangesInThisDataTable)
-						if (flattened.GetCollectionRange(range).Contains(obj))
+					foreach (var childModelDef in range.ModelLink.ModelDefinition.TypeDefinition.NestedModels)
+					{
+						var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
+						if (null == Demand)
 						{
-							var row = range.ModelLink.Data.NewRow();
-							UnboxObject(obj, range.ModelLink, row);
-							range.ModelLink.Data.Rows.Add(row);
-							break;
+							Demand = new MemberRelationshipDemand(range.ModelLink, childModelDef, null);
+							relationships.Enqueue(Demand);
 						}
+					}
 				}
+
+				foreach (var rowToDelete in rowsInThisDataTable)
+					rowToDelete.Delete();
 			}
 
 			//         // ** Updates and deletes
@@ -243,7 +240,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			//	modelLink.RememberAddedRow(row, ModelObject);
 			//         }
 
-			//// ** Relationship demands
+			////// ** Relationship demands
 			//foreach (var childModelDef in modelLink.ModelDefinition.TypeDefinition.NestedModels)
 			//{
 			//	var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));

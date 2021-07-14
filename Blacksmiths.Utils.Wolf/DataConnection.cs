@@ -440,6 +440,13 @@ namespace Blacksmiths.Utils.Wolf
 
 				table.PrimaryKey = PKcols.ToArray();
 			}
+			else
+			{
+				if (table.Columns.Cast<DataColumn>().Any(c => c.AutoIncrement))
+					ret |= SyncResultFlags.HasIdentity;
+
+				var t = table.DataSet.Relations;
+			}
 
 			return ret;
 		}

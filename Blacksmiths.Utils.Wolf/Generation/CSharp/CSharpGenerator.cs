@@ -19,7 +19,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		private Dictionary<string, string> CSharpTypes = new Dictionary<string, string>(StringComparer.CurrentCultureIgnoreCase)
 		{
 			{ "System.Boolean", "bool?" },
-			{ "System.Byte", "byte" },
+			{ "System.Byte", "byte?" },
 			{ "System.SByte", "sbyte" },
 			{ "System.Char", "char?" },
 			{ "System.Decimal", "decimal?" },

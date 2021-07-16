@@ -204,7 +204,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
         internal override void SetValue(object source, object value)
         {
-            this.Setter(source, value);
+            try
+            {
+                this.Setter(source, value);
+            }
+            catch(NullReferenceException ex)
+			{
+                if (null == value)
+                    throw new NullReferenceException($"Couldn't set a null value into the member '{this.Member.Name}'. Check that the member allows nulls.", ex);
+                throw;
+			}
         }
     }
 }

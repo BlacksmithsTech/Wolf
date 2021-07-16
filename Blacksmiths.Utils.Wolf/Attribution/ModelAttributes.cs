@@ -136,6 +136,10 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 				data.Constraints.Add(constraint);
 				data.DataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
 
+				//if (this.isParentTable)
+				//else
+				//	data.DataSet.Relations.Add(constraint.Columns, constraint.RelatedColumns);
+
 				return constraint;
 			}
 			else

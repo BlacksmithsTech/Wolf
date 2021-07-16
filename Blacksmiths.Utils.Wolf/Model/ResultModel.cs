@@ -71,7 +71,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			Utility.PerfDebuggers.BeginTrace("Unboxing");
 			var Relationships = new Queue<MemberRelationshipDemand>();
-			//this._data.EnforceConstraints = false;
+			this._data.EnforceConstraints = false;
 			foreach (var collection in Collections.Values)
 			{
 				this.UnboxEnumerable(connection, collection, Relationships);

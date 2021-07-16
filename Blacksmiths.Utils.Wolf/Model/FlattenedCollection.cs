@@ -49,6 +49,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal void AddCollection(ModelDefinition md, object source, System.Collections.IList collection)
         {
+            if (null == collection)
+                return;
+
             int startIndex;
             int length;
             if(null == this.Collection)

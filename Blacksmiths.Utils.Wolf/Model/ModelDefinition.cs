@@ -62,7 +62,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
 
             foreach (var nm in this.TypeDefinition.NestedModels)
-                if (nm.CollectionType != this.CollectionType)
+                if (nm.CollectionType != this.CollectionType && null != thisCollection)
                     foreach (var no in thisCollection)
                         nm.Flatten(ds, no, Collections);
         }

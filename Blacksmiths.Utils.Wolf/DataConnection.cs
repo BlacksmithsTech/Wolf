@@ -351,8 +351,12 @@ namespace Blacksmiths.Utils.Wolf
 						dbAdapter.MissingSchemaAction = MissingSchemaAction.Error;
 						dbAdapter.ContinueUpdateOnError = false;
 
-						// ** Perform the DB change
-						ret.AffectedRowCount += dbAdapter.Update(table);
+						// ** Perform the DB change.
+						Utility.PerfDebuggers.BeginTrace("Row ordering");
+						var commitRows = this.OrderRowsForCommit(table).ToArray();
+						Utility.PerfDebuggers.EndTrace("Row ordering");
+
+						ret.AffectedRowCount += dbAdapter.Update(commitRows);
 					}
 
 					dbTransaction.Commit();
@@ -439,6 +443,7 @@ namespace Blacksmiths.Utils.Wolf
 				}
 
 				table.PrimaryKey = PKcols.ToArray();
+				//table.Constraints.Add(new UniqueConstraint(table.PrimaryKey));
 			}
 			else
 			{
@@ -457,53 +462,20 @@ namespace Blacksmiths.Utils.Wolf
 				mapping.ColumnMappings.Add(column.ColumnName, column.ColumnName);
 		}
 
-		private sealed class DataTableComparer : IComparer<DataTable>
-		{
-			public int Compare(DataTable x, DataTable y)
-			{
-				if (this.IsChildOfY(x, y))
-					return 1;
-				else if (this.IsParentOfY(x, y))
-					return -1;
-				return 0;
-			}
-
-			private bool IsChildOfY(DataTable x, DataTable y)
-			{
-				foreach (var relation in x.ParentRelations.Cast<DataRelation>())
-				{
-					if (y == relation.ParentTable)
-						return true;
-
-					var ParentComparison = this.IsChildOfY(relation.ParentTable, y);
-					if (ParentComparison)
-						return ParentComparison;
-				}
-
-				return false;
-			}
-
-			private bool IsParentOfY(DataTable x, DataTable y)
-			{
-				foreach (var relation in x.ChildRelations.Cast<DataRelation>())
-				{
-					if (y == relation.ChildTable)
-						return true;
-
-					var ChildComparison = this.IsParentOfY(relation.ChildTable, y);
-					if (ChildComparison)
-						return ChildComparison;
-				}
-
-				return false;
-			}
-		}
+		
 
 		private IEnumerable<DataTable> OrderTablesForCommit(DataSet ds)
 		{
 			return ds.Tables.Cast<DataTable>()
 				.Where(dt => dt.Rows.Count > 0)
-				.OrderBy(dt => dt, new DataTableComparer());
+				.OrderBy(dt => dt, new Utility.DataTableComparer());
+		}
+
+		private IEnumerable<DataRow> OrderRowsForCommit(DataTable dt)
+		{
+			return dt.Rows
+				.Cast<DataRow>()
+				.OrderBy(dr => dr, new Utility.DataRowComparer());
 		}
 	}
 }

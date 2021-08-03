@@ -11,6 +11,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
         internal ModelLink ParentModelLink { get; private set; }
         internal ModelDefinition ChildModelDefinition { get; private set; }
+        internal Attribution.Relation Relationship { get; set; }
 
         internal MemberRelationshipDemand(ModelLink parentModelLink, ModelDefinition childModelDefinition, System.Collections.IList parentCollection)
         {

@@ -41,22 +41,29 @@ namespace Blacksmiths.Utils.Wolf.Model
 		private void IdentifyKeyColumns(DataConnection connection)
 		{
 			// ** Identify the key columns
-			this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column)));//Attribution based PKs?
-			if (0 == this._keyColumns.Count && null != connection)
+			try
 			{
-				// ** Attribution based PK (reflection is expensive, so moved this into the null!=connection so this only happens during updates and not reads)
-				this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => m.IsKey(Attribution.Key.KeyType.PrimaryKey)));
+				this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column)));//Attribution based PKs?
+				if (0 == this._keyColumns.Count && null != connection)
+				{
+					// ** Attribution based PK (reflection is expensive, so moved this into the null!=connection so this only happens during updates and not reads)
+					this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => m.IsKey(Attribution.Key.KeyType.PrimaryKey)));
 
-				if (0 == this._keyColumns.Count)
-				{
-					connection.FetchSchema(this.Data); // If a connection has been provided, go to the database to identify the key columns
-					this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column))); //use the new schema data to populate
-				}
-				else if(null == this.Data.PrimaryKey || 0 == this.Data.PrimaryKey.Length)
-				{
-					foreach (var keyColumn in this._keyColumns)
+					if (0 == this._keyColumns.Count)
+					{
+						connection.FetchSchema(this.Data); // If a connection has been provided, go to the database to identify the key columns
+						this._keyColumns = new List<MemberLink>(this._members.Values.Where(m => this.Data.PrimaryKey.Any(pkc => pkc == m.Column))); //use the new schema data to populate
+					}
+					else if (null == this.Data.PrimaryKey || 0 == this.Data.PrimaryKey.Length)
+					{
 						this.Data.PrimaryKey = this._keyColumns.Select(kc => kc.Column).ToArray();
+						//this.Data.Constraints.Add(new UniqueConstraint(this.Data.PrimaryKey));
+					}
 				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exceptions.ModelException($"An exception was thrown whilst identifying key columns for {Utility.DataTableHelpers.GetNormalisedName(this.Data)}", ex);
 			}
 		}
 

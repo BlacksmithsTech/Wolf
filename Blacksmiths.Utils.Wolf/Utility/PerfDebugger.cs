@@ -18,6 +18,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		}
 
 		[Conditional("TRACE")]
+		public static void Trace(string message)
+		{
+			System.Diagnostics.Trace.WriteLine(message);
+		}
+
+		[Conditional("TRACE")]
 		public static void BeginTrace(string Name)
 		{
 			var sw = new Stopwatch();
@@ -30,7 +36,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			if (Debuggers.TryGetValue(Name, out var sw))
 			{
-				Trace.WriteLine($"{Name} {sw.ElapsedMilliseconds}ms");
+				System.Diagnostics.Trace.WriteLine($"{Name} {sw.ElapsedMilliseconds}ms");
 				sw.Stop();
 			}
 			Debuggers.TryRemove(Name, out var swr);

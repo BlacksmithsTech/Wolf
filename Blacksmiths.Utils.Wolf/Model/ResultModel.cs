@@ -71,7 +71,6 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 			Utility.PerfDebuggers.BeginTrace("Unboxing");
 			var Relationships = new Queue<MemberRelationshipDemand>();
-			this._data.EnforceConstraints = false;
 			foreach (var collection in Collections.Values)
 			{
 				this.UnboxEnumerable(connection, collection, Relationships);
@@ -81,16 +80,16 @@ namespace Blacksmiths.Utils.Wolf.Model
 			Utility.PerfDebuggers.BeginTrace("Creating and enabling constraints");
 
 			// ** Create the FKs
+			this._data.EnforceConstraints = false;
 			while (Relationships.Count > 0)
 			{
 				var relationship = Relationships.Dequeue();
 				var childModelLink = relationship.ChildModelDefinition.GetModelTarget(this._data);
-				var formalRelationship = childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
+				var formalRelationship = relationship.Relationship ?? childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
 
 				// ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
 				formalRelationship?.CreateForeignKey(relationship.ParentModelLink, childModelLink);
 			}
-
 			this._data.EnforceConstraints = true;
 			Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
 		}
@@ -173,7 +172,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 		private void UnboxEnumerable(FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
 		{
-			foreach (var dataTable in flattened.Select(r => r.ModelLink.Data).Distinct())
+			foreach (var dataTable in flattened.Select(r => r.ModelLink.Data).Distinct().OrderBy(dt => dt, new Utility.DataTableComparer()))
 			{
 				var rangesInThisDataTable = flattened.Where(r => r.ModelLink.Data == dataTable);
 				var modelsInThisDataTable = rangesInThisDataTable.SelectMany(r => flattened.GetCollectionRange(r));
@@ -186,8 +185,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 						var row = dataTable.Rows.Find(range.ModelLink.GetKeyValues(model));
 						if (null != row)
 						{
-							UnboxObject(model, range.ModelLink, row);
+							var changesMade = UnboxObject(model, range.ModelLink, row);
 							rowsInThisDataTable.Remove(row);
+
+							if (changesMade > 0)
+								Utility.PerfDebuggers.Trace($"[UPDATE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)} : {string.Join(", ", row.ItemArray)}");
 						}
 						else
 						{
@@ -195,6 +197,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 							UnboxObject(model, range.ModelLink, row);
 							range.ModelLink.Data.Rows.Add(row);
 							range.ModelLink.RememberAddedRow(row, model);
+
+							Utility.PerfDebuggers.Trace($"[INSERT] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", row.ItemArray)}");
 						}
 					}
 
@@ -207,10 +211,25 @@ namespace Blacksmiths.Utils.Wolf.Model
 							relationships.Enqueue(Demand);
 						}
 					}
+
+					if(range.ModelLink.ModelDefinition.TypeDefinition.SelfRelationships.Any())
+					{
+						var demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(range.ModelLink.ModelDefinition) && d.ParentModelLink == range.ModelLink);
+						if (null == demand)
+						{
+							// only supports one for now
+							demand = new MemberRelationshipDemand(range.ModelLink, range.ModelLink.ModelDefinition, null);
+							demand.Relationship = range.ModelLink.ModelDefinition.TypeDefinition.SelfRelationships.FirstOrDefault();
+							relationships.Enqueue(demand);
+						}
+					}
 				}
 
 				foreach (var rowToDelete in rowsInThisDataTable)
+				{
+					Utility.PerfDebuggers.Trace($"[DELETE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", rowToDelete.ItemArray)}");
 					rowToDelete.Delete();
+				}
 			}
 
 			//         // ** Updates and deletes
@@ -252,8 +271,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 			//}
 		}
 
-		internal static void UnboxObject(object o, ModelLink modelLink, DataRow r)
+		internal static int UnboxObject(object o, ModelLink modelLink, DataRow r)
 		{
+			int changesMade = 0;
+
 			// ** Primitives
 			foreach (var ml in modelLink.Members)
 			{
@@ -265,13 +286,22 @@ namespace Blacksmiths.Utils.Wolf.Model
 				if (r.IsNull(ml.Column))
 				{
 					if (null != v)
+					{
 						r[ml.Column] = v;
+						changesMade++;
+					}
 				}
 				else if (!r[ml.Column].Equals(v))
 				{
-					r[ml.Column] = v;
+					if (null == v)
+						r[ml.Column] = DBNull.Value;
+					else
+						r[ml.Column] = v;
+					changesMade++;
 				}
 			}
+
+			return changesMade;
 		}
 
 		private System.Collections.IList BoxEnumerable(ModelDefinition modelDef, DataSet ds, Queue<MemberRelationshipDemand> relationships, System.Collections.IList sourceCollection)

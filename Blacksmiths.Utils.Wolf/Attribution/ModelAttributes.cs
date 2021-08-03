@@ -77,8 +77,11 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 
 	/// <summary>
 	/// Configures the relationship of a nested collection or object
+	/// 
+	/// Apply to a property or field to create a cross table relationship.
+	/// Apply to a class to apply a same table relationship.
 	/// </summary>
-	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field, AllowMultiple = true)]
+	[AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Class, AllowMultiple = true)]
 	public class Relation : Attribute
 	{
 		public string[] ParentFieldNames { get; set; }

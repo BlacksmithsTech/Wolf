@@ -41,7 +41,7 @@ namespace Blacksmiths.Utils.Wolf.Model
                 this.CollectionType = this.MemberType;
             this.TypeDefinition = typeLinks.GetOrCreate(this.CollectionType);
 
-            this.RelationshipAttributes = new Lazy<IEnumerable<Attribution.Relation>>(() => this.GetAttributes<Attribution.Relation>());
+            this.RelationshipAttributes = new Lazy<IEnumerable<Attribution.Relation>>(() => this.GetAccessorAttributes<Attribution.Relation>());//only
             this.IgnoreAttributes = new Lazy<IEnumerable<Attribution.Ignore>>(() => this.GetAttributes<Attribution.Ignore>());
             this.TargetAttributes = new Lazy<IEnumerable<Attribution.Target>>(() => this.GetAttributes<Attribution.Target>());
         }
@@ -67,9 +67,19 @@ namespace Blacksmiths.Utils.Wolf.Model
                         nm.Flatten(ds, no, Collections);
         }
 
+        internal IEnumerable<T> GetAccessorAttributes<T>() where T : Attribute
+        {
+            return this._memberAccessor.Member.GetCustomAttributes<T>();
+        }
+
+        internal IEnumerable<T> GetCollectionTypeAttributes<T>() where T : Attribute
+        {
+            return this.CollectionType.GetCustomAttributes<T>();
+        }
+
         internal IEnumerable<T> GetAttributes<T>() where T : Attribute
         {
-            return this._memberAccessor.Member.GetCustomAttributes<T>().Concat(this.CollectionType.GetCustomAttributes<T>());
+            return this.GetAccessorAttributes<T>().Concat(this.GetCollectionTypeAttributes<T>());
         }
 
         internal ModelLink GetModelTarget(DataSet ds)

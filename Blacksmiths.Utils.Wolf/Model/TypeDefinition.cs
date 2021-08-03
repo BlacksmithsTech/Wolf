@@ -36,6 +36,14 @@ namespace Blacksmiths.Utils.Wolf.Model
             }
         }
 
+        internal IEnumerable<Attribution.Relation> SelfRelationships
+		{
+            get
+			{
+                return this.Type.GetCustomAttributes<Attribution.Relation>();
+			}
+		}
+
         private TypeDefinition(Type t)
         {
             this.Type = t;

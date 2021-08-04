@@ -278,11 +278,18 @@ namespace Blacksmiths.Utils.Wolf
 			Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
         }
 
-        // *************************************************
-        // Engine room - Commit
-        // *************************************************
+		// *************************************************
+		// Engine room - Commit
+		// *************************************************
 
-        internal CommitResult Commit(ModelProcessor processor)
+		private class CommitAction
+		{
+			public System.Data.Common.DbDataAdapter adapter;
+			public IEnumerable<DataRow> insertUpdateRows;
+			public IEnumerable<DataRow> deleteRows;
+		}
+
+		internal CommitResult Commit(ModelProcessor processor)
 		{
 			if (null == processor)
 				throw new ArgumentNullException($"{nameof(processor)} may not be null");
@@ -308,7 +315,10 @@ namespace Blacksmiths.Utils.Wolf
 
 				try
 				{
-					foreach (var table in this.OrderTablesForCommit(ds))
+					var orderedTables = this.OrderTablesForCommit(ds);
+					var commitActions = new List<CommitAction>();
+
+					foreach (var table in orderedTables)
 					{
 						if (!Utility.DataTableHelpers.HasChanges(table))
 							continue;
@@ -351,12 +361,29 @@ namespace Blacksmiths.Utils.Wolf
 						dbAdapter.MissingSchemaAction = MissingSchemaAction.Error;
 						dbAdapter.ContinueUpdateOnError = false;
 
-						// ** Perform the DB change.
-						Utility.PerfDebuggers.BeginTrace("Row ordering");
-						var commitRows = this.OrderRowsForCommit(table).ToArray();
-						Utility.PerfDebuggers.EndTrace("Row ordering");
+						// ** Prepare the DB change.
+						//Utility.PerfDebuggers.BeginTrace("Row ordering");
+						//var commitRows = this.OrderRowsForCommit(table).ToArray();
+						//Utility.PerfDebuggers.EndTrace("Row ordering");
 
-						ret.AffectedRowCount += dbAdapter.Update(commitRows);
+						commitActions.Add(new CommitAction() { adapter = dbAdapter, insertUpdateRows = this.OrderRowsForInsert(table), deleteRows = this.OrderRowsForDeleteUpdate(table) });
+						//ret.AffectedRowCount += dbAdapter.Update(commitRows);
+					}
+
+					foreach (var commitAction in commitActions.Cast<CommitAction>().Reverse())
+					{
+						Utility.PerfDebuggers.BeginTrace("Row ordering for delete update");
+						var commitRows = commitAction.deleteRows.ToArray();
+						Utility.PerfDebuggers.EndTrace("Row ordering for delete update");
+						ret.AffectedRowCount += commitAction.adapter.Update(commitRows);
+					}
+
+					foreach (var commitAction in commitActions)
+					{
+						Utility.PerfDebuggers.BeginTrace("Row ordering for insert");
+						var commitRows = commitAction.insertUpdateRows.ToArray();
+						Utility.PerfDebuggers.EndTrace("Row ordering for insert");
+						ret.AffectedRowCount += commitAction.adapter.Update(commitRows);
 					}
 
 					dbTransaction.Commit();
@@ -475,6 +502,24 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			return dt.Rows
 				.Cast<DataRow>()
+				.Where(dr => new[] { DataRowState.Added, DataRowState.Modified, DataRowState.Deleted }.Contains(dr.RowState))
+				.OrderBy(dr => dr, new Utility.DataRowComparer());
+		}
+
+
+		private IEnumerable<DataRow> OrderRowsForInsert(DataTable dt)
+		{
+			return dt.Rows
+				.Cast<DataRow>()
+				.Where(dr => new[] { DataRowState.Added }.Contains(dr.RowState))
+				.OrderBy(dr => dr, new Utility.DataRowComparer());
+		}
+
+		private IEnumerable<DataRow> OrderRowsForDeleteUpdate(DataTable dt)
+		{
+			return dt.Rows
+				.Cast<DataRow>()
+				.Where(dr => new[] { DataRowState.Deleted, DataRowState.Modified }.Contains(dr.RowState))
 				.OrderBy(dr => dr, new Utility.DataRowComparer());
 		}
 	}

@@ -150,7 +150,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					return -1;//x < y
 				else if (y.RowState == DataRowState.Deleted)
 					return -1;//x < y
-				else if(y.RowState == DataRowState.Added)
+				else if (y.RowState == DataRowState.Added)
 					return this.CompareOrderSensitive(x, y, DataRowVersion.Current);
 			}
 			else if (x.RowState == DataRowState.Modified)
@@ -169,6 +169,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				else if (y.RowState == DataRowState.Deleted)
 					return this.CompareOrderSensitive(x, y, DataRowVersion.Original) * -1;
 			}
+			else if (x.Table != y.Table)
+				return new DataTableComparer().Compare(x.Table, y.Table);
+
 			return 0;
 
 		}
@@ -179,19 +182,28 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return 1;
 			else if (this.IsAncestorOfY(x, y, version))
 				return -1;//x < y
+			else if (x.Table != y.Table)
+				return new DataTableComparer().Compare(x.Table, y.Table);
 			return 0;// x == y
 		}
 
 		private bool IsDescendantOfY(DataRow x, DataRow y, DataRowVersion version)
 		{
-			var sameTableRelationships = this.GetParentRelationships(x);
+			var relationships = this.GetParentRelationships(x);
 
-			foreach (var relationship in sameTableRelationships)
+			foreach (var relationship in relationships)
 			{
 				var parentRows = new List<DataRow>();
 				var parentRow = x.GetParentRow(relationship, version);
 				while (null != parentRow && !parentRows.Contains(parentRow))
 				{
+					if (parentRow.Table != x.Table)
+					{
+						if (IsDescendantOfY(parentRow, y, version))
+							return true;
+						break;
+					}
+
 					if (y == parentRow)
 						return true;
 
@@ -202,31 +214,44 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return false;
 		}
 
-		private bool IsAncestorOfY(DataRow x, DataRow y, DataRowVersion version)
+		private bool IsAncestorOfY(DataRow x, DataRow y, DataRowVersion version) => this.IsAncestorOfY(new[] { x }, new List<DataRow>(), y, version);
+
+		private bool IsAncestorOfY(DataRow[] childRowsInput, List<DataRow> childRows, DataRow y, DataRowVersion version)
 		{
-			var sameTableRelationships = this.GetChildRelationships(x);
-			foreach (var relationship in sameTableRelationships)
+			if (0 == childRowsInput.Length)
+				return false;
+			var relationships = this.GetChildRelationships(childRowsInput[0]);
+			var table = childRowsInput[0].Table;
+
+			foreach (var relationship in relationships)
 			{
-				var childRows = new List<DataRow>();
-				var childRowsHere = x.GetChildRows(relationship, version);
-				while (null != childRowsHere && childRowsHere.Length > 0 && !childRowsHere.Any(cr => childRows.Contains(cr)))
+				var childRowsHere = childRowsInput;
+				while (null != childRowsHere && childRowsHere.Length > 0)
 				{
 					if (childRowsHere.Contains(y))
 						return true;
 
 					childRows.AddRange(childRowsHere);
+
 					var newChildRows = new List<DataRow>();
 					foreach (var row in childRowsHere)
-						newChildRows.AddRange(row.GetChildRows(relationship, version));
+						newChildRows.AddRange(row.GetChildRows(relationship, version).Where(r => !childRows.Contains(r)));
 					childRowsHere = newChildRows.Where(r => r.RowState != DataRowState.Deleted).ToArray();
+
+					if(table != relationship.ChildTable)
+					{
+						if (this.IsAncestorOfY(childRowsHere, childRows, y, version))
+							return true;
+						break;
+					}
 				}
 			}
 			return false;
 		}
 
-		private IEnumerable<DataRelation> GetParentRelationships(DataRow x) => x.Table.ParentRelations.Cast<DataRelation>().Where(dr => dr.ParentTable == x.Table);
+		private IEnumerable<DataRelation> GetParentRelationships(DataRow x) => x.Table.ParentRelations.Cast<DataRelation>();
 
-		private IEnumerable<DataRelation> GetChildRelationships(DataRow x) => x.Table.ChildRelations.Cast<DataRelation>().Where(dr => dr.ChildTable == x.Table);
+		private IEnumerable<DataRelation> GetChildRelationships(DataRow x) => x.Table.ChildRelations.Cast<DataRelation>();
 
 	}
 }

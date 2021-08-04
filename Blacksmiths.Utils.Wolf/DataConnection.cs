@@ -282,12 +282,12 @@ namespace Blacksmiths.Utils.Wolf
 		// Engine room - Commit
 		// *************************************************
 
-		private class CommitAction
-		{
-			public System.Data.Common.DbDataAdapter adapter;
-			public IEnumerable<DataRow> insertUpdateRows;
-			public IEnumerable<DataRow> deleteRows;
-		}
+		//private class CommitAction
+		//{
+		//	public System.Data.Common.DbDataAdapter adapter;
+		//	public IEnumerable<DataRow> insertUpdateRows;
+		//	public IEnumerable<DataRow> deleteRows;
+		//}
 
 		internal CommitResult Commit(ModelProcessor processor)
 		{
@@ -316,7 +316,8 @@ namespace Blacksmiths.Utils.Wolf
 				try
 				{
 					var orderedTables = this.OrderTablesForCommit(ds);
-					var commitActions = new List<CommitAction>();
+					var adapterDictionary = new Dictionary<DataTable, System.Data.Common.DbDataAdapter>();
+					var rowsToCommit = new List<DataRow>(ds.Tables.Cast<DataTable>().Sum(dt => dt.Rows.Count));
 
 					foreach (var table in orderedTables)
 					{
@@ -366,24 +367,36 @@ namespace Blacksmiths.Utils.Wolf
 						//var commitRows = this.OrderRowsForCommit(table).ToArray();
 						//Utility.PerfDebuggers.EndTrace("Row ordering");
 
-						commitActions.Add(new CommitAction() { adapter = dbAdapter, insertUpdateRows = this.OrderRowsForInsert(table), deleteRows = this.OrderRowsForDeleteUpdate(table) });
+						//commitActions.Add(new CommitAction() { adapter = dbAdapter, insertUpdateRows = this.OrderRowsForInsert(table), deleteRows = this.OrderRowsForDeleteUpdate(table) });
 						//ret.AffectedRowCount += dbAdapter.Update(commitRows);
+
+						adapterDictionary.Add(table, dbAdapter);
+						rowsToCommit.AddRange(this.GetRowsForCommit(table));
 					}
 
-					foreach (var commitAction in commitActions.Cast<CommitAction>().Reverse())
+					DataTable currentTable = null;
+					System.Data.Common.DbDataAdapter currentAdapter = null;
+					var batch = new List<DataRow>(rowsToCommit.Count);
+					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DataRowComparer());
+					foreach (var row in debugRowsToCommit)
 					{
-						Utility.PerfDebuggers.BeginTrace("Row ordering for delete update");
-						var commitRows = commitAction.deleteRows.ToArray();
-						Utility.PerfDebuggers.EndTrace("Row ordering for delete update");
-						ret.AffectedRowCount += commitAction.adapter.Update(commitRows);
+						if(currentTable != row.Table)
+						{
+							if(batch.Count > 0)
+							{
+								ret.AffectedRowCount += currentAdapter.Update(batch.ToArray());
+								batch.Clear();
+							}
+							currentTable = row.Table;
+							currentAdapter = adapterDictionary[currentTable];
+						}
+
+						batch.Add(row);
 					}
 
-					foreach (var commitAction in commitActions)
+					if (batch.Count > 0)
 					{
-						Utility.PerfDebuggers.BeginTrace("Row ordering for insert");
-						var commitRows = commitAction.insertUpdateRows.ToArray();
-						Utility.PerfDebuggers.EndTrace("Row ordering for insert");
-						ret.AffectedRowCount += commitAction.adapter.Update(commitRows);
+						ret.AffectedRowCount += currentAdapter.Update(batch.ToArray());
 					}
 
 					dbTransaction.Commit();
@@ -496,6 +509,13 @@ namespace Blacksmiths.Utils.Wolf
 			return ds.Tables.Cast<DataTable>()
 				.Where(dt => dt.Rows.Count > 0)
 				.OrderBy(dt => dt, new Utility.DataTableComparer());
+		}
+
+		private IEnumerable<DataRow> GetRowsForCommit(DataTable dt)
+		{
+			return dt.Rows
+				.Cast<DataRow>()
+				.Where(dr => new[] { DataRowState.Added, DataRowState.Modified, DataRowState.Deleted }.Contains(dr.RowState));
 		}
 
 		private IEnumerable<DataRow> OrderRowsForCommit(DataTable dt)

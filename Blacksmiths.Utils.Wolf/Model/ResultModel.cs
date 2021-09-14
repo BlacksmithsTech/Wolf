@@ -90,7 +90,15 @@ namespace Blacksmiths.Utils.Wolf.Model
 				// ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
 				formalRelationship?.CreateForeignKey(relationship.ParentModelLink, childModelLink);
 			}
-			this._data.EnforceConstraints = true;
+			try
+			{
+				this._data.EnforceConstraints = true;
+			}
+			catch(ConstraintException ce)
+			{
+				throw new Exceptions.ConstraintException(this._data, ce);
+			}
+
 			Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
 		}
 

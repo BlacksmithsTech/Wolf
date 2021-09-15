@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Reflection;
@@ -27,6 +28,11 @@ namespace Blacksmiths.Utils.Wolf.Model
         internal bool IsKey(Attribution.Key.KeyType keyType)
 		{
             return this.Member.Member.GetCustomAttributes<Attribution.Key>().Any(ka => keyType.Equals(ka.Type));
+		}
+
+        internal IEnumerable<Attribution.ForeignKey> GetForeignKeys()
+		{
+            return this.Member.Member.GetCustomAttributes<Attribution.ForeignKey>();
 		}
 
         internal object GetValue(object source)

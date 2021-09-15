@@ -60,9 +60,65 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		public enum KeyType
 		{
 			PrimaryKey,
+			ForeignKey,
 		}
 
-		public KeyType Type { get; set; } = KeyType.PrimaryKey;
+		public KeyType Type { get; protected set; } = KeyType.PrimaryKey;
+	}
+
+	/// <summary>
+	/// Defines that a property of field is a foreign key to another table
+	/// </summary>
+	public class ForeignKey : Key
+	{
+		public string ParentTableName { get; set; }
+		public string[] ParentFieldNames { get; set; }
+		public string[] ChildFieldNames { get; set; }
+
+		public ForeignKey(string parentTableName, string sharedChildFieldName)
+			: this(parentTableName, new[] { sharedChildFieldName }, new[] { sharedChildFieldName })
+		{
+		}
+
+		public ForeignKey(string parentTableName, string parentFieldName, string childFieldName)
+			: this(parentTableName, new[] { parentFieldName }, new[] { childFieldName })
+		{
+		}
+
+		public ForeignKey(string parentTableName, string[] parentFieldNames, string[] childFieldNames)
+		{
+			this.Type = KeyType.ForeignKey;
+			this.ParentTableName = parentTableName;
+			this.ParentFieldNames = parentFieldNames;
+			this.ChildFieldNames = childFieldNames;
+		}
+
+		internal System.Data.ForeignKeyConstraint CreateForeignKey(System.Data.DataSet dataSet, System.Data.DataTable childTable)
+		{
+			var parentTable = Utility.DataTableHelpers.GetByNormalisedName(dataSet, this.ParentTableName);
+			if (null == parentTable)
+				return null;
+
+			var parentColumns = parentTable.Columns.Cast<System.Data.DataColumn>().Where(pc => this.ParentFieldNames.Contains(pc.ColumnName)).ToArray();
+			var childColumns = childTable.Columns.Cast<System.Data.DataColumn>().Where(pc => this.ChildFieldNames.Contains(pc.ColumnName)).ToArray();
+			if (parentColumns.Length == this.ParentFieldNames.Length && childColumns.Length == this.ChildFieldNames.Length)
+			{
+				// ** Relationship and constraints
+				System.Data.ForeignKeyConstraint constraint;
+
+				constraint = new System.Data.ForeignKeyConstraint(parentColumns, childColumns);
+				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
+
+				childTable.Constraints.Add(constraint);
+				dataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
+
+				return constraint;
+			}
+			else
+			{
+				return null;
+			}
+		}
 	}
 
 	/// <summary>

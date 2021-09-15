@@ -2,10 +2,16 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using System.Data;
 
 namespace Blacksmiths.Utils.Wolf.Model
 {
-    internal sealed class MemberRelationshipDemand
+    internal interface IRelationshipDemand
+	{
+        void CreateForeignKey(System.Data.DataSet dataSet);
+	}
+
+    internal sealed class MemberRelationshipDemand : IRelationshipDemand
     {
         private System.Collections.IList parentCollection;
 
@@ -48,5 +54,32 @@ namespace Blacksmiths.Utils.Wolf.Model
                     childLink.ModelDefinition.SetValue(parenti, sourceCollection);
             }
         }
-    }
+
+		public void CreateForeignKey(System.Data.DataSet dataSet)
+		{
+            var childModelLink = this.ChildModelDefinition.GetModelTarget(dataSet);
+            var formalRelationship = this.Relationship ?? childModelLink.FindFirstValidRelationshipWithParent(this.ParentModelLink);
+
+            // ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
+            formalRelationship?.CreateForeignKey(this.ParentModelLink, childModelLink);
+        }
+	}
+
+	internal sealed class ForeignKeyRelationshipDemand : IRelationshipDemand
+	{
+        internal DataTable ParentTable { get; private set; }
+
+        internal Attribution.ForeignKey ForeignKey { get; private set; }
+
+        internal ForeignKeyRelationshipDemand(DataTable parentTable, Attribution.ForeignKey foreignKey)
+		{
+            this.ParentTable = parentTable;
+            this.ForeignKey = foreignKey;
+		}
+
+        public void CreateForeignKey(DataSet dataSet)
+		{
+            this.ForeignKey.CreateForeignKey(dataSet, this.ParentTable);
+		}
+	}
 }

@@ -69,37 +69,33 @@ namespace Blacksmiths.Utils.Wolf.Model
 				ml.Flatten(this._data, this, Collections);
 			Utility.PerfDebuggers.EndTrace("Flattening object structure");
 
-			Utility.PerfDebuggers.BeginTrace("Unboxing");
-			var Relationships = new Queue<MemberRelationshipDemand>();
+			Utility.PerfDebuggers.BeginTrace("Unboxing (change plan shown is not in order)");
+			var relationships = new Queue<IRelationshipDemand>();
 			foreach (var collection in Collections.Values)
 			{
-				this.UnboxEnumerable(connection, collection, Relationships);
+				this.UnboxEnumerable(connection, collection, relationships);
 			}
 
-			Utility.PerfDebuggers.EndTrace("Unboxing");
+			Utility.PerfDebuggers.EndTrace("Unboxing (change plan shown is not in order)");
 			Utility.PerfDebuggers.BeginTrace("Creating and enabling constraints");
 
 			// ** Create the FKs
 			this._data.EnforceConstraints = false;
-			while (Relationships.Count > 0)
-			{
-				var relationship = Relationships.Dequeue();
-				var childModelLink = relationship.ChildModelDefinition.GetModelTarget(this._data);
-				var formalRelationship = relationship.Relationship ?? childModelLink.FindFirstValidRelationshipWithParent(relationship.ParentModelLink);
+			while (relationships.Count > 0)
+				relationships.Dequeue().CreateForeignKey(this._data);
 
-				// ** Create the DataTable relationships and constraints, and force the values to match so ADO.NET recognizes the relationship
-				formalRelationship?.CreateForeignKey(relationship.ParentModelLink, childModelLink);
-			}
 			try
 			{
 				this._data.EnforceConstraints = true;
 			}
-			catch(ConstraintException ce)
+			catch (ConstraintException ce)
 			{
 				throw new Exceptions.ConstraintException(this._data, ce);
 			}
-
-			Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
+			finally
+			{
+				Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
+			}
 		}
 
 		/// <summary>
@@ -170,7 +166,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			return this._modelMembers;
 		}
 
-		private void UnboxEnumerable(DataConnection connection, FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
+		private void UnboxEnumerable(DataConnection connection, FlattenedCollection flattened, Queue<IRelationshipDemand> relationships)
 		{
 			foreach (var range in flattened)
 				range.ModelLink.ThrowIfCantUpdate(connection);
@@ -178,7 +174,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			this.UnboxEnumerable(flattened, relationships);
 		}
 
-		private void UnboxEnumerable(FlattenedCollection flattened, Queue<MemberRelationshipDemand> relationships)
+		private void UnboxEnumerable(FlattenedCollection flattened, Queue<IRelationshipDemand> relationships)
 		{
 			foreach (var dataTable in flattened.Select(r => r.ModelLink.Data).Distinct().OrderBy(dt => dt, new Utility.DataTableComparer()))
 			{
@@ -210,9 +206,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 						}
 					}
 
+					// ** Add member relationship demands across tables/objects
 					foreach (var childModelDef in range.ModelLink.ModelDefinition.TypeDefinition.NestedModels)
 					{
-						var Demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
+						var Demand = relationships.OfType<MemberRelationshipDemand>().FirstOrDefault(d => d.ChildModelDefinition.Equals(childModelDef));
 						if (null == Demand)
 						{
 							Demand = new MemberRelationshipDemand(range.ModelLink, childModelDef, null);
@@ -220,9 +217,10 @@ namespace Blacksmiths.Utils.Wolf.Model
 						}
 					}
 
+					// ** Add member relationship demands for the same table
 					if(range.ModelLink.ModelDefinition.TypeDefinition.SelfRelationships.Any())
 					{
-						var demand = relationships.FirstOrDefault(d => d.ChildModelDefinition.Equals(range.ModelLink.ModelDefinition) && d.ParentModelLink == range.ModelLink);
+						var demand = relationships.OfType<MemberRelationshipDemand>().FirstOrDefault(d => d.ChildModelDefinition.Equals(range.ModelLink.ModelDefinition) && d.ParentModelLink == range.ModelLink);
 						if (null == demand)
 						{
 							// only supports one for now
@@ -230,6 +228,14 @@ namespace Blacksmiths.Utils.Wolf.Model
 							demand.Relationship = range.ModelLink.ModelDefinition.TypeDefinition.SelfRelationships.FirstOrDefault();
 							relationships.Enqueue(demand);
 						}
+					}
+
+					// ** Add foreign key demands, which don't populate objects but do influence ordering
+					foreach (var foreignKey in range.ModelLink.GetForeignKeys())
+					{
+						var demand = relationships.OfType<ForeignKeyRelationshipDemand>().FirstOrDefault(d => d.ParentTable == range.ModelLink.Data && d.ForeignKey.Equals(foreignKey));
+						if (null == demand)
+							relationships.Enqueue(new ForeignKeyRelationshipDemand(range.ModelLink.Data, foreignKey));
 					}
 				}
 

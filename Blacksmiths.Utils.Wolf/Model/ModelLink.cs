@@ -154,6 +154,11 @@ namespace Blacksmiths.Utils.Wolf.Model
 				return null;
 		}
 
+		internal IEnumerable<Attribution.ForeignKey> GetForeignKeys()
+		{
+			return this._members.Values.SelectMany(m => m.GetForeignKeys());
+		}
+
 		internal void RememberAddedRow(DataRow r, object o)
 		{
 			if (null == this._addedRows)

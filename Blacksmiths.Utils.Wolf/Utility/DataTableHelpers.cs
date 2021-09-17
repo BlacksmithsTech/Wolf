@@ -245,15 +245,15 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				var parentRow = x.GetParentRow(relationship, version);
 				while (null != parentRow && !parentRows.Contains(parentRow))
 				{
+					if (y == parentRow)
+						return true;
+
 					if (parentRow.Table != x.Table)
 					{
 						if (IsDescendantOfY(parentRow, y, version))
 							return true;
 						break;
 					}
-
-					if (y == parentRow)
-						return true;
 
 					parentRows.Add(parentRow);
 					parentRow = parentRow.GetParentRow(relationship, DataRowVersion.Original);

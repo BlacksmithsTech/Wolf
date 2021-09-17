@@ -377,7 +377,7 @@ namespace Blacksmiths.Utils.Wolf
 					DataTable currentTable = null;
 					System.Data.Common.DbDataAdapter currentAdapter = null;
 					var batch = new List<DataRow>(rowsToCommit.Count);
-					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DataRowComparer());
+					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DebugDataRowComparer());
 					foreach (var row in debugRowsToCommit)
 					{
 						if(currentTable != row.Table)

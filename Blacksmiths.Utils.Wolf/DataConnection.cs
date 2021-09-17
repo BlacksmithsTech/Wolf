@@ -518,29 +518,29 @@ namespace Blacksmiths.Utils.Wolf
 				.Where(dr => new[] { DataRowState.Added, DataRowState.Modified, DataRowState.Deleted }.Contains(dr.RowState));
 		}
 
-		private IEnumerable<DataRow> OrderRowsForCommit(DataTable dt)
-		{
-			return dt.Rows
-				.Cast<DataRow>()
-				.Where(dr => new[] { DataRowState.Added, DataRowState.Modified, DataRowState.Deleted }.Contains(dr.RowState))
-				.OrderBy(dr => dr, new Utility.DataRowComparer());
-		}
+		//private IEnumerable<DataRow> OrderRowsForCommit(DataTable dt)
+		//{
+		//	return dt.Rows
+		//		.Cast<DataRow>()
+		//		.Where(dr => new[] { DataRowState.Added, DataRowState.Modified, DataRowState.Deleted }.Contains(dr.RowState))
+		//		.OrderBy(dr => dr, new Utility.DataRowComparer());
+		//}
 
 
-		private IEnumerable<DataRow> OrderRowsForInsert(DataTable dt)
-		{
-			return dt.Rows
-				.Cast<DataRow>()
-				.Where(dr => new[] { DataRowState.Added }.Contains(dr.RowState))
-				.OrderBy(dr => dr, new Utility.DataRowComparer());
-		}
+		//private IEnumerable<DataRow> OrderRowsForInsert(DataTable dt)
+		//{
+		//	return dt.Rows
+		//		.Cast<DataRow>()
+		//		.Where(dr => new[] { DataRowState.Added }.Contains(dr.RowState))
+		//		.OrderBy(dr => dr, new Utility.DataRowComparer());
+		//}
 
-		private IEnumerable<DataRow> OrderRowsForDeleteUpdate(DataTable dt)
-		{
-			return dt.Rows
-				.Cast<DataRow>()
-				.Where(dr => new[] { DataRowState.Deleted, DataRowState.Modified }.Contains(dr.RowState))
-				.OrderBy(dr => dr, new Utility.DataRowComparer());
-		}
+		//private IEnumerable<DataRow> OrderRowsForDeleteUpdate(DataTable dt)
+		//{
+		//	return dt.Rows
+		//		.Cast<DataRow>()
+		//		.Where(dr => new[] { DataRowState.Deleted, DataRowState.Modified }.Contains(dr.RowState))
+		//		.OrderBy(dr => dr, new Utility.DataRowComparer());
+		//}
 	}
 }

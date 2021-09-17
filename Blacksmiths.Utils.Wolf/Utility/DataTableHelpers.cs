@@ -104,7 +104,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return 0;
 		}
 
-		private bool IsChildOfY(DataTable x, DataTable y)
+		private bool IsChildOfY(DataTable x, DataTable y, List<DataTable> observed = null)
 		{
 			var parentRelationships = x.ParentRelations.Cast<DataRelation>();
 			foreach (var relation in parentRelationships)
@@ -114,15 +114,21 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				else if (relation.ParentTable == relation.ChildTable)
 					return false;
 
-				var ParentComparison = this.IsChildOfY(relation.ParentTable, y);
-				if (ParentComparison)
-					return ParentComparison;
+				if (null == observed)
+					observed = new List<DataTable>();
+				observed.Add(x);
+				if (!observed.Contains(relation.ChildTable))
+				{
+					var ParentComparison = this.IsChildOfY(relation.ParentTable, y);
+					if (ParentComparison)
+						return ParentComparison;
+				}
 			}
 
 			return false;
 		}
 
-		private bool IsParentOfY(DataTable x, DataTable y)
+		private bool IsParentOfY(DataTable x, DataTable y, List<DataTable> observed = null)
 		{
 			foreach (var relation in x.ChildRelations.Cast<DataRelation>())
 			{
@@ -131,13 +137,47 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				else if (relation.ParentTable == relation.ChildTable)
 					return false;
 
-				var ChildComparison = this.IsParentOfY(relation.ChildTable, y);
-				if (ChildComparison)
-					return ChildComparison;
+				if (null == observed)
+					observed = new List<DataTable>();
+				observed.Add(x);
+				if (!observed.Contains(relation.ChildTable))
+				{
+					//Utility.PerfDebuggers.Trace(relation.ChildTable.TableName);
+					var ChildComparison = this.IsParentOfY(relation.ChildTable, y, observed);
+					if (ChildComparison)
+						return ChildComparison;
+				}
 			}
 
 			return false;
 		}
+	}
+
+	internal sealed class DebugDataRowComparer : IComparer<DataRow>
+	{
+		private DataRowComparer _comparer = new DataRowComparer();
+
+		public int Compare(DataRow x, DataRow y)
+		{
+			var result = this._comparer.Compare(x, y);
+			switch(result)
+			{
+				case 0:
+					PerfDebuggers.Trace($"{GetRowValues(x)} is equal to {GetRowValues(y)}");
+					break;
+
+				case 1:
+					PerfDebuggers.Trace($"{GetRowValues(x)} is after {GetRowValues(y)}");
+					break;
+
+				case -1:
+					PerfDebuggers.Trace($"{GetRowValues(x)} is before {GetRowValues(y)}");
+					break;
+			}
+			return result;
+		}
+
+		private static string GetRowValues(DataRow row) => $"[{Utility.DataTableHelpers.GetNormalisedName(row.Table)}] {Exceptions.ConstraintException.GetRowValues(row)}";
 	}
 
 	internal sealed class DataRowComparer : IComparer<DataRow>
@@ -184,7 +224,15 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return -1;//x < y
 			else if (x.Table != y.Table)
 				return new DataTableComparer().Compare(x.Table, y.Table);
-			return 0;// x == y
+			return this.ActiveRelationCount(x, y, version);
+		}
+
+		private int ActiveRelationCount(DataRow x, DataRow y, DataRowVersion version)
+		{
+			var relationships = this.GetParentRelationships(x);
+			var xc = relationships.Sum(r => r.ChildColumns.Count(rc => !x.IsNull(rc, version)));
+			var yc = relationships.Sum(r => r.ChildColumns.Count(rc => !y.IsNull(rc, version)));
+			return xc - yc;
 		}
 
 		private bool IsDescendantOfY(DataRow x, DataRow y, DataRowVersion version)
@@ -236,9 +284,18 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					var newChildRows = new List<DataRow>();
 					foreach (var row in childRowsHere)
 						newChildRows.AddRange(row.GetChildRows(relationship, version).Where(r => !childRows.Contains(r)));
-					childRowsHere = newChildRows.Where(r => r.RowState != DataRowState.Deleted).ToArray();
+					switch(version)
+					{
+						case DataRowVersion.Original:
+							childRowsHere = newChildRows.Where(r => r.RowState == DataRowState.Deleted).ToArray();
+							break;
 
-					if(table != relationship.ChildTable)
+						default:
+							childRowsHere = newChildRows.Where(r => r.RowState != DataRowState.Deleted).ToArray();
+							break;
+					}
+
+					if (table != relationship.ChildTable)
 					{
 						if (this.IsAncestorOfY(childRowsHere, childRows, y, version))
 							return true;

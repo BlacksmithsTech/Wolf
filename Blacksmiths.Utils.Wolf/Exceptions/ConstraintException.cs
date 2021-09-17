@@ -22,7 +22,7 @@ namespace Blacksmiths.Utils.Wolf.Exceptions
 			return sb.ToString();
 		}
 
-		private static string GetRowValues(DataRow row)
+		internal static string GetRowValues(DataRow row)
 		{
 			DataRowVersion v = DataRowVersion.Default;
 			if (row.RowState == DataRowState.Deleted)

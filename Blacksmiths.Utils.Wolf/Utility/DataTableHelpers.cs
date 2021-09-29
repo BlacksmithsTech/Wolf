@@ -6,6 +6,11 @@ using System.Linq;
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
+	public static class DataRowHelpers
+	{
+		public static string PrintRow(DataRow row) => $"[{row.RowState}] {DataTableHelpers.GetNormalisedName(row.Table)} {Exceptions.ConstraintException.GetRowValues(row)}";
+	}
+
 	public static class DataTableHelpers
 	{
 		private const string C_EXTENDED_WOLF_IDENTITY = "_WolfIdentity";
@@ -156,28 +161,44 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	internal sealed class DebugDataRowComparer : IComparer<DataRow>
 	{
 		private DataRowComparer _comparer = new DataRowComparer();
+		private Dictionary<(DataRow x, DataRow y), int> _sanityChecker = new Dictionary<(DataRow x, DataRow y), int>();
 
 		public int Compare(DataRow x, DataRow y)
 		{
 			var result = this._comparer.Compare(x, y);
-			switch(result)
+
+			switch (result)
 			{
 				case 0:
-					PerfDebuggers.Trace($"{GetRowValues(x)} is equal to {GetRowValues(y)}");
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is equal to {DataRowHelpers.PrintRow(y)}");
 					break;
 
 				case 1:
-					PerfDebuggers.Trace($"{GetRowValues(x)} is after {GetRowValues(y)}");
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is after {DataRowHelpers.PrintRow(y)}");
 					break;
 
 				case -1:
-					PerfDebuggers.Trace($"{GetRowValues(x)} is before {GetRowValues(y)}");
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is before {DataRowHelpers.PrintRow(y)}");
 					break;
 			}
+
+			if (x == y && result != 0)
+				PerfDebuggers.Trace($"Insane comparison detected: same row is not equal to itself");
+
+			var key = (x, y);
+			var reverseKey = (y, x);
+
+			if (this._sanityChecker.ContainsKey(reverseKey))
+			{
+				if (this._sanityChecker[reverseKey] != result * -1)
+					PerfDebuggers.Trace($"Insane comparison detected: Y vs X was {this._sanityChecker[reverseKey]}");
+			}
+
+			if (!this._sanityChecker.ContainsKey(key))
+				this._sanityChecker.Add(key, result);
+
 			return result;
 		}
-
-		private static string GetRowValues(DataRow row) => $"[{Utility.DataTableHelpers.GetNormalisedName(row.Table)}] {Exceptions.ConstraintException.GetRowValues(row)}";
 	}
 
 	internal sealed class DataRowComparer : IComparer<DataRow>
@@ -256,7 +277,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					}
 
 					parentRows.Add(parentRow);
-					parentRow = parentRow.GetParentRow(relationship, DataRowVersion.Original);
+					parentRow = parentRow.GetParentRow(relationship, version);
 				}
 			}
 			return false;

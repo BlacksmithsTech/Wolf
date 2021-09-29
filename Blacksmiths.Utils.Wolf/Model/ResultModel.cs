@@ -69,14 +69,14 @@ namespace Blacksmiths.Utils.Wolf.Model
 				ml.Flatten(this._data, this, Collections);
 			Utility.PerfDebuggers.EndTrace("Flattening object structure");
 
-			Utility.PerfDebuggers.BeginTrace("Unboxing (change plan shown is not in order)");
+			Utility.PerfDebuggers.BeginTrace("Unboxing");
 			var relationships = new Queue<IRelationshipDemand>();
 			foreach (var collection in Collections.Values)
 			{
 				this.UnboxEnumerable(connection, collection, relationships);
 			}
 
-			Utility.PerfDebuggers.EndTrace("Unboxing (change plan shown is not in order)");
+			Utility.PerfDebuggers.EndTrace("Unboxing");
 			Utility.PerfDebuggers.BeginTrace("Creating and enabling constraints");
 
 			// ** Create the FKs
@@ -192,8 +192,8 @@ namespace Blacksmiths.Utils.Wolf.Model
 							var changesMade = UnboxObject(model, range.ModelLink, row);
 							rowsInThisDataTable.Remove(row);
 
-							if (changesMade > 0)
-								Utility.PerfDebuggers.Trace($"[UPDATE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)} : {string.Join(", ", row.ItemArray)}");
+							//if (changesMade > 0)
+							//	Utility.PerfDebuggers.Trace($"[UPDATE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)} : {string.Join(", ", row.ItemArray)}");
 						}
 						else
 						{
@@ -202,7 +202,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 							range.ModelLink.Data.Rows.Add(row);
 							range.ModelLink.RememberAddedRow(row, model);
 
-							Utility.PerfDebuggers.Trace($"[INSERT] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", row.ItemArray)}");
+							//Utility.PerfDebuggers.Trace($"[INSERT] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", row.ItemArray)}");
 						}
 					}
 
@@ -241,7 +241,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 
 				foreach (var rowToDelete in rowsInThisDataTable)
 				{
-					Utility.PerfDebuggers.Trace($"[DELETE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", rowToDelete.ItemArray)}");
+					//Utility.PerfDebuggers.Trace($"[DELETE] {Utility.DataTableHelpers.GetNormalisedName(dataTable)}: {string.Join(", ", rowToDelete.ItemArray)}");
 					rowToDelete.Delete();
 				}
 			}

@@ -208,23 +208,38 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		private DataRowComparer _comparer = new DataRowComparer();
 		private Dictionary<(DataRow x, DataRow y), int> _sanityChecker = new Dictionary<(DataRow x, DataRow y), int>();
 
+		internal DebugDataRowComparer()
+		{
+			Utility.PerfDebuggers.Trace(string.Empty);
+			Utility.PerfDebuggers.Trace("** Order Plan **");
+			Utility.PerfDebuggers.Trace(string.Empty);
+		}
+
+		private bool isDebugFocus(DataRow x)
+		{
+			return x.Table.TableName == "View" && x.ItemArray[0] as Guid? == new Guid("bd55dcde-98ac-4efb-851d-cdd38d2d401c");
+		}
+
 		public int Compare(DataRow x, DataRow y)
 		{
 			var result = this._comparer.Compare(x, y);
 
-			switch (result)
+			if (this.isDebugFocus(x) || this.isDebugFocus(y))
 			{
-				case 0:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is equal to {DataRowHelpers.PrintRow(y)}");
-					break;
+				switch (result)
+				{
+					case 0:
+						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS EQUAL TO {DataRowHelpers.PrintRow(y)}");
+						break;
 
-				case 1:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is after {DataRowHelpers.PrintRow(y)}");
-					break;
+					case 1:
+						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS AFTER {DataRowHelpers.PrintRow(y)}");
+						break;
 
-				case -1:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} is before {DataRowHelpers.PrintRow(y)}");
-					break;
+					case -1:
+						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS BEFORE {DataRowHelpers.PrintRow(y)}");
+						break;
+				}
 			}
 
 			if (x == y && result != 0)
@@ -288,9 +303,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return 1;
 			else if (this.IsAncestorOfY(x, y, version))
 				return -1;//x < y
-			else if (x.Table != y.Table)
-				return new DataTableComparer().Compare(x.Table, y.Table);
-			return this.ActiveRelationCount(x, y, version);
+			else if (x.Table == y.Table)
+				return this.ActiveRelationCount(x, y, version);
+			else
+				return 0;
 		}
 
 		private int ActiveRelationCount(DataRow x, DataRow y, DataRowVersion version)

@@ -8,7 +8,48 @@ namespace Blacksmiths.Utils.Wolf.Utility
 {
 	public static class DataRowHelpers
 	{
-		public static string PrintRow(DataRow row) => $"[{row.RowState}] {DataTableHelpers.GetNormalisedName(row.Table)} {Exceptions.ConstraintException.GetRowValues(row)}";
+		public static string GetRowKeyValues(DataRow row) => GetRowValues(row, row.Table.PrimaryKey);
+
+		public static string GetRowValues(DataRow row, IEnumerable<DataColumn> fromColumns = null)
+		{
+			DataRowVersion v = DataRowVersion.Default;
+			if (row.RowState == DataRowState.Deleted)
+				v = DataRowVersion.Original;
+			var values = new List<object>();
+			foreach (DataColumn column in fromColumns ?? row.Table.Columns.Cast<DataColumn>())
+				values.Add(row[column, v]);
+			return string.Join(", ", values);
+		}
+
+		public static string PrintRow(DataRow row) => $"[{row.RowState}] {DataTableHelpers.GetNormalisedName(row.Table)} {GetRowValues(row)}";
+
+		public static string PrintRowKey(DataRow row) => $"[{row.RowState}] {DataTableHelpers.GetNormalisedName(row.Table)} {GetRowKeyValues(row)}";
+
+
+		public static string PrintParents(DataRow row) => PrintParents(row, string.Empty);
+
+		public static string PrintParents(DataRow row, string route)
+		{
+			StringBuilder output = new StringBuilder();
+			route = route + PrintRowKey(row);
+
+			foreach (var relationship in GetParentRelationships(row))
+			{
+				var parentRow = row.GetParentRow(relationship);
+				if (null != parentRow)
+				{
+					var thisRoute = PrintParents(parentRow, $"{route} -> ");
+					output.AppendLine(thisRoute);
+				}
+			}
+
+			output.Append(route);
+			return output.ToString();
+		}
+
+		internal static IEnumerable<DataRelation> GetParentRelationships(DataRow x) => DataTableHelpers.GetParentRelationships(x.Table);
+
+		internal static IEnumerable<DataRelation> GetChildRelationships(DataRow x) => DataTableHelpers.GetChildRelationships(x.Table);
 	}
 
 	public static class DataTableHelpers
@@ -91,6 +132,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			return table.Rows.Cast<DataRow>().Any(dr => dr.RowState != DataRowState.Unchanged);
 		}
+
+		internal static IEnumerable<DataRelation> GetParentRelationships(DataTable x) => x.ParentRelations.Cast<DataRelation>();
+
+		internal static IEnumerable<DataRelation> GetChildRelationships(DataTable x) => x.ChildRelations.Cast<DataRelation>();
 	}
 
 	internal sealed class DataTableComparer : IComparer<DataTable>
@@ -297,9 +342,6 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				var childRowsHere = childRowsInput;
 				while (null != childRowsHere && childRowsHere.Length > 0)
 				{
-					if (childRowsHere.Contains(y))
-						return true;
-
 					childRows.AddRange(childRowsHere);
 
 					var newChildRows = new List<DataRow>();
@@ -315,6 +357,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 							childRowsHere = newChildRows.Where(r => r.RowState != DataRowState.Deleted).ToArray();
 							break;
 					}
+
+					if (childRowsHere.Contains(y))
+						return true;
 
 					if (table != relationship.ChildTable)
 					{

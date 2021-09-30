@@ -17,20 +17,11 @@ namespace Blacksmiths.Utils.Wolf.Exceptions
 			{
 				var rowErrors = dt.GetErrors();
 				foreach (var row in rowErrors)
-					sb.AppendLine($"[{Utility.DataTableHelpers.GetNormalisedName(dt)}] {row.RowError} at {row.RowState.ToString().ToLower()} row {GetRowValues(row)}");
+					sb.AppendLine($"[{Utility.DataTableHelpers.GetNormalisedName(dt)}] {row.RowError} at {row.RowState.ToString().ToLower()} row {Utility.DataRowHelpers.GetRowValues(row)}");
 			}
 			return sb.ToString();
 		}
 
-		internal static string GetRowValues(DataRow row)
-		{
-			DataRowVersion v = DataRowVersion.Default;
-			if (row.RowState == DataRowState.Deleted)
-				v = DataRowVersion.Original;
-			var values = new List<object>();
-			foreach (DataColumn column in row.Table.Columns)
-				values.Add(row[column, v]);
-			return string.Join(", ", values);
-		}
+		
 	}
 }

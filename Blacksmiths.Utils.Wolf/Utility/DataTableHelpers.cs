@@ -240,9 +240,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		internal DebugDataRowComparer()
 		{
-			Utility.PerfDebuggers.Trace(string.Empty);
-			Utility.PerfDebuggers.Trace("** Order Plan **");
-			Utility.PerfDebuggers.Trace(string.Empty);
+			Utility.Logging.Trace(string.Empty);
+			Utility.Logging.Trace("** Order Plan **");
+			Utility.Logging.Trace(string.Empty);
 		}
 
 		private bool isDebugFocus(DataRow x)
@@ -279,15 +279,15 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			switch (result)
 			{
 				case 0:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
+					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
 					break;
 
 				case 1:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
+					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
 					break;
 
 				case -1:
-					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
+					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
 					break;
 			}
 
@@ -296,7 +296,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			//PerfDebuggers.Trace(string.Empty);
 
 			if (x == y && result != 0)
-				PerfDebuggers.Trace($"Insane comparison detected: same row is not equal to itself");
+				Logging.Trace($"Insane comparison detected: same row is not equal to itself");
 
 			var key = (x, y);
 			var reverseKey = (y, x);
@@ -304,7 +304,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			if (this._sanityChecker.ContainsKey(reverseKey))
 			{
 				if (this._sanityChecker[reverseKey] != result * -1)
-					PerfDebuggers.Trace($"Insane comparison detected: Y vs X was {this._sanityChecker[reverseKey]}");
+					Logging.Trace($"Insane comparison detected: Y vs X was {this._sanityChecker[reverseKey]}");
 			}
 
 			if (!this._sanityChecker.ContainsKey(key))
@@ -316,6 +316,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 	internal sealed class DataRowComparer : IComparer<DataRow>
 	{
+		private Dictionary<(DataTable x, DataTable y), int?> _distanceCache = new Dictionary<(DataTable x, DataTable y), int?>();
+
 		public int Compare(DataRow x, DataRow y)
 		{
 			if (x.RowState == DataRowState.Added)
@@ -372,8 +374,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		private int RelationshipDistance(DataRow x, DataRow y)
 		{
-			var xyDistance = DataTableHelpers.RelationshipDistanceFrom(x.Table, y.Table);
-			var yxDistance = DataTableHelpers.RelationshipDistanceFrom(y.Table, x.Table);
+			var xyDistance = RelationshipDistanceFrom(x.Table, y.Table);
+			var yxDistance = RelationshipDistanceFrom(y.Table, x.Table);
 			if (xyDistance.HasValue && yxDistance.HasValue)
 				return xyDistance.Value - yxDistance.Value;
 			else if (xyDistance.HasValue)
@@ -382,6 +384,17 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return -1;
 			else
 				return 0;
+		}
+
+		private int? RelationshipDistanceFrom(DataTable x, DataTable y)
+		{
+			var key = (x, y);
+			if (this._distanceCache.TryGetValue(key, out var result))
+				return result;
+
+			var distance = DataTableHelpers.RelationshipDistanceFrom(x, y);
+			this._distanceCache.Add(key, distance);
+			return distance;
 		}
 
 		private bool IsDescendantOfY(DataRow x, DataRow y, DataRowVersion version)

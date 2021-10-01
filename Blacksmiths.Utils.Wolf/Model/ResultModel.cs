@@ -63,21 +63,21 @@ namespace Blacksmiths.Utils.Wolf.Model
 			if (null == this._data)
 				this._data = new DataSet();
 
-			Utility.PerfDebuggers.BeginTrace("Flattening object structure");
+			Utility.Logging.BeginTrace("Flattening object structure");
 			var Collections = new Dictionary<Type, FlattenedCollection>();
 			foreach (var ml in this.GetTopLevelModelMembers())
 				ml.Flatten(this._data, this, Collections);
-			Utility.PerfDebuggers.EndTrace("Flattening object structure");
+			Utility.Logging.EndTrace("Flattening object structure");
 
-			Utility.PerfDebuggers.BeginTrace("Unboxing");
+			Utility.Logging.BeginTrace("Unboxing");
 			var relationships = new Queue<IRelationshipDemand>();
 			foreach (var collection in Collections.Values)
 			{
 				this.UnboxEnumerable(connection, collection, relationships);
 			}
 
-			Utility.PerfDebuggers.EndTrace("Unboxing");
-			Utility.PerfDebuggers.BeginTrace("Creating and enabling constraints");
+			Utility.Logging.EndTrace("Unboxing");
+			Utility.Logging.BeginTrace("Creating and enabling constraints");
 
 			// ** Create the FKs
 			this._data.EnforceConstraints = false;
@@ -94,7 +94,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 			}
 			finally
 			{
-				Utility.PerfDebuggers.EndTrace("Creating and enabling constraints");
+				Utility.Logging.EndTrace("Creating and enabling constraints");
 			}
 		}
 
@@ -103,7 +103,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 		/// </summary>
 		internal void DataBind(DataSet ds)
 		{
-			Utility.PerfDebuggers.BeginTrace("Model databinding");
+			Utility.Logging.BeginTrace("Model databinding");
 
 			//TODO: The reliance here on using the DataSet as the foundation to the boxing is probably aggravating perf costs (exhasibated over large result sets). Should consider directly boxing from DataReaders.
 			if (null == this._data)
@@ -119,12 +119,12 @@ namespace Blacksmiths.Utils.Wolf.Model
 			// ** Assign related data
 			this.SatisfyRelationshipDemands(Relationships);
 
-			Utility.PerfDebuggers.EndTrace("Model databinding");
+			Utility.Logging.EndTrace("Model databinding");
 		}
 
 		private void SatisfyRelationshipDemands(Queue<MemberRelationshipDemand> Demands)
 		{
-			Utility.PerfDebuggers.BeginTrace("Satisfying relationships");
+			Utility.Logging.BeginTrace("Satisfying relationships");
 
 			if (Demands.Count > 0)
 			{
@@ -148,7 +148,7 @@ namespace Blacksmiths.Utils.Wolf.Model
 				}
 			}
 
-			Utility.PerfDebuggers.EndTrace("Satisfying relationships");
+			Utility.Logging.EndTrace("Satisfying relationships");
 		}
 
 		private ModelDefinition[] GetTopLevelModelMembers()

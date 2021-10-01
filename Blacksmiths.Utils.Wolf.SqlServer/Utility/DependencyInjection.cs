@@ -37,6 +37,12 @@ namespace Microsoft.Extensions.DependencyInjection
                 if (connection is IServiceLocator serviceLocatorConnection)
                     serviceLocatorConnection.ServiceProvider = provider;
 
+                var logger = provider.GetRequiredService<Logging.ILogger<IDataConnection>>();
+                Blacksmiths.Utils.Wolf.Utility.Logging.LogHandler = (level, message, args) =>
+                {
+                    Blacksmiths.Utils.Wolf.Utility.Logging.LogUsingMicrosoftLogging(logger, level, message, args);
+                };
+
                 return connection;
             });
 

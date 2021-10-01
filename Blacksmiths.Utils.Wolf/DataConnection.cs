@@ -210,7 +210,7 @@ namespace Blacksmiths.Utils.Wolf
 			Result.Request = request;
 
 			// ** Connect to the database
-			Utility.PerfDebuggers.BeginTrace("Request execution");
+			Utility.Logging.BeginTrace("Request execution");
 
 			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
 			{
@@ -246,14 +246,14 @@ namespace Blacksmiths.Utils.Wolf
 				}
 			}
 
-			Utility.PerfDebuggers.EndTrace("Request execution");
+			Utility.Logging.EndTrace("Request execution");
 
 			return Result;
 		}
 
         internal void FetchSchema(DataTable dt)
         {
-            Utility.PerfDebuggers.BeginTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
+            Utility.Logging.BeginTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
 
 			//var wolfCommand = dt.ExtendedProperties[Utility.WolfCommandBinding.C_EXTENDED_WOLF_COMMAND] as Utility.WolfCommandBinding;
 			//if(null != wolfCommand)
@@ -275,7 +275,7 @@ namespace Blacksmiths.Utils.Wolf
 				this.SyncSchemaInfo(dt, dbBuilder);
 			}
 
-			Utility.PerfDebuggers.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
+			Utility.Logging.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
         }
 
 		// *************************************************
@@ -378,14 +378,14 @@ namespace Blacksmiths.Utils.Wolf
 					System.Data.Common.DbDataAdapter currentAdapter = null;
 					var batch = new List<DataRow>(rowsToCommit.Count);
 
-					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DebugDataRowComparer()).ToArray();
+					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DataRowComparer()).ToArray();
 
-					Utility.PerfDebuggers.Trace(string.Empty);
-					Utility.PerfDebuggers.Trace("** Commit Plan **");
-					Utility.PerfDebuggers.Trace(string.Empty);
-
+					var commitPlan = new System.Text.StringBuilder();
+					commitPlan.AppendLine("** Commit Plan **");
 					foreach (var row in debugRowsToCommit)
-						Utility.PerfDebuggers.Trace(Utility.DataRowHelpers.PrintRow(row));
+						commitPlan.AppendLine(Utility.DataRowHelpers.PrintRow(row));
+
+					Utility.Logging.Log(Utility.LogLevel.Debug, commitPlan.ToString());
 
 					foreach (var row in debugRowsToCommit)
 					{

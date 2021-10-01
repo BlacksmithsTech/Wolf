@@ -83,7 +83,7 @@ namespace Blacksmiths.Utils.Wolf
 			if (null == ds)
 				throw new ArgumentNullException("DataSet cannot be null");
 
-			PerfDebuggers.BeginTrace("DataSet preperation");
+			Logging.BeginTrace("DataSet preperation");
 
 			ds.EnforceConstraints = false;
 
@@ -129,7 +129,7 @@ namespace Blacksmiths.Utils.Wolf
 
 			ds.EnforceConstraints = true;
 
-			PerfDebuggers.EndTrace("DataSet preperation");
+			Logging.EndTrace("DataSet preperation");
 
 			return ds;
 		}

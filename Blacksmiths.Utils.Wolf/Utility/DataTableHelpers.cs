@@ -247,49 +247,49 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		private bool isDebugFocus(DataRow x)
 		{
-			return x.Table.TableName == "View" && x.ItemArray[0] as Guid? == new Guid("bd55dcde-98ac-4efb-851d-cdd38d2d401c");
+			return x.Table.TableName == "btqlValue" && x.ItemArray[0] as Guid? == new Guid("ae896993-d28d-4158-bc7f-7d485f21fcb8");
 		}
 
 		public int Compare(DataRow x, DataRow y)
 		{
 			var result = this._comparer.Compare(x, y);
 
-			//if (this.isDebugFocus(x) || this.isDebugFocus(y))
-			//{
-			//	switch (result)
-			//	{
-			//		case 0:
-			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
-			//			break;
-
-			//		case 1:
-			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
-			//			break;
-
-			//		case -1:
-			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
-			//			break;
-			//	}
-
-			//	//PerfDebuggers.Trace(DataRowHelpers.PrintParents(x));
-			//	//PerfDebuggers.Trace(DataRowHelpers.PrintParents(y));
-			//	//PerfDebuggers.Trace(string.Empty);
-			//}
-
-			switch (result)
+			if (x.Table.TableName == "btqlValue" && y.Table.TableName == "btqlExpression")
 			{
-				case 0:
-					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
-					break;
+				switch (result)
+				{
+					case 0:
+						Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
+						break;
 
-				case 1:
-					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
-					break;
+					case 1:
+						Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
+						break;
 
-				case -1:
-					Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
-					break;
+					case -1:
+						Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
+						break;
+				}
+
+				//PerfDebuggers.Trace(DataRowHelpers.PrintParents(x));
+				//PerfDebuggers.Trace(DataRowHelpers.PrintParents(y));
+				//PerfDebuggers.Trace(string.Empty);
 			}
+
+			//switch (result)
+			//{
+			//	case 0:
+			//		Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
+			//		break;
+
+			//	case 1:
+			//		Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
+			//		break;
+
+			//	case -1:
+			//		Logging.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
+			//		break;
+			//}
 
 			//PerfDebuggers.Trace(DataRowHelpers.PrintParents(x));
 			//PerfDebuggers.Trace(DataRowHelpers.PrintParents(y));
@@ -359,12 +359,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			else if (this.IsDescendantOfY(y, x, version))
 				return -1;//x < y
 			else if (x.Table == y.Table)
-				return this.ActiveRelationCount(x, y, version);
+				return this.ActiveRelationCountSameTable(x, y, version);
 			else
-				return this.RelationshipDistance(x, y);
+				return this.RelationshipDistance(x, y, version);
 		}
 
-		private int ActiveRelationCount(DataRow x, DataRow y, DataRowVersion version)
+		private int ActiveRelationCountSameTable(DataRow x, DataRow y, DataRowVersion version)
 		{
 			var relationships = this.GetParentRelationships(x);
 			var xc = relationships.Sum(r => r.ChildColumns.Count(rc => !x.IsNull(rc, version)));
@@ -372,15 +372,40 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return xc - yc;
 		}
 
-		private int RelationshipDistance(DataRow x, DataRow y)
+		private int RelationshipDistance(DataRow x, DataRow y, DataRowVersion version)
 		{
 			var xyDistance = RelationshipDistanceFrom(x.Table, y.Table);
 			var yxDistance = RelationshipDistanceFrom(y.Table, x.Table);
+
 			if (xyDistance.HasValue && yxDistance.HasValue)
-				return xyDistance.Value - yxDistance.Value;
+			{
+				var result = xyDistance.Value - yxDistance.Value;
+				if (0 == result)
+					return this.ActiveRelationCountDifferentTables(x, y, version);
+				else
+					return 0;
+			}
 			else if (xyDistance.HasValue)
 				return 1;
 			else if (yxDistance.HasValue)
+				return -1;
+			else
+				return 0;
+		}
+
+		private int ActiveRelationCountDifferentTables(DataRow x, DataRow y, DataRowVersion version)
+		{
+			var xRelationships = this.GetParentRelationships(x).Where(r => r.ParentTable == y.Table);
+			var yRelationships = this.GetParentRelationships(y).Where(r => r.ParentTable == x.Table);
+			var xColumns = xRelationships.SelectMany(r => r.ChildColumns).Distinct();
+			var yColumns = yRelationships.SelectMany(r => r.ChildColumns).Distinct();
+
+			var xc = xColumns.Count(c => !x.IsNull(c, version));
+			var yc = yColumns.Count(c => !y.IsNull(c, version));
+
+			if (xc < yc)
+				return 1;
+			else if (xc > yc)
 				return -1;
 			else
 				return 0;

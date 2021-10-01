@@ -133,6 +133,36 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			return table.Rows.Cast<DataRow>().Any(dr => dr.RowState != DataRowState.Unchanged);
 		}
 
+		internal static int? RelationshipDistanceFrom(DataTable x, DataTable y)
+		{
+			var distances = GetParentRelationshipTables(x)
+				.Select(chain => chain.IndexOf(y) + 1)
+				.Where(distance => distance > 0);
+
+			if (distances.Any())
+				return distances.Min();
+			else
+				return null;
+		}
+
+		internal static List<List<DataTable>> GetParentRelationshipTables(DataTable x) => GetParentRelationshipTables(x, new List<DataTable>());
+
+		internal static List<List<DataTable>> GetParentRelationshipTables(DataTable x, List<DataTable> dataTables)
+		{
+			List<List<DataTable>> result = new List<List<DataTable>>();
+
+			foreach (var relationship in GetParentRelationships(x))
+				if (!dataTables.Contains(relationship.ParentTable))
+				{
+					var thisChain = new List<DataTable>(dataTables);
+					thisChain.Add(relationship.ParentTable);
+					result.AddRange(GetParentRelationshipTables(relationship.ParentTable, thisChain));
+					result.Add(thisChain);
+				}
+
+			return result;
+		}
+
 		internal static IEnumerable<DataRelation> GetParentRelationships(DataTable x) => x.ParentRelations.Cast<DataRelation>();
 
 		internal static IEnumerable<DataRelation> GetChildRelationships(DataTable x) => x.ChildRelations.Cast<DataRelation>();
@@ -224,23 +254,46 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			var result = this._comparer.Compare(x, y);
 
-			if (this.isDebugFocus(x) || this.isDebugFocus(y))
+			//if (this.isDebugFocus(x) || this.isDebugFocus(y))
+			//{
+			//	switch (result)
+			//	{
+			//		case 0:
+			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
+			//			break;
+
+			//		case 1:
+			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
+			//			break;
+
+			//		case -1:
+			//			PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
+			//			break;
+			//	}
+
+			//	//PerfDebuggers.Trace(DataRowHelpers.PrintParents(x));
+			//	//PerfDebuggers.Trace(DataRowHelpers.PrintParents(y));
+			//	//PerfDebuggers.Trace(string.Empty);
+			//}
+
+			switch (result)
 			{
-				switch (result)
-				{
-					case 0:
-						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS EQUAL TO {DataRowHelpers.PrintRow(y)}");
-						break;
+				case 0:
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS EQUAL TO {DataRowHelpers.PrintRowKey(y)}");
+					break;
 
-					case 1:
-						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS AFTER {DataRowHelpers.PrintRow(y)}");
-						break;
+				case 1:
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS AFTER {DataRowHelpers.PrintRowKey(y)}");
+					break;
 
-					case -1:
-						PerfDebuggers.Trace($"{DataRowHelpers.PrintRow(x)} IS BEFORE {DataRowHelpers.PrintRow(y)}");
-						break;
-				}
+				case -1:
+					PerfDebuggers.Trace($"{DataRowHelpers.PrintRowKey(x)} IS BEFORE {DataRowHelpers.PrintRowKey(y)}");
+					break;
 			}
+
+			//PerfDebuggers.Trace(DataRowHelpers.PrintParents(x));
+			//PerfDebuggers.Trace(DataRowHelpers.PrintParents(y));
+			//PerfDebuggers.Trace(string.Empty);
 
 			if (x == y && result != 0)
 				PerfDebuggers.Trace($"Insane comparison detected: same row is not equal to itself");
@@ -301,12 +354,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			if (this.IsDescendantOfY(x, y, version))
 				return 1;
-			else if (this.IsAncestorOfY(x, y, version))
+			else if (this.IsDescendantOfY(y, x, version))
 				return -1;//x < y
 			else if (x.Table == y.Table)
 				return this.ActiveRelationCount(x, y, version);
 			else
-				return 0;
+				return this.RelationshipDistance(x, y);
 		}
 
 		private int ActiveRelationCount(DataRow x, DataRow y, DataRowVersion version)
@@ -315,6 +368,20 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			var xc = relationships.Sum(r => r.ChildColumns.Count(rc => !x.IsNull(rc, version)));
 			var yc = relationships.Sum(r => r.ChildColumns.Count(rc => !y.IsNull(rc, version)));
 			return xc - yc;
+		}
+
+		private int RelationshipDistance(DataRow x, DataRow y)
+		{
+			var xyDistance = DataTableHelpers.RelationshipDistanceFrom(x.Table, y.Table);
+			var yxDistance = DataTableHelpers.RelationshipDistanceFrom(y.Table, x.Table);
+			if (xyDistance.HasValue && yxDistance.HasValue)
+				return xyDistance.Value - yxDistance.Value;
+			else if (xyDistance.HasValue)
+				return 1;
+			else if (yxDistance.HasValue)
+				return -1;
+			else
+				return 0;
 		}
 
 		private bool IsDescendantOfY(DataRow x, DataRow y, DataRowVersion version)
@@ -332,8 +399,12 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 					if (parentRow.Table != x.Table)
 					{
+						//if (parentRow.Table == y.Table)
+						//	return true;
+
 						if (IsDescendantOfY(parentRow, y, version))
 							return true;
+
 						break;
 					}
 

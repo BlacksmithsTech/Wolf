@@ -378,7 +378,9 @@ namespace Blacksmiths.Utils.Wolf
 					System.Data.Common.DbDataAdapter currentAdapter = null;
 					var batch = new List<DataRow>(rowsToCommit.Count);
 
-					var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DataRowComparer()).ToArray();
+					//var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DebugDataRowComparer()).ToArray();
+					var debugRowsToCommit = new Utility.DataRowCollection(rowsToCommit);
+					debugRowsToCommit.Sort();
 
 					var commitPlan = new System.Text.StringBuilder();
 					commitPlan.AppendLine("** Commit Plan **");

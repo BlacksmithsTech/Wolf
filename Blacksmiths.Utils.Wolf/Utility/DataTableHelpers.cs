@@ -245,16 +245,36 @@ namespace Blacksmiths.Utils.Wolf.Utility
 			Utility.Logging.Trace(string.Empty);
 		}
 
-		private bool isDebugFocus(DataRow x)
+		private bool isDebugFocus(DataRow x, DataRow y)
 		{
-			return x.Table.TableName == "btqlValue" && x.ItemArray[0] as Guid? == new Guid("ae896993-d28d-4158-bc7f-7d485f21fcb8");
+			return this.isDebugFocus1(x, y) || this.isDebugFocus2(x, y);
+		}
+
+		private bool isDebugFocus1(DataRow x, DataRow y)
+		{
+			return this.isDebugFocus1(x) || this.isDebugFocus1(y);
+		}
+
+		private bool isDebugFocus1(DataRow x)
+		{
+			return x.Table.TableName == "btqlInvocation" && x.ItemArray[0] as Guid? == new Guid("a1f56fb2-ed00-46f6-b495-b49b0eb48ad0");
+		}
+
+		private bool isDebugFocus2(DataRow x, DataRow y)
+		{
+			return this.isDebugFocus2(x) || this.isDebugFocus2(y);
+		}
+
+		private bool isDebugFocus2(DataRow x)
+		{
+			return x.Table.TableName == "btqlValue" && x.ItemArray[0] as Guid? == new Guid("19681c05-12fd-46ee-af1f-d1777a1b7bf2");
 		}
 
 		public int Compare(DataRow x, DataRow y)
 		{
 			var result = this._comparer.Compare(x, y);
 
-			if (x.Table.TableName == "btqlValue" && y.Table.TableName == "btqlExpression")
+			if (this.isDebugFocus(x,y))
 			{
 				switch (result)
 				{
@@ -311,6 +331,39 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				this._sanityChecker.Add(key, result);
 
 			return result;
+		}
+	}
+
+	internal sealed class DataRowCollection : List<DataRow>
+	{
+		internal DataRowCollection(IEnumerable<DataRow> rows)
+			: base(rows)
+		{
+		}
+
+		internal void Sort()
+		{
+			for(int i = this.Count - 1; i > -1; i--)
+			{
+				var thisRow = this[i];
+				foreach(var parentRelationship in DataRowHelpers.GetParentRelationships(thisRow))
+				{
+					var parentRow = thisRow.GetParentRow(parentRelationship);
+
+					if (null != parentRow && parentRow.RowState != DataRowState.Unchanged && parentRow != thisRow)
+					{
+						var parentIndex = this.IndexOf(parentRow);
+						if (parentIndex > i)
+						{
+							// ** Swap the rows
+							this[i] = parentRow;
+							this[parentIndex] = thisRow;
+							i = Math.Max(i + 1, parentIndex);
+							break;
+						}
+					}
+				}
+			}
 		}
 	}
 

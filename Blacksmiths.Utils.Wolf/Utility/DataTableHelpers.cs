@@ -348,18 +348,37 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				var thisRow = this[i];
 				foreach(var parentRelationship in DataRowHelpers.GetParentRelationships(thisRow))
 				{
-					var parentRow = thisRow.GetParentRow(parentRelationship);
+					var version = DataRowVersion.Current;
+					if (thisRow.RowState == DataRowState.Deleted)
+						version = DataRowVersion.Original;
+
+					var parentRow = thisRow.GetParentRow(parentRelationship, version);
 
 					if (null != parentRow && parentRow.RowState != DataRowState.Unchanged && parentRow != thisRow)
 					{
 						var parentIndex = this.IndexOf(parentRow);
-						if (parentIndex > i)
+
+						if (parentRow.RowState == DataRowState.Deleted)
 						{
-							// ** Swap the rows
-							this[i] = parentRow;
-							this[parentIndex] = thisRow;
-							i = Math.Max(i + 1, parentIndex);
-							break;
+							if (parentIndex < i)
+							{
+								// ** Swap the rows
+								this[i] = parentRow;
+								this[parentIndex] = thisRow;
+								i = Math.Max(i + 1, parentIndex);
+								break;
+							}
+						}
+						else
+						{
+							if (parentIndex > i)
+							{
+								// ** Swap the rows
+								this[i] = parentRow;
+								this[parentIndex] = thisRow;
+								i = Math.Max(i + 1, parentIndex);
+								break;
+							}
 						}
 					}
 				}

@@ -337,8 +337,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	internal sealed class DataRowCollection : List<DataRow>
 	{
 		internal DataRowCollection(IEnumerable<DataRow> rows)
-			: base(rows)
 		{
+			this.Capacity = rows.Count() + 1;
+			this.AddRange(rows);
 		}
 
 		internal void Sort()
@@ -363,9 +364,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
 							if (parentIndex < i)
 							{
 								// ** Swap the rows
-								this[i] = parentRow;
-								this[parentIndex] = thisRow;
-								i = Math.Max(i + 1, parentIndex);
+								//this[i] = parentRow;
+								//this[parentIndex] = thisRow;
+								this.Insert(i + 1, parentRow);
+								this.RemoveAt(parentIndex);
+								i = Math.Max(i + 1, parentIndex + 1);
 								break;
 							}
 						}
@@ -374,9 +377,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
 							if (parentIndex > i)
 							{
 								// ** Swap the rows
-								this[i] = parentRow;
-								this[parentIndex] = thisRow;
-								i = Math.Max(i + 1, parentIndex);
+								this.Insert(i, parentRow);
+								this.RemoveAt(parentIndex + 1);
+								//this[i] = parentRow;
+								//this[parentIndex] = thisRow;
+								i = Math.Max(i + 1, parentIndex + 1);
 								break;
 							}
 						}

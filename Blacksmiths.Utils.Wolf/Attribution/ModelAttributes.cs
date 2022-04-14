@@ -108,7 +108,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 
 				constraint = new System.Data.ForeignKeyConstraint(parentColumns, childColumns);
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
-
+				constraint.ConstraintName = $"{parentTable.TableName}_{childTable.TableName}_{string.Join("_", childColumns.Select(cc => cc.ColumnName))}";
 				childTable.Constraints.Add(constraint);
 				dataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
 
@@ -183,11 +183,13 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 				{
 					data = childModelLink.Data;
 					constraint = new System.Data.ForeignKeyConstraint(parentColumns.Select(pc => pc.Column).ToArray(), childColumns.Select(cc => cc.Column).ToArray());
+					constraint.ConstraintName = $"{parentModelLink.Data.TableName}_{childModelLink.Data.TableName}_{string.Join("_", childColumns.Select(cc => cc.Column.ColumnName))}";
 				}
 				else
 				{
 					data = parentModelLink.Data;
 					constraint = new System.Data.ForeignKeyConstraint(childColumns.Select(cc => cc.Column).ToArray(), parentColumns.Select(pc => pc.Column).ToArray());
+					constraint.ConstraintName = $"{childModelLink.Data.TableName}_{parentModelLink.Data.TableName}_{string.Join("_", parentColumns.Select(pc => pc.Column.ColumnName))}";
 				}
 
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;

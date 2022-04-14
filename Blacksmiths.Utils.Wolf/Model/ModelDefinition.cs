@@ -46,25 +46,41 @@ namespace Blacksmiths.Utils.Wolf.Model
             this.TargetAttributes = new Lazy<IEnumerable<Attribution.Target>>(() => this.GetAttributes<Attribution.Target>());
         }
 
-        internal void Flatten(DataSet ds, object source, Dictionary<Type, FlattenedCollection> Collections)
+        internal void Flatten(DataSet ds, object source, Dictionary<Type, FlattenedCollection> collections)
         {
             if (this.isIgnoredDuringCommit)
                 return;
 
-            var thisCollection = this.ToCollection(source);
-            if (Collections.ContainsKey(this.CollectionType))
+            var thisCollection = null != source ? this.ToCollection(source) : new object[0];
+            var collectionAdded = false;
+
+            if (collections.ContainsKey(this.CollectionType))
             {
-                Collections[this.CollectionType].AddCollection(this, source, thisCollection);
+                // Append to the collection where there is data to append
+                if (thisCollection.Count > 0)
+                    collections[this.CollectionType].AddCollection(this, source, thisCollection);
             }
             else
             {
-                Collections.Add(this.CollectionType, new FlattenedCollection(ds, this, source, thisCollection));
+                // Always create the needed collections
+                collections.Add(this.CollectionType, new FlattenedCollection(ds, this, source, thisCollection));
+                collectionAdded = true;
             }
 
             foreach (var nm in this.TypeDefinition.NestedModels)
                 if (nm.CollectionType != this.CollectionType && null != thisCollection)
-                    foreach (var no in thisCollection)
-                        nm.Flatten(ds, no, Collections);
+                {
+                    if (thisCollection.Count > 0)
+                    {
+                        foreach (var no in thisCollection)
+                            nm.Flatten(ds, no, collections);
+                    }
+                    else if(collectionAdded)//avoid infinite loops, only need to do this for brand new collections
+                    {
+                        // Flatten against null so that the empty collection is registered. Fixes a bug where is the nested model was entirely empty, the model would be ignored by the commit.
+                        nm.Flatten(ds, null, collections);
+                    }
+                }
         }
 
         internal IEnumerable<T> GetAccessorAttributes<T>() where T : Attribute

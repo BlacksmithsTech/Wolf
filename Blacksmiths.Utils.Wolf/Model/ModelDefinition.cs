@@ -57,7 +57,7 @@ namespace Blacksmiths.Utils.Wolf.Model
             if (collections.ContainsKey(this.CollectionType))
             {
                 // Append to the collection where there is data to append
-                if (thisCollection.Count > 0)
+                if (thisCollection?.Count > 0)
                     collections[this.CollectionType].AddCollection(this, source, thisCollection);
             }
             else

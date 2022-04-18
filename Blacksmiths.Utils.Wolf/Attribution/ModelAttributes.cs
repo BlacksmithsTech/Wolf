@@ -110,7 +110,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
 				constraint.ConstraintName = $"{parentTable.TableName}_{childTable.TableName}_{string.Join("_", childColumns.Select(cc => cc.ColumnName))}";
 				childTable.Constraints.Add(constraint);
-				dataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
+				dataSet.Relations.Add(constraint.ConstraintName, constraint.RelatedColumns, constraint.Columns);
 
 				return constraint;
 			}
@@ -195,7 +195,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 				constraint.AcceptRejectRule = System.Data.AcceptRejectRule.None;
 
 				data.Constraints.Add(constraint);
-				data.DataSet.Relations.Add(constraint.RelatedColumns, constraint.Columns);
+				data.DataSet.Relations.Add(constraint.ConstraintName, constraint.RelatedColumns, constraint.Columns);
 
 				//if (this.isParentTable)
 				//else

@@ -353,41 +353,57 @@ namespace Blacksmiths.Utils.Wolf.Utility
 					if (thisRow.RowState == DataRowState.Deleted)
 						version = DataRowVersion.Original;
 
-					var parentRow = thisRow.GetParentRow(parentRelationship, version);
+					var currentParentRow = thisRow.GetParentRow(parentRelationship, version);
+					
+					bool swapped = false;
+					swapped |= Swap(ref i, currentParentRow, thisRow);
 
-					if (null != parentRow && parentRow.RowState != DataRowState.Unchanged && parentRow != thisRow)
+					if (DataRowVersion.Original != version)
 					{
-						var parentIndex = this.IndexOf(parentRow);
+						var originalParentRow = thisRow.GetParentRow(parentRelationship, DataRowVersion.Original);
+						if (currentParentRow != originalParentRow)
+							swapped |= Swap(ref i, originalParentRow, thisRow);
+					}
+					if (swapped)
+						break;
+				}
+			}
+		}
 
-						if (parentRow.RowState == DataRowState.Deleted)
-						{
-							if (parentIndex < i)
-							{
-								// ** Swap the rows
-								//this[i] = parentRow;
-								//this[parentIndex] = thisRow;
-								this.Insert(i + 1, parentRow);
-								this.RemoveAt(parentIndex);
-								i = Math.Max(i + 1, parentIndex + 1);
-								break;
-							}
-						}
-						else
-						{
-							if (parentIndex > i)
-							{
-								// ** Swap the rows
-								this.Insert(i, parentRow);
-								this.RemoveAt(parentIndex + 1);
-								//this[i] = parentRow;
-								//this[parentIndex] = thisRow;
-								i = Math.Max(i + 1, parentIndex + 1);
-								break;
-							}
-						}
+		private bool Swap(ref int i, DataRow swapRow, DataRow thisRow)
+        {
+			if (null != swapRow && swapRow.RowState != DataRowState.Unchanged && swapRow != thisRow)
+			{
+				var parentIndex = this.IndexOf(swapRow);
+
+				if (swapRow.RowState == DataRowState.Deleted)
+				{
+					if (parentIndex < i)
+					{
+						// ** Swap the rows
+						//this[i] = parentRow;
+						//this[parentIndex] = thisRow;
+						this.Insert(i + 1, swapRow);
+						this.RemoveAt(parentIndex);
+						i = Math.Max(i + 1, parentIndex + 1);
+						return true;
+					}
+				}
+				else
+				{
+					if (parentIndex > i)
+					{
+						// ** Swap the rows
+						this.Insert(i, swapRow);
+						this.RemoveAt(parentIndex + 1);
+						//this[i] = parentRow;
+						//this[parentIndex] = thisRow;
+						i = Math.Max(i + 1, parentIndex + 1);
+						return true;
 					}
 				}
 			}
+			return false;
 		}
 	}
 

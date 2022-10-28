@@ -223,13 +223,14 @@ namespace Blacksmiths.Utils.Wolf
 
 				var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
 				Result.Commands = wolfWork.ToArray();
-
+				Utility.WolfCommandBinding lastCommandBinding = null;
 				try
 				{
 
 					// ** Process the commands
 					foreach (var wolfCommand in wolfWork)
 					{
+						lastCommandBinding = wolfCommand;
 						// ** Get a data adapter and fill a dataset
 						var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
 						dbAdapter.Fill(wolfCommand.ResultData);
@@ -239,10 +240,10 @@ namespace Blacksmiths.Utils.Wolf
 
 					dbTransaction?.Commit();
 				}
-				catch
+				catch(Exception ex)
 				{
 					dbTransaction?.Rollback();
-					throw;
+					throw new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
 				}
 			}
 
@@ -412,10 +413,10 @@ namespace Blacksmiths.Utils.Wolf
 
 					dbTransaction.Commit();
 				}
-				catch
+				catch(Exception ex)
 				{
 					dbTransaction.Rollback();
-					throw;
+					throw new Exceptions.CommitExecutionException(processor, ex);
 				}
 			}
 

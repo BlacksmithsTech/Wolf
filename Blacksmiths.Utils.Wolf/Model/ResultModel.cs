@@ -285,6 +285,9 @@ namespace Blacksmiths.Utils.Wolf.Model
 			//}
 		}
 
+		private static Func<object, object, bool> enumValueComparer = (columnValue, modelValue) => ((string)columnValue).Equals(modelValue.ToString(), StringComparison.CurrentCultureIgnoreCase);
+		private static Func<object, object, bool> standardValueComparer = (columnValue, modelValue) => columnValue.Equals(modelValue);
+
 		internal static int UnboxObject(object o, ModelLink modelLink, DataRow r)
 		{
 			int changesMade = 0;
@@ -305,13 +308,22 @@ namespace Blacksmiths.Utils.Wolf.Model
 						changesMade++;
 					}
 				}
-				else if (!r[ml.Column].Equals(v))
+				else
 				{
-					if (null == v)
-						r[ml.Column] = DBNull.Value;
+					Func<object, object, bool> valueComparer;
+					if (ml.MemberElementType.IsEnum && ml.Column.DataType == typeof(string))
+						valueComparer = enumValueComparer;
 					else
-						r[ml.Column] = v;
-					changesMade++;
+						valueComparer = standardValueComparer;
+
+					if (!valueComparer(r[ml.Column], v))
+					{
+						if (null == v)
+							r[ml.Column] = DBNull.Value;
+						else
+							r[ml.Column] = v;
+						changesMade++;
+					}
 				}
 			}
 

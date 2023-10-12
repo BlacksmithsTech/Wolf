@@ -16,11 +16,11 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 {
 	public class SqlServerProvider : IProvider
 	{
-        // *************************************************
-        // Fields
-        // *************************************************
+		// *************************************************
+		// Fields
+		// *************************************************
 
-        private System.Reflection.Assembly _callingAssembly;
+		private System.Reflection.Assembly _callingAssembly;
 		private StoredProcedureProvider _spProvider;
 		private ConnectionProvider _connectionProvider;
 
@@ -33,21 +33,21 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		/// </summary>
 		public SqlConnectionStringBuilder ConnectionString { get; private set; }
 
-        DbConnectionStringBuilder IProvider.ConnectionString => this.ConnectionString;
+		DbConnectionStringBuilder IProvider.ConnectionString => this.ConnectionString;
 
-        public string DatabaseName { get { return this.ConnectionString.InitialCatalog; } }
+		public string DatabaseName { get { return this.ConnectionString.InitialCatalog; } }
 
-        public string Server { get { return this.ConnectionString.DataSource; } }
+		public string Server { get { return this.ConnectionString.DataSource; } }
 
-        // *************************************************
-        // Constructor & Factory
-        // *************************************************
+		// *************************************************
+		// Constructor & Factory
+		// *************************************************
 
-        internal SqlServerProvider(string connectionString, System.Reflection.Assembly callingAssembly)
+		internal SqlServerProvider(string connectionString, System.Reflection.Assembly callingAssembly)
 		{
 			if (null == connectionString)
 				throw new ArgumentNullException("connectionString may not be null");
-            this._callingAssembly = callingAssembly;
+			this._callingAssembly = callingAssembly;
 			this.ConnectionString = this.PrepareConnectionString(connectionString);
 		}
 
@@ -58,15 +58,25 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		/// <returns>Database connection</returns>
 		public static DataConnection NewSqlServerConnection(string connectionString)
 		{
-			return new DataConnection(new SqlServerProvider(connectionString, System.Reflection.Assembly.GetCallingAssembly()));
+			return new DataConnection(NewSqlServerProvider(connectionString));
 		}
 
-        /// <summary>
-        /// Creates a new SQL Server data connection from your application configuration
-        /// </summary>
-        /// <param name="connectionStringName">Optional. The name of a connection string in your configuration to use for this connection.</param>
-        /// <returns>Database connection</returns>
-        public static DataConnection NewSqlServerConnectionFromCfg(string connectionStringName = null)
+		/// <summary>
+		/// Creates a new SQL Server data provider
+		/// </summary>
+		/// <param name="connectionString"></param>
+		/// <returns></returns>
+		public static IProvider NewSqlServerProvider(string connectionString)
+        {
+			return new SqlServerProvider(connectionString, System.Reflection.Assembly.GetCallingAssembly());
+		}
+
+		/// <summary>
+		/// Creates a new SQL Server data connection from your application configuration
+		/// </summary>
+		/// <param name="connectionStringName">Optional. The name of a connection string in your configuration to use for this connection.</param>
+		/// <returns>Database connection</returns>
+		public static DataConnection NewSqlServerConnectionFromCfg(string connectionStringName = null)
         {
             return new DataConnection(new SqlServerProvider(new Utility.WolfOptionsSqlServer().GetConnectionStringFromCfg(connectionStringName), System.Reflection.Assembly.GetCallingAssembly()));
         }

@@ -13,6 +13,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	public interface IDataConnectionFactory
 	{
 		IDataConnection NewDataConnection(WolfConnectionOptions options);
+		IProvider NewDataProvider(WolfConnectionOptions options);
         bool ConfigurationIsEmpty(WolfConnectionOptions options);
 	}
 
@@ -44,6 +45,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			return this.GetDataConnectionFactory().NewDataConnection(this);
 		}
+
+		public IProvider NewDataProvider()
+        {
+			return this.GetDataConnectionFactory().NewDataProvider(this);
+        }
 
         public bool ConfigurationIsEmpty()
         {

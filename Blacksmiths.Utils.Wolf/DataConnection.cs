@@ -81,12 +81,13 @@ namespace Blacksmiths.Utils.Wolf
 		/// Creates a new database connection service using the given underlying provider
 		/// </summary>
 		/// <param name="provider">Provider to use. Consider using a convienence factory method, such as Blacksmiths.Utils.Wolf.SqlServer.SqlServerProvider.NewSqlServerConnection()</param>
-		public DataConnection(IProvider provider)
+		public DataConnection(IProvider provider, IServiceProvider serviceProvider = null)
 		{
 			if (null == provider)
 				throw new ArgumentNullException("provider may not be null");
 
 			this.Provider = provider;
+			this.ServiceProvider = serviceProvider;
 		}
 
 		public static IDataConnection FromOptions(Utility.WolfConnectionOptions options)

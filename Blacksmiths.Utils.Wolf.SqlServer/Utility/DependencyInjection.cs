@@ -13,6 +13,7 @@ using System.Linq;
 
 #if NETSTANDARD
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace Microsoft.Extensions.DependencyInjection
 {
@@ -25,7 +26,7 @@ namespace Microsoft.Extensions.DependencyInjection
         /// <returns></returns>
         public static IServiceCollection AddWolfSqlServer(this IServiceCollection services, Action<WolfOptionsSqlServer> options = null)
         {
-            services.AddScoped<IDataConnection>((provider) =>
+            services.AddSingleton<IProvider>((provider) =>
             {
                 var sqlOptions = new WolfOptionsSqlServer(provider.GetRequiredService<IConfiguration>());
                 if (null != options)
@@ -33,18 +34,22 @@ namespace Microsoft.Extensions.DependencyInjection
 
                 sqlOptions.AutoConfigureFromConfiguration();
 
-                var connection = DataConnection.FromOptions(sqlOptions.Options);
-                if (connection is IServiceLocator serviceLocatorConnection)
-                    serviceLocatorConnection.ServiceProvider = provider;
+                var dataProvider = sqlOptions.Options.NewDataProvider();
 
                 var logger = provider.GetRequiredService<Logging.ILogger<IDataConnection>>();
+
+
                 Blacksmiths.Utils.Wolf.Utility.Logging.LogHandler = (level, message, args) =>
                 {
                     Blacksmiths.Utils.Wolf.Utility.Logging.LogUsingMicrosoftLogging(logger, level, message, args);
                 };
 
-                return connection;
+                logger.LogDebug($"Added Wolf SQL Server {System.Reflection.Assembly.GetExecutingAssembly().GetName().Version} into service container");
+
+                return dataProvider;
             });
+
+            services.AddScoped<IDataConnection, DataConnection>();
 
             return services;
         }
@@ -67,6 +72,14 @@ namespace Blacksmiths.Utils.Wolf.Utility
             if (string.IsNullOrWhiteSpace(cs))
                 throw new ArgumentException("A connection string must be specified to open a data connection to Microsoft SQL Server");
             return SqlServer.SqlServerProvider.NewSqlServerConnection(cs);
+        }
+
+        public IProvider NewDataProvider(WolfConnectionOptions options)
+        {
+            var cs = options.GetValue(WolfOptionsSqlServer.Key_ConnectionString);
+            if (string.IsNullOrWhiteSpace(cs))
+                throw new ArgumentException("A connection string must be specified to open a data connection to Microsoft SQL Server");
+            return SqlServer.SqlServerProvider.NewSqlServerProvider(cs);
         }
     }
 

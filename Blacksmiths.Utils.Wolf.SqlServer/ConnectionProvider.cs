@@ -21,7 +21,8 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			this._provider = provider;
 
 		}
-		public DbConnection ToDbConnection()
+
+        public DbConnection ToDbConnection()
 		{
 			return new SqlConnection(this._provider.ConnectionString.ToString());
 		}

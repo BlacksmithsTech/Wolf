@@ -11,6 +11,7 @@ using Blacksmiths.Tests.Wolf.Models;
 using System.Diagnostics;
 using Blacksmiths.Utils.Wolf;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Blacksmiths.Tests.Wolf
 {
@@ -75,7 +76,7 @@ namespace Blacksmiths.Tests.Wolf
 				.Add(
 					new Sprocs.uspGetManagerEmployees()
 					{
-						BusinessEntityID = 2
+						BusinessEntityID = 290
 					}
 				)
 				.Execute()
@@ -297,6 +298,31 @@ namespace Blacksmiths.Tests.Wolf
                 .Add(new Sprocs.uspGetPersonAddress())
                 .Execute()
                 .ToSimpleModel<Models.BusinessEntity>();
+        }
+
+        [TestMethod]
+        public async Task Request_Deadlocking()
+        {
+			var t1 = Task.Run(() =>
+			{
+                this.Connection.NewRequest()//(options => { options.UseTransaction = true; })
+				.Add(new StoredProcedure("uspDeadlock1"))
+				.Execute();
+			});
+
+			var t2 = Task.Run(() =>
+            {
+                this.Connection.NewRequest()//(options => { options.UseTransaction = true; })
+                .Add(new StoredProcedure("uspDeadlock2"))
+                .Execute();
+            });
+
+			await Task.WhenAll(t1, t2);
+
+    //        new DataRequest(this.Connection)
+				//.Add(new StoredProcedure("uspDeadlock1"))
+				//.Add(new StoredProcedure("uspDeadlock2"))
+				//.Execute();
         }
 
         [TestMethod]

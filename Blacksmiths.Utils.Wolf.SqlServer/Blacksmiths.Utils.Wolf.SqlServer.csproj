@@ -6,13 +6,13 @@
 		<Authors>Blacksmiths Technology Ltd,Alexander Ali</Authors>
 		<Company>Blacksmiths Technology Ltd</Company>
 		<Description>Wolf is a database-first lightweight data access layer which prioritises ease of use and productivity in the middle tier. It provides basic object-relational mapping features and a fluent interface. This package provides support for Microsoft SQL Server.</Description>
-		<Copyright>(C) 2020 Blacksmiths Technology Ltd</Copyright>
+		<Copyright>(C) 2023 Blacksmiths Technology Ltd</Copyright>
 		<PackageProjectUrl>https://github.com/BlacksmithsTech/Wolf</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/BlacksmithsTech/Wolf</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>Database,O/RM,ADO.NET,SQL</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <VersionPrefix>1.4.0</VersionPrefix>
+    <VersionPrefix>1.5.0</VersionPrefix>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">

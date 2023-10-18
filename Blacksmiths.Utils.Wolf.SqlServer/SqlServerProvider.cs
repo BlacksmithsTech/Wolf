@@ -39,11 +39,16 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 
 		public string Server { get { return this.ConnectionString.DataSource; } }
 
-		// *************************************************
-		// Constructor & Factory
-		// *************************************************
+        public List<int> RetryOnErrorCodes { get; set; } = new List<int>()
+        {
+            1205,//Transaction chosen as the deadlock victim
+		};
 
-		internal SqlServerProvider(string connectionString, System.Reflection.Assembly callingAssembly)
+        // *************************************************
+        // Constructor & Factory
+        // *************************************************
+
+        internal SqlServerProvider(string connectionString, System.Reflection.Assembly callingAssembly)
 		{
 			if (null == connectionString)
 				throw new ArgumentNullException("connectionString may not be null");
@@ -124,11 +129,13 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 				return v.ToString();
 		}
 
-		// *************************************************
-		// Contract (IProvider)
-		// *************************************************
+        // *************************************************
+        // Contract (IProvider)
+        // *************************************************
 
-		public IConnectionProvider GetConnectionProvider()
+        public bool isRetriedError(DbException dbException) => dbException is SqlException sqlException && this.RetryOnErrorCodes.Contains(sqlException.Number);
+
+        public IConnectionProvider GetConnectionProvider()
 		{
 			if (null == this._connectionProvider)
 				this._connectionProvider = new ConnectionProvider(this);

@@ -17,6 +17,21 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets or sets if the data request will execute all queries within the scope of a database transaction. Defaults to false.
 		/// </summary>
 		bool UseTransaction { get; set; }
+
+		/// <summary>
+		/// Gets or sets the maximum number of attempts to run the request work. Defaults to 3.
+		/// </summary>
+		short? MaximumAttempts { get; set; }
+
+		/// <summary>
+		/// Gets or sets the minimum time in ms before a data request is retried, to introduce jittering. Defaults to 10ms
+		/// </summary>
+		short? RetryJitterMinimumMs { get; set; }
+
+		/// <summary>
+		/// Gets or sets the maximum time in ms before data request is retried, to introduce jittering. Defaults to 100ms
+		/// </summary>
+		short? RetryJitterMaximumMs { get; set; }
 	}
 
 	public sealed class DataRequest : Collection<IDataRequestItem>, IDataRequestOptions
@@ -25,20 +40,25 @@ namespace Blacksmiths.Utils.Wolf
 		// Fields
 		// *************************************************
 
+        // *************************************************
+        // Properties
+        // *************************************************
 
-		// *************************************************
-		// Properties
-		// *************************************************
-
-		public DataConnection Connection { get; private set; }
+        public DataConnection Connection { get; private set; }
 
 		public bool UseTransaction { get; set; }
 
-		// *************************************************
-		// Constructor
-		// *************************************************
+		public short? MaximumAttempts { get; set; } = 3;
 
-		public DataRequest(DataConnection connection)
+		public short? RetryJitterMinimumMs { get; set; } = 10;
+
+		public short? RetryJitterMaximumMs { get; set; } = 100;
+
+        // *************************************************
+        // Constructor
+        // *************************************************
+
+        public DataRequest(DataConnection connection)
 		{
 			if (null == connection)
 				throw new ArgumentNullException("connection may not be null");

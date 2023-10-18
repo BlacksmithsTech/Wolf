@@ -29,9 +29,10 @@ namespace Blacksmiths.Utils.Wolf
 		System.Data.Common.DbDataAdapter GetDataAdapter(System.Data.DataTable sourceTable, System.Data.Common.DbConnection connection, System.Data.Common.DbTransaction transaction);
 		System.Data.Common.DbCommandBuilder GetCommandBuilder(System.Data.Common.DbDataAdapter adapter);
 		void EnableIdentityColumnSyncing(DbDataAdapter dbAdapter, DbConnection connection, DbTransaction transaction, string identityColumnName, IdentitySyncAction identitySyncAction);
-	}
+		bool isRetriedError(System.Data.Common.DbException dbException);
+    }
 
-	public interface IConnectionProvider
+    public interface IConnectionProvider
 	{
 		System.Data.Common.DbConnection ToDbConnection();
 	}

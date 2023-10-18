@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data;
+using System.Data.Common;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -210,48 +211,130 @@ namespace Blacksmiths.Utils.Wolf
 			Result = Result ?? new DataResult();
 			Result.Request = request;
 
-			// ** Connect to the database
-			Utility.Logging.BeginTrace("Request execution");
+			short batchAttempt = 0;
+			short maxBatchAttempts = 1;
+			short maxCommandAttempts = 1;
+			if(request.UseTransaction)
+				maxBatchAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
+			else
+				maxCommandAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
 
-			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+            Exceptions.RequestExecutionException batchRetryException = null;
+			string batchTraceLabel;
+
+			do
 			{
-				System.Data.Common.DbTransaction dbTransaction = null;
-				if (request.UseTransaction)
-				{
-					dbConnection.Open();
-					dbTransaction = dbConnection.BeginTransaction();
-				}
+                if (null != batchRetryException)
+                    this.Jitter(batchRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
+                batchRetryException = null;
+                batchAttempt++;
+				batchTraceLabel = $"Batch execution attempt {batchAttempt} of {maxBatchAttempts}";
 
-				var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
-				Result.Commands = wolfWork.ToArray();
-				Utility.WolfCommandBinding lastCommandBinding = null;
-				try
-				{
+                // ** Connect to the database
+                Utility.Logging.BeginTrace(batchTraceLabel);
 
-					// ** Process the commands
-					foreach (var wolfCommand in wolfWork)
+				using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+				{
+					System.Data.Common.DbTransaction dbTransaction = null;
+					if (request.UseTransaction)
 					{
-						lastCommandBinding = wolfCommand;
-						// ** Get a data adapter and fill a dataset
-						var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-						dbAdapter.Fill(wolfCommand.ResultData);
-						// ** The data adapter will now have executed the command. Perform binding back to the request objects
-						wolfCommand.Bind();
+						dbConnection.Open();
+						dbTransaction = dbConnection.BeginTransaction();
 					}
 
-					dbTransaction?.Commit();
-				}
-				catch(Exception ex)
-				{
-					dbTransaction?.Rollback();
-					throw new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
-				}
-			}
+					var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
+					Result.Commands = wolfWork.ToArray();
+					Utility.WolfCommandBinding lastCommandBinding = null;
+					try
+					{
+						// ** Process the commands
+						foreach (var wolfCommand in wolfWork)
+						{
+							lastCommandBinding = wolfCommand;
+							short commandAttempt = 0;
+                            Exceptions.RequestExecutionException commandRetryException = null;
+                            string commandTraceLabel;
 
-			Utility.Logging.EndTrace("Request execution");
+                            do
+                            {
+                                if (null != commandRetryException)
+                                    this.Jitter(commandRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
+                                commandRetryException = null;
+                                commandAttempt++;
+                                commandTraceLabel = $"{wolfCommand.DbCommand.CommandText} execution attempt {commandAttempt} of {maxCommandAttempts}";
+                                Utility.Logging.BeginTrace(commandTraceLabel);
+
+                                try
+                                {
+									// ** Get a data adapter and fill a dataset
+									var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
+									dbAdapter.Fill(wolfCommand.ResultData);
+								}
+								catch (Exception ex)
+								{
+									if (commandAttempt < maxCommandAttempts && this.Provider.isRetriedError(ex as DbException))
+										commandRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+									else
+										throw;
+								}
+								finally
+								{
+                                    Utility.Logging.EndTrace(commandTraceLabel);
+                                }
+
+                            } while (null != commandRetryException);
+
+                            // ** The data adapter will now have executed the command. Perform binding back to the request objects
+                            wolfCommand.Bind();
+                        }
+
+						dbTransaction?.Commit();
+					}
+					catch (Exception ex)
+					{
+						try
+						{
+							dbTransaction?.Rollback();
+						}
+						catch(Exception rollbackEx)
+						{
+							Utility.Logging.Log(Utility.LogLevel.Information, "A transaction rollback threw an exception {rollbackEx}. Usually this means the transaction was already rolled back.", rollbackEx);
+						}
+
+                        if (batchAttempt < maxBatchAttempts && this.Provider.isRetriedError(ex as DbException))
+                            batchRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+                        else
+                            throw new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+                    }
+                }
+
+				Utility.Logging.EndTrace(batchTraceLabel);
+			} while (null != batchRetryException);
 
 			return Result;
 		}
+
+		private void Jitter(Exceptions.RequestExecutionException ex, int? minMs, int? maxMs)
+		{
+			minMs = Math.Max(0, minMs.GetValueOrDefault(0));
+			maxMs = Math.Max(minMs.Value, maxMs.GetValueOrDefault(0));
+            var jitterMs = minMs.Value == maxMs.Value ? minMs.Value : new Random().Next(minMs.Value, maxMs.Value + 1);
+
+            var wri = ex.CommandBinding?.WolfRequestItem;
+			object dbCommand = null;
+            if (wri is StoredProcedure sp)
+                dbCommand = new { sp.ProcedureName, Parameters = sp.ToList() };
+
+            if (jitterMs > 0)
+			{
+				Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying in {jitterMs}ms", dbCommand);
+				System.Threading.Thread.Sleep(jitterMs);
+			}
+			else
+			{
+                Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying immediately", dbCommand);
+            }
+        }
 
         internal void FetchSchema(DataTable dt)
         {

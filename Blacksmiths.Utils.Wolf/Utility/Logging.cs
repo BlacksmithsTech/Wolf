@@ -76,7 +76,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			var sw = new Stopwatch();
 			sw.Start();
-			Debuggers.TryAdd(Name, sw);
+			Debuggers.TryAdd(Name, sw);//the keynames are shared across all threads
 		}
 
 		[Conditional("TRACE")]

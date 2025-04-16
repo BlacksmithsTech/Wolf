@@ -20,7 +20,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		/// <summary>
 		/// Gets or sets the parameter data direction
 		/// </summary>
-		public System.Data.ParameterDirection Direction { get; set; }
+		public System.Data.ParameterDirection Direction { get; set; } = System.Data.ParameterDirection.Input;
 	}
 
 	/// <summary>

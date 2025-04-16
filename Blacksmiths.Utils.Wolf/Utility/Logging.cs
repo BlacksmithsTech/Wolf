@@ -100,13 +100,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		{
 			System.Diagnostics.Trace.WriteLine(message);
 		}
-
-#if NETSTANDARD
 		public static void LogUsingMicrosoftLogging(Microsoft.Extensions.Logging.ILogger<IDataConnection> log, LogLevel level, string message, params object[] args)
 		{
 			Microsoft.Extensions.Logging.LoggerExtensions.Log(log, (Microsoft.Extensions.Logging.LogLevel)level, message, args);
 		}
-#endif
-
 	}
 }

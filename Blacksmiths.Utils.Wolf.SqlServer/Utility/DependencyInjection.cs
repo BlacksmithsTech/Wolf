@@ -10,8 +10,6 @@ using System.Text;
 using Blacksmiths.Utils.Wolf;
 using Blacksmiths.Utils.Wolf.Utility;
 using System.Linq;
-
-#if NETSTANDARD
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -55,7 +53,6 @@ namespace Microsoft.Extensions.DependencyInjection
         }
     }
 }
-#endif
 
 namespace Blacksmiths.Utils.Wolf.Utility
 {
@@ -85,9 +82,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
     public sealed class WolfOptionsSqlServer
     {
-#if NETSTANDARD
         private IConfiguration _configuration;
-#endif
         private WolfConnectionOptions _options = new WolfConnectionOptions();
 
         internal const string Key_ConnectionString = "ConnectionString";
@@ -118,13 +113,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
             this._options.Provider = typeof(SqlServerProviderFactory).AssemblyQualifiedName;
         }
 
-#if NETSTANDARD
         public WolfOptionsSqlServer(IConfiguration config)
             : this()
         {
             this._configuration = config;
         }
-#endif
 
         public void AutoConfigureFromConfiguration()
         {
@@ -138,7 +131,6 @@ namespace Blacksmiths.Utils.Wolf.Utility
         internal string GetConnectionStringFromCfg(string ConnectionStringName)
         {
             string Ret = null;
-#if NETSTANDARD
             if (null != this._configuration)
             {
                 // ** Automatically aquire connection string using the .NET Core style configuration source
@@ -155,30 +147,6 @@ namespace Blacksmiths.Utils.Wolf.Utility
                         Ret = ConnectionStrings.FirstOrDefault()?.Value;
                 }
             }
-#endif
-#if NETFRAMEWORK
-            if (string.IsNullOrEmpty(Ret))
-            {
-                const string BuiltInKeyName = "LocalSqlServer";
-
-                // ** Automatically aquire connection string using the .NET Framework style configuration source
-                if (!string.IsNullOrEmpty(ConnectionStringName))
-                {
-                    if (null != System.Configuration.ConfigurationManager.ConnectionStrings[ConnectionStringName])
-                        Ret = System.Configuration.ConfigurationManager.ConnectionStrings[ConnectionStringName].ConnectionString;
-                    else
-                        throw new ArgumentException($"The connection string '{ConnectionStringName}' was not present in your configuration (using .NET Framework style [XML] configuration source)");
-                }
-                else
-                {
-                    if (1 == System.Configuration.ConfigurationManager.ConnectionStrings.Count)
-                        Ret = System.Configuration.ConfigurationManager.ConnectionStrings[0].ConnectionString;
-                    else if (2 == System.Configuration.ConfigurationManager.ConnectionStrings.Count && null != System.Configuration.ConfigurationManager.ConnectionStrings[BuiltInKeyName])
-                        Ret = System.Configuration.ConfigurationManager.ConnectionStrings[1].ConnectionString;//.NET Framework provides "LocalSqlServer" out-of-the-box and this needs ignoring if another string is present in the collection
-                }
-                
-            }
-#endif
             return Ret;
         }
     }

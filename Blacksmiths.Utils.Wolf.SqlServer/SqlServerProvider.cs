@@ -8,9 +8,9 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text;
-using System.Data.SqlClient;
 using System.Data;
 using Blacksmiths.Utils.Wolf.Utility;
+using Microsoft.Data.SqlClient;
 
 namespace Blacksmiths.Utils.Wolf.SqlServer
 {

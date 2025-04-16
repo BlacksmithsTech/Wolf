@@ -1,27 +1,26 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>netstandard2.0;net40</TargetFrameworks>
+		<TargetFramework>net8.0</TargetFramework>
 		<Product>Wolf</Product>
 		<Authors>Blacksmiths Technology Ltd,Alexander Ali</Authors>
 		<Company>Blacksmiths Technology Ltd</Company>
 		<Description>Wolf is a database-first lightweight data access layer which prioritises ease of use and productivity in the middle tier. It provides basic object-relational mapping features and a fluent interface.</Description>
-		<Copyright>(C) 2023 Blacksmiths Technology Ltd</Copyright>
+		<Copyright>(C) 2025 Blacksmiths Technology Ltd</Copyright>
 		<PackageProjectUrl>https://github.com/BlacksmithsTech/Wolf</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/BlacksmithsTech/Wolf</RepositoryUrl>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageTags>Database,O/RM,ADO.NET</PackageTags>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <VersionPrefix>1.7.0</VersionPrefix>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)' == 'Debug'">
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'net40'">
-	  <PackageReference Include="System.ValueTuple" Version="4.5.0" />
-	</ItemGroup>
-	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions " Version="5.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+	  <PackageReference Update="Microsoft.Extensions.Logging.Abstractions" Version="8.0.3" />
 	</ItemGroup>
 </Project>

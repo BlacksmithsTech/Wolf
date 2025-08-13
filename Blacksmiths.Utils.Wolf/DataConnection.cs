@@ -264,6 +264,9 @@ namespace Blacksmiths.Utils.Wolf
                                 commandTraceLabel = $"{wolfCommand.DbCommand.CommandText} execution attempt {commandAttempt} of {maxCommandAttempts}";
                                 Utility.Logging.BeginTrace(commandTraceLabel);
 
+								if (request.CommandTimeout.HasValue)
+									wolfCommand.DbCommand.CommandTimeout = (int)Math.Round(request.CommandTimeout.Value.TotalSeconds);
+
                                 try
                                 {
 									// ** Get a data adapter and fill a dataset

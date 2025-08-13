@@ -32,7 +32,12 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets or sets the maximum time in ms before data request is retried, to introduce jittering. Defaults to 100ms
 		/// </summary>
 		short? RetryJitterMaximumMs { get; set; }
-	}
+
+		/// <summary>
+		/// The timespan, to the nearest second, before a single command execution times out
+		/// </summary>
+        TimeSpan? CommandTimeout { get; set; }
+    }
 
 	public sealed class DataRequest : Collection<IDataRequestItem>, IDataRequestOptions
 	{
@@ -53,6 +58,8 @@ namespace Blacksmiths.Utils.Wolf
 		public short? RetryJitterMinimumMs { get; set; } = 10;
 
 		public short? RetryJitterMaximumMs { get; set; } = 100;
+
+		public TimeSpan? CommandTimeout { get; set; }
 
         // *************************************************
         // Constructor

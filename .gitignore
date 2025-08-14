@@ -330,3 +330,4 @@ ASALocalRun/
 .mfractor/
 /Blacksmiths.Tests.Wolf/PrivateTests.cs
 /Blacksmiths.Tests.Wolf/Private
+/Blacksmiths.Tests.Wolf/appsettings.local.json

@@ -7,9 +7,10 @@
 using Blacksmiths.Utils.Wolf.Utility;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Data;
 using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -59,9 +60,25 @@ namespace Blacksmiths.Utils.Wolf
 	}
 
 	/// <summary>
-	/// Binds wolf command results to it's associated wolf request
+	/// Asyncronous helpers for cleaner consumer code
 	/// </summary>
-	public class DataResult : IFluentResult
+	public static class DataResultExtensions
+	{
+		public static async Task<DataSet> ToDataSetAsync(this Task<IFluentResult> result) => (await result).ToDataSet();
+
+        public static async Task<Model.SimpleResultModel<T>> ToSimpleModelAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>();
+
+        public static async Task<List<T>> ToListAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results;
+
+		public static async Task<T> ToFirstAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results.First();
+
+		public static async Task<T> ToFirstOrDefaultAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Binds wolf command results to it's associated wolf request
+    /// </summary>
+    public class DataResult : IFluentResult
 	{
 		public WolfCommandBinding[] Commands { get; set; }
 		public DataRequest Request { get; set; }

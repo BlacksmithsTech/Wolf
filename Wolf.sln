@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Blacksmiths.Utils.Wolf.SqlS
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blacksmiths.Apps.Wolf", "Blacksmiths.Apps.Wolf\Blacksmiths.Apps.Wolf.csproj", "{A07DB3B4-A6BE-41D3-B4FD-CAF13A9BE6AD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blacksmiths.Tests.Wolf", "Blacksmiths.Tests.Wolf\Blacksmiths.Tests.Wolf.csproj", "{891DA489-D5AD-45B4-B2C1-0FD42990F90B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{A07DB3B4-A6BE-41D3-B4FD-CAF13A9BE6AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A07DB3B4-A6BE-41D3-B4FD-CAF13A9BE6AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A07DB3B4-A6BE-41D3-B4FD-CAF13A9BE6AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{891DA489-D5AD-45B4-B2C1-0FD42990F90B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{891DA489-D5AD-45B4-B2C1-0FD42990F90B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{891DA489-D5AD-45B4-B2C1-0FD42990F90B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{891DA489-D5AD-45B4-B2C1-0FD42990F90B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

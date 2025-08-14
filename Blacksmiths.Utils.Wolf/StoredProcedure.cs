@@ -4,23 +4,53 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Blacksmiths.Utils.Wolf.Utility;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
-using Blacksmiths.Utils.Wolf.Utility;
+using System.Xml.Linq;
+using static Blacksmiths.Utils.Wolf.StoredProcedure;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public class StoredProcedure : IDataRequestItem, IEnumerable<StoredProcedure.SpParameter>
+	public class StoredProcedure : IDataRequestItem, IEnumerable<StoredProcedure.ISpParameter>
 	{
 		// *************************************************
 		// Inner objects
 		// *************************************************
 
-		public class SpParameter
+		public interface ISpParameter
+		{
+            /// <summary>
+            /// The name of the parameter, as declared on the database
+            /// </summary>
+            string Name { get; set; }
+
+            /// <summary>
+            /// Gets or sets the value of the parameter
+            /// </summary>
+            object Value { get; set; }
+
+			/// <summary>
+			/// Input or output parameter
+			/// </summary>
+            ParameterDirection Direction { get; set; }
+
+			/// <summary>
+			/// Length of the parameter
+			/// </summary>
+            int Length { get; set; }
+
+			/// <summary>
+			/// Converts the definition into an ADO.NET database parameter
+			/// </summary>
+			DbParameter ToDbParameter(DbCommand command);
+        }
+
+		public class SpParameter : ISpParameter
 		{
 			private object _value;
 
@@ -54,7 +84,21 @@ namespace Blacksmiths.Utils.Wolf
 				this.Direction = direction;
 			}
 
-			protected void InferValueType(Type t)
+			public virtual DbParameter ToDbParameter(DbCommand command)
+			{
+                var dbp = command.CreateParameter();
+                dbp.ParameterName = this.Name;
+                dbp.Value = null != this.Value ? this.Value : DBNull.Value;
+                dbp.Direction = this.Direction;
+                dbp.Size = this.Length;
+                if (this.ValueType.HasValue)
+                    dbp.DbType = this.ValueType.Value;
+                else if (null == this.Value)
+                    throw new InvalidOperationException($"A database value type of parameter '{this.Name}' was not defined and a type could not be automatically determined.");
+				return dbp;
+            }
+
+			internal static DbType InferValueType(Type t)
 			{
 				var typeMap = new Dictionary<Type, DbType>();
 				typeMap[typeof(byte)] = DbType.Byte;
@@ -93,7 +137,9 @@ namespace Blacksmiths.Utils.Wolf
 				typeMap[typeof(DateTimeOffset?)] = DbType.DateTimeOffset;
 
 				if (typeMap.ContainsKey(t))
-					this.ValueType = typeMap[t];
+					return typeMap[t];
+				else
+					throw new ArgumentException($"Unknown database type for parameter of type '{t}'");
 			}
 		}
 
@@ -108,31 +154,67 @@ namespace Blacksmiths.Utils.Wolf
 			public SpParameter(string name, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input, T value = default)
 				: base(name, direction, value)
 			{
-				this.InferValueType(typeof(T));
+				this.ValueType = InferValueType(typeof(T));
 			}
 		}
 
-		public class BoundSpParameter : SpParameter
-		{
-			private object _instance;
-			private System.Reflection.PropertyInfo _property;
+        public class BoundSpParameter : SpParameter
+        {
+            private object _instance;
+            private System.Reflection.PropertyInfo _property;
 
-			public override object Value
-			{
-				get { return this._property.GetValue(this._instance, null); }
-				set { this._property.SetValue(this._instance, value, null); }
-			}
+            public override object Value
+            {
+                get { return this._property.GetValue(this._instance, null); }
+                set { this._property.SetValue(this._instance, value, null); }
+            }
 
-			public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
-				: base(name)
-			{
-				this._instance = instance;
-				this._property = property;
-				this.InferValueType(this._property.PropertyType);
-			}
-		}
+            public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
+                : base(name)
+            {
+                this._instance = instance;
+                this._property = property;
+				this.ValueType = InferValueType(this._property.PropertyType);
+            }
+        }
 
-		internal class CodeGenSpParameter : SpParameter
+        //public class BoundSpParameter : ISpParameter
+        //{
+        //	private ISpParameter _parameter;
+        //	private object _instance;
+        //	private System.Reflection.PropertyInfo _property;
+
+        //          public string Name { get => _parameter.Name; set => _parameter.Name = value; }
+        //          public ParameterDirection Direction { get => _parameter.Direction; set => _parameter.Direction = value; }
+        //          public int Length { get => _parameter.Length; set => _parameter.Length = value; }
+
+        //          public object Value
+        //          {
+        //              get { return this._property.GetValue(this._instance, null); }
+        //              set { this._property.SetValue(this._instance, value, null); }
+        //          }
+
+        //          public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
+        //	{
+        //		this._instance = instance;
+        //		this._property = property;
+        //		this._parameter = this.CreateSpParameter(name);
+        //	}
+
+        //	protected virtual ISpParameter CreateSpParameter(string name)
+        //	{
+        //              var p = new SpParameter(name);
+        //              p.ValueType = SpParameter.InferValueType(this._property.PropertyType);
+        //		return p;
+        //          }
+
+        //          public DbParameter ToDbParameter(DbCommand command)
+        //          {
+        //              return _parameter.ToDbParameter(command);
+        //          }
+        //      }
+
+        internal class CodeGenSpParameter : SpParameter
 		{
 			private string _ValueTypeName;
 
@@ -142,7 +224,7 @@ namespace Blacksmiths.Utils.Wolf
 				set
 				{
 					this._ValueTypeName = value;
-					this.InferValueType(Type.GetType(this._ValueTypeName));
+					this.ValueType = InferValueType(Type.GetType(this._ValueTypeName));
 				}
 			}
 
@@ -154,7 +236,7 @@ namespace Blacksmiths.Utils.Wolf
 		// Fields
 		// *************************************************
 
-		private List<SpParameter> _dbParameters;
+		private List<ISpParameter> _dbParameters;
 		private string _procedureName;
 		private Utility.QualifiedSqlName _targetTableName;
 
@@ -188,13 +270,13 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Gets the collection of parameters to be sent to the database
 		/// </summary>
-		internal List<SpParameter> DbParameters
+		internal List<ISpParameter> DbParameters
 		{
 			get
 			{
 				if(null == this._dbParameters)
 				{
-					this._dbParameters = new List<SpParameter>();
+					this._dbParameters = new List<ISpParameter>();
 					this.ReflectMembers();
 				}
 				return this._dbParameters;
@@ -223,7 +305,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// <param name="parameterName">Name of the parameter</param>
 		/// <returns>The database parameter</returns>
 		[Attribution.Ignore]
-		public SpParameter this[string parameterName]
+		public ISpParameter this[string parameterName]
 		{
 			get
 			{
@@ -272,7 +354,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Adds a parameter to the stored procedure
 		/// </summary>
 		/// <param name="p">Parameter to add</param>
-		public StoredProcedure AddParameter(SpParameter p)
+		public StoredProcedure AddParameter(ISpParameter p)
 		{
 			if (null == p)
 				throw new ArgumentNullException("DbParameter may not be null");
@@ -323,7 +405,7 @@ namespace Blacksmiths.Utils.Wolf
 		// Contract (IEnumerable)
 		// *************************************************
 
-		public IEnumerator<SpParameter> GetEnumerator()
+		public IEnumerator<ISpParameter> GetEnumerator()
 		{
 			return this.DbParameters.GetEnumerator();
 		}

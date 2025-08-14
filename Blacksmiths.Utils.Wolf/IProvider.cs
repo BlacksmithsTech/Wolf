@@ -40,7 +40,7 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IStoredProcedureProvider
 	{
 		Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null);
-		Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.SpParameter p, DbCommand command);
+		Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.ISpParameter p, DbCommand command);
 	}
 
 	public interface IDataRequestItem

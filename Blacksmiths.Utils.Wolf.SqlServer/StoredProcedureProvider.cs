@@ -4,9 +4,14 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient.Server;
 using System;
+using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Reflection;
 
 namespace Blacksmiths.Utils.Wolf.SqlServer
 {
@@ -30,23 +35,64 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 			};
 		}
 
-		public Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.SpParameter p, DbCommand command)
+		public Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.ISpParameter p, DbCommand command)
 		{
-			var dbp = command.CreateParameter();
-			dbp.ParameterName = p.Name;
-			dbp.Value = null != p.Value ? p.Value : DBNull.Value;
-			dbp.Direction = p.Direction;
-			dbp.Size = p.Length;
-			if (p.ValueType.HasValue)
-				dbp.DbType = p.ValueType.Value;
-			else if (null == p.Value)
-				throw new InvalidOperationException($"A database value type of parameter '{p.Name}' was not defined and a type could not be automatically determined.");
-
 			return new Utility.WolfParameterDbBinding()
 			{
-				DbParameter = dbp,
+				DbParameter = p.ToDbParameter(command),
 				WolfParameter = p
 			};
 		}
+	}
+
+	//interface ISpParameterSqlServer
+	//{
+	//	SqlDbType ValueTypeSql { get; set; }
+	//}
+
+	public class SpParameterSqlServerTvp : StoredProcedure.SpParameter//, ISpParameterSqlServer
+	{
+		/// <summary>
+		/// Gets or sets the name of the SQL server user table-type representing the TVP
+		/// </summary>
+		public string TvpQualifiedName { get; set; }
+		public SqlDbType ValueTypeSql { get; } = SqlDbType.Structured;
+
+        public SpParameterSqlServerTvp(string name, string tvpQualifiedName, ParameterDirection direction = ParameterDirection.Input, IEnumerable<SqlDataRecord> value = null)
+			: base(name, direction, value) 
+		{
+			this.TvpQualifiedName = tvpQualifiedName;
+		}
+
+        public override DbParameter ToDbParameter(DbCommand command)
+        {
+            var dbp = (SqlParameter)command.CreateParameter();
+            dbp.ParameterName = this.Name;
+            dbp.Value = null != this.Value ? this.Value : DBNull.Value;
+            dbp.Direction = this.Direction;
+            dbp.Size = this.Length;
+			dbp.SqlDbType = this.ValueTypeSql;
+			dbp.TypeName = this.TvpQualifiedName;
+            return dbp;
+        }
+    }
+
+	public sealed class BoundSpParameterSqlServerTvp : SpParameterSqlServerTvp
+    {
+        private object _instance;
+        private System.Reflection.PropertyInfo _property;
+
+        public override object Value
+        {
+            get { return this._property.GetValue(this._instance, null); }
+            set { this._property.SetValue(this._instance, value, null); }
+        }
+
+        public BoundSpParameterSqlServerTvp(string name, string tvpQualifiedName, object instance, PropertyInfo property)
+			: base(name, tvpQualifiedName)
+		{
+            this._instance = instance;
+            this._property = property;
+        }
 	}
 }

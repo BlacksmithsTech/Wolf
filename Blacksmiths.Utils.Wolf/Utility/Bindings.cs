@@ -62,7 +62,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	public sealed class WolfParameterDbBinding
 	{
 		public DbParameter DbParameter { get; set; }
-		public StoredProcedure.SpParameter WolfParameter { get; set; }
+		public StoredProcedure.ISpParameter WolfParameter { get; set; }
 
 		/// <summary>
 		/// Updates the Wolf parameter value with the ADO.NET value

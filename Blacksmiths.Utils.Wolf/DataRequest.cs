@@ -8,6 +8,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -76,6 +78,29 @@ namespace Blacksmiths.Utils.Wolf
 		// Methods
 		// *************************************************
 
+		/// <summary>
+		/// Specifies that this request will run all commands within a transaction
+		/// </summary>
+		public DataRequest WithTransaction(bool useTransaction = true)
+		{
+			this.UseTransaction = useTransaction;
+			return this;
+		}
+
+		/// <summary>
+		/// Specifies that this request will run all commands with a given timeout timespan in milliseconds
+		/// </summary>
+		public DataRequest WithCommandTimeout(int milliseconds) => this.WithCommandTimeout(TimeSpan.FromMilliseconds(milliseconds));
+
+        /// <summary>
+        /// Specifies that this request will run all commands with a given timeout timespan
+        /// </summary>
+        public DataRequest WithCommandTimeout(TimeSpan? commandTimeout = null)
+        {
+            this.CommandTimeout = commandTimeout;
+            return this;
+        }
+
         /// <summary>
         /// Adds a new item (command) to the request. It is not executed until you call Execute()
         /// </summary>
@@ -125,16 +150,30 @@ namespace Blacksmiths.Utils.Wolf
 			return this.Connection.Fetch(this);
 		}
 
-		internal IFluentResult Execute(DataResult result)
+        /// <summary>
+        /// Executes the items within this request against the database.
+        /// </summary>
+        /// <returns>Result commands</returns>
+        public async Task<IFluentResult> ExecuteAsync(CancellationToken cancellationToken = default)
+        {
+            return await this.Connection.FetchAsync(this, null, cancellationToken);
+        }
+
+        internal IFluentResult Execute(DataResult result)
 		{
 			return this.Connection.Fetch(this, result);
 		}
 
-		// *************************************************
-		// Utility
-		// *************************************************
+        internal async Task<IFluentResult> ExecuteAsync(DataResult result, CancellationToken cancellationToken = default)
+        {
+            return await this.Connection.FetchAsync(this, result, cancellationToken);
+        }
 
-		protected override void InsertItem(int index, IDataRequestItem item)
+        // *************************************************
+        // Utility
+        // *************************************************
+
+        protected override void InsertItem(int index, IDataRequestItem item)
 		{
 			if (null == item)
 				throw new ArgumentNullException("Cannot insert a null data request item");

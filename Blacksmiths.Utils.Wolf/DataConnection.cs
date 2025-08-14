@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Data;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -199,17 +201,19 @@ namespace Blacksmiths.Utils.Wolf
 			}
 		}
 
-		// *************************************************
-		// Engine room - Fetch Request
-		// *************************************************
+        // *************************************************
+        // Engine room - Fetch Request
+        // *************************************************
 
-		internal DataResult Fetch(DataRequest request, DataResult Result = null)
+        internal DataResult Fetch(DataRequest request, DataResult result = null) => this.FetchAsync(request, result).ConfigureAwait(false).GetAwaiter().GetResult();
+
+        internal async Task<DataResult> FetchAsync(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default)
 		{
 			if (null == request || 0 == request.Count)
 				return null;
 
-			Result = Result ?? new DataResult();
-			Result.Request = request;
+			result = result ?? new DataResult();
+			result.Request = request;
 
 			short batchAttempt = 0;
 			short maxBatchAttempts = 1;
@@ -222,8 +226,14 @@ namespace Blacksmiths.Utils.Wolf
             Exceptions.RequestExecutionException batchRetryException = null;
 			string batchTraceLabel;
 
+			bool cancellationDelegateRegistered = false;
+
+			// Execution loop (resiliance)
 			do
 			{
+                if (cancellationToken.IsCancellationRequested)
+                    break;
+
                 if (null != batchRetryException)
                     this.Jitter(batchRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
                 batchRetryException = null;
@@ -243,8 +253,19 @@ namespace Blacksmiths.Utils.Wolf
 					}
 
 					var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
-					Result.Commands = wolfWork.ToArray();
+					result.Commands = wolfWork.ToArray();
 					Utility.WolfCommandBinding lastCommandBinding = null;
+
+					// Cancellation support
+					if (!cancellationDelegateRegistered)
+					{
+						cancellationDelegateRegistered = true;
+						cancellationToken.Register(() =>
+						{
+							lastCommandBinding?.DbCommand?.Cancel();	//cancel currently executing command
+						});
+					}
+
 					try
 					{
 						// ** Process the commands
@@ -254,6 +275,9 @@ namespace Blacksmiths.Utils.Wolf
 							short commandAttempt = 0;
                             Exceptions.RequestExecutionException commandRetryException = null;
                             string commandTraceLabel;
+
+                            if (cancellationToken.IsCancellationRequested)//cancelled before we execute the next command
+                                break;
 
                             do
                             {
@@ -287,6 +311,9 @@ namespace Blacksmiths.Utils.Wolf
 
                             } while (null != commandRetryException);
 
+							if (cancellationToken.IsCancellationRequested)	// cancelled after the command execution completed
+								break;
+
                             // ** The data adapter will now have executed the command. Perform binding back to the request objects
                             wolfCommand.Bind();
                         }
@@ -314,7 +341,8 @@ namespace Blacksmiths.Utils.Wolf
 				Utility.Logging.EndTrace(batchTraceLabel);
 			} while (null != batchRetryException);
 
-			return Result;
+			cancellationToken.ThrowIfCancellationRequested();
+			return result;
 		}
 
 		private void Jitter(Exceptions.RequestExecutionException ex, int? minMs, int? maxMs)

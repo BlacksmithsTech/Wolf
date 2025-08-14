@@ -137,7 +137,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		}
 	}
 
-    internal class MemberAccessor
+    public class MemberAccessor
     {
         internal MemberInfo Member;
 
@@ -148,7 +148,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
             this.Member = m;
         }
 
-        internal static MemberAccessor Create(MemberInfo m)
+        public static MemberAccessor Create(MemberInfo m)
         {
             if (m is PropertyInfo pi)
                 return new PropertyAccessor(pi);

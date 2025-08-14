@@ -205,9 +205,9 @@ namespace Blacksmiths.Utils.Wolf
         // Engine room - Fetch Request
         // *************************************************
 
-        internal DataResult Fetch(DataRequest request, DataResult result = null) => this.FetchAsync(request, result).ConfigureAwait(false).GetAwaiter().GetResult();
+        internal DataResult Fetch(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default) => this.FetchAsync(request, result, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
 
-        internal async Task<DataResult> FetchAsync(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default)
+        internal Task<DataResult> FetchAsync(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default)
 		{
 			if (null == request || 0 == request.Count)
 				return null;
@@ -295,7 +295,7 @@ namespace Blacksmiths.Utils.Wolf
                                 {
 									// ** Get a data adapter and fill a dataset
 									var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-									dbAdapter.Fill(wolfCommand.ResultData);
+									dbAdapter.Fill(wolfCommand.ResultData);			// No "FillAsync". Thread here is probably hotter than it ought to be.
 								}
 								catch (Exception ex)
 								{
@@ -342,7 +342,7 @@ namespace Blacksmiths.Utils.Wolf
 			} while (null != batchRetryException);
 
 			cancellationToken.ThrowIfCancellationRequested();
-			return result;
+			return Task.FromResult(result);
 		}
 
 		private void Jitter(Exceptions.RequestExecutionException ex, int? minMs, int? maxMs)

@@ -145,9 +145,9 @@ namespace Blacksmiths.Utils.Wolf
         /// Executes the items within this request against the database.
         /// </summary>
         /// <returns>Result commands</returns>
-		public IFluentResult Execute()
+		public IFluentResult Execute(CancellationToken cancellationToken = default)
 		{
-			return this.Connection.Fetch(this);
+			return this.Connection.Fetch(this, null, cancellationToken);
 		}
 
         /// <summary>
@@ -159,9 +159,9 @@ namespace Blacksmiths.Utils.Wolf
             return await this.Connection.FetchAsync(this, null, cancellationToken);
         }
 
-        internal IFluentResult Execute(DataResult result)
+        internal IFluentResult Execute(DataResult result, CancellationToken cancellationToken = default)
 		{
-			return this.Connection.Fetch(this, result);
+			return this.Connection.Fetch(this, result, cancellationToken);
 		}
 
         internal async Task<IFluentResult> ExecuteAsync(DataResult result, CancellationToken cancellationToken = default)

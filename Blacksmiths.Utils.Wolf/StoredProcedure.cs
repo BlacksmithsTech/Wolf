@@ -435,6 +435,7 @@ namespace Blacksmiths.Utils.Wolf
 				var ParamType = member.PropertyType;
 				var ParamDirection = System.Data.ParameterDirection.Input;
 				int? ParamLength = null;
+				Type ParamProvider = null;
 
 				var ParamAttrib = member.GetCustomAttributes(typeof(Attribution.Parameter), true).Cast<Attribution.Parameter>().FirstOrDefault();
 				if (null != ParamAttrib)
@@ -442,9 +443,20 @@ namespace Blacksmiths.Utils.Wolf
 					ParamName = ParamAttrib.Name ?? ParamName;
 					ParamLength = ParamAttrib.Length;
 					ParamDirection = ParamAttrib.Direction;
+					ParamProvider = ParamAttrib.Provider;
 				}
 
-				var p = new BoundSpParameter(ParamName, this, member);
+                SpParameter p;
+				if(null != ParamProvider)
+				{
+					// Quick and dirty, no validation here on the type.
+					p = (SpParameter)Activator.CreateInstance(ParamProvider, ParamName, this, member);
+				}
+				else
+				{
+					p = new BoundSpParameter(ParamName, this, member);
+                }
+
 				p.Direction = ParamDirection;
 				p.Length = ParamLength.GetValueOrDefault(-1);
 				this.AddParameter(p);

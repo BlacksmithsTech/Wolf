@@ -21,6 +21,11 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 		/// Gets or sets the parameter data direction
 		/// </summary>
 		public System.Data.ParameterDirection Direction { get; set; } = System.Data.ParameterDirection.Input;
+
+		/// <summary>
+		/// Gets or sets the providing implementation for platform specific parameter types.
+		/// </summary>
+		public Type Provider { get; set; }
 	}
 
 	/// <summary>

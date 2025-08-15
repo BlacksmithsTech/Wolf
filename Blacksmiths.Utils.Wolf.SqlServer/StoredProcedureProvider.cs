@@ -4,6 +4,8 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Blacksmiths.Utils.Wolf.SqlServer.Data;
+using Blacksmiths.Utils.Wolf.Utility;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.Server;
 using System;
@@ -81,18 +83,32 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
     {
         private object _instance;
         private System.Reflection.PropertyInfo _property;
+		private Type _memberType;
+		private TvpConverter _tvpConverter;
 
         public override object Value
         {
-            get { return this._property.GetValue(this._instance, null); }
-            set { this._property.SetValue(this._instance, value, null); }
+            get { return this._tvpConverter.ToRecords((object[])this._property.GetValue(this._instance)); }
+			set
+			{ 
+				// Intentionally blank. UDTs are read only.
+			}
         }
 
-        public BoundSpParameterSqlServerTvp(string name, string tvpQualifiedName, object instance, PropertyInfo property)
-			: base(name, tvpQualifiedName)
+        public BoundSpParameterSqlServerTvp(string name, object instance, PropertyInfo property)
+			: base(name, null)
 		{
             this._instance = instance;
             this._property = property;
+
+			// Get the member type (not its array or collection)
+			//this._memberType = ReflectionHelper.GetMemberType(property);
+			this._memberType = ReflectionHelper.GetCollectionType(property);
+			if (null == this._memberType)
+				throw new ArgumentException($"Property '{property}' must be a collection to use as a table valued parameter");
+
+			this._tvpConverter = new TvpConverter(this._memberType);
+			this.TvpQualifiedName = this._tvpConverter.Udt.Name;
         }
 	}
 }

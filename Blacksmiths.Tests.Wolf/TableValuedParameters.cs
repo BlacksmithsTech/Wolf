@@ -1,4 +1,5 @@
 ﻿using Blacksmiths.Utils.Wolf;
+using Blacksmiths.Utils.Wolf.Attribution;
 using Blacksmiths.Utils.Wolf.SqlServer;
 using Blacksmiths.Utils.Wolf.SqlServer.Data;
 using Microsoft.Data.SqlClient.Server;
@@ -9,8 +10,15 @@ namespace Blacksmiths.Tests.Wolf
     [Collection(Collections.Constants.WolfTestDatabase)]
     public class TableValuedParameters
     {
+        [Procedure(Name = "[dbo].[spEchoTVP]")]
+        private class spEchoTVP : StoredProcedure
+        {
+            [Parameter(Provider = typeof(BoundSpParameterSqlServerTvp))]
+            public udtSample[] Input { get; set; }
+        }
+
         [UdtTable(Name = "[dbo].[udtSample]")]
-        private class Sample
+        private class udtSample
         {
             [UdtColumn(0)]
             public Guid Id { get; set; }
@@ -64,15 +72,9 @@ namespace Blacksmiths.Tests.Wolf
         [Fact]
         public async Task Echo_UdtTyping_ReturnsIdentical()
         {
-            var udtData = new Sample[]
-            {
-                new Sample() { Id = Guid.NewGuid(), Name = "Jacob", Age = 30 },
-                new Sample() { Id = Guid.NewGuid(), Name = "Sarah", Age = 40 },
-                new Sample() { Id = Guid.NewGuid(), Name = "Sophie", Age = 24 },
-                new Sample() { Id = Guid.NewGuid(), Name = "David" },
-            };
+            var udtData = GetSampleData();
 
-            var udtType = typeof(Sample);
+            var udtType = typeof(udtSample);
             var tvpConverter = new TvpConverter(udtType);
 
             var result = await this.connection.NewRequest()
@@ -95,6 +97,41 @@ namespace Blacksmiths.Tests.Wolf
                 foreach (DataColumn column in table.Columns)
                     Assert.Equal(udtType.GetProperty(column.ColumnName).GetValue(udtData[rowIndex]), NullSafe(table.Rows[rowIndex][column]));
         }
+
+        [Fact]
+        public async Task Echo_StrongTyping_ReturnsIdentical()
+        {
+            var udtData = GetSampleData();
+
+            var udtType = typeof(udtSample);
+            var tvpConverter = new TvpConverter(udtType);
+
+            var result = await this.connection.NewRequest()
+                .Add(new spEchoTVP() { Input = udtData })
+                .ExecuteAsync()
+                .ToDataSetAsync();
+
+            // Test the echo is identical
+            var table = result.Tables[0];
+            Assert.Equal(table.Columns.Count, tvpConverter.Columns.Length);
+            for (var i = 0; i < table.Columns.Count; i++)
+            {
+                Assert.Equal(tvpConverter.Columns[i].MetaData.Name, table.Columns[i].ColumnName);
+            }
+
+            Assert.Equal(table.Rows.Count, udtData.Length);
+            for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+                foreach (DataColumn column in table.Columns)
+                    Assert.Equal(udtType.GetProperty(column.ColumnName).GetValue(udtData[rowIndex]), NullSafe(table.Rows[rowIndex][column]));
+        }
+
+        private udtSample[] GetSampleData() => new udtSample[]
+        {
+            new udtSample() { Id = Guid.NewGuid(), Name = "Jacob", Age = 30 },
+            new udtSample() { Id = Guid.NewGuid(), Name = "Sarah", Age = 40 },
+            new udtSample() { Id = Guid.NewGuid(), Name = "Sophie", Age = 24 },
+            new udtSample() { Id = Guid.NewGuid(), Name = "David" },
+        };
 
         private object NullSafe(object obj) => obj is DBNull ? null : obj;
 

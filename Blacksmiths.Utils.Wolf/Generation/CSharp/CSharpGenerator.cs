@@ -252,8 +252,17 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 
 				if (null != TypeRow)
 				{
-					Param.ValueTypeName = (string)TypeRow["DataType"];
-				}
+					try
+					{
+						Param.ValueTypeName = (string)TypeRow["DataType"];
+					}
+					catch
+					{
+                        this.WriteLog($"WARNING: Data type for {Ret.ProcedureName}{ParamName} failed to resolve to a .NET type. This can occur if the parameter is a TVP (not implemented yet). The parameter will be skipped and will assume string during generation");
+                        Param.ValueTypeName = "System.String";
+						Param.Skip = true;
+                    }
+                }
 				else
 				{
 					this.WriteLog($"WARNING: Data type for {Ret.ProcedureName}{ParamName} could not be determined. Will assume string during generation");
@@ -316,7 +325,9 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				if (!string.IsNullOrEmpty(AttrParams))
 					sb.AppendLine($@"[Parameter({AttrParams})]");
 
-				sb.AppendLine($"public {ParamType} {ParamName} {{ get; set; }}");
+				var skip = Param.Skip ? "//" : string.Empty;
+
+				sb.AppendLine($"{skip}public {ParamType} {ParamName} {{ get; set; }}");
 			}
 			sb.Outdent();
 			sb.AppendLine("}");

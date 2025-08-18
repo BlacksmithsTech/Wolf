@@ -67,13 +67,15 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
 
         private SqlMetaData CreateSqlMetaData(PropertyInfo prop, UdtColumnAttribute attrColumn)
         {
-            var dbType = attrColumn.SqlDbType.HasValue ? attrColumn.SqlDbType.Value : this.MapSqlDbType(StoredProcedure.SpParameter.InferValueType(prop.PropertyType));
+            //var dbType = attrColumn.SqlDbType.HasValue ? attrColumn.SqlDbType.Value : this.MapSqlDbType(StoredProcedure.SpParameter.InferValueType(prop.PropertyType));
+            var dbType = this.MapSqlDbType(StoredProcedure.SpParameter.InferValueType(prop.PropertyType));
+
             var columnName = attrColumn.Name ?? prop.Name;
 
             switch (dbType)
             {
                 case SqlDbType.NVarChar:
-                    return new SqlMetaData(columnName, dbType, attrColumn.Length ?? -1);
+                    return new SqlMetaData(columnName, dbType, attrColumn.Length);
 
                 default:
                     return new SqlMetaData(columnName, dbType);

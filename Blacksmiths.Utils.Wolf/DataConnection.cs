@@ -301,7 +301,7 @@ namespace Blacksmiths.Utils.Wolf
 								{
 									if (commandAttempt < maxCommandAttempts && this.Provider.isRetriedError(ex as DbException))
 										commandRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
-									else
+									else if(!cancellationToken.IsCancellationRequested)//SqlClient provides no good exception type or error code for the exception which is thrown during cancellation. Simply assume if we're here this exception was due to cancellation.
 										throw;
 								}
 								finally

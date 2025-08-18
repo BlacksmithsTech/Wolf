@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Threading;
 using System.Xml.Linq;
 using static Blacksmiths.Utils.Wolf.StoredProcedure;
 
@@ -227,6 +228,8 @@ namespace Blacksmiths.Utils.Wolf
 					this.ValueType = InferValueType(Type.GetType(this._ValueTypeName));
 				}
 			}
+
+			internal bool Skip { get; set; }
 
 			internal CodeGenSpParameter(string name)
 				: base(name) { }
@@ -484,5 +487,11 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			return (IFluentResultSp<T>)connection.NewRequest().Add(sp).Execute(new DataResultSp<T>());
 		}
-	}
+
+		public static async System.Threading.Tasks.Task<IFluentResultSp<T>> ExecuteAsync<T>(this T sp, IDataConnection connection, CancellationToken cancellationToken = default) where T : StoredProcedure
+		{
+			return (IFluentResultSp<T>)await connection.NewRequest().Add(sp).ExecuteAsync(new DataResultSp<T>(), cancellationToken);
+
+        }
+    }
 }

@@ -1,0 +1,69 @@
+﻿using Blacksmiths.Utils.Wolf;
+using Blacksmiths.Utils.Wolf.Attribution;
+using Blacksmiths.Utils.Wolf.SqlServer;
+using Microsoft.Data.SqlClient.Server;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Blacksmiths.Tests.Wolf
+{
+    [Collection(Collections.Constants.WolfTestDatabase)]
+    public class MultipleResultSets
+    {
+        [Procedure(Name = "[dbo].[spMultiResult]")]
+        private class spMultiResult : StoredProcedure
+        {
+        }
+
+        [Source(From = "[dbo].[spMultiResult][0]")]
+        private class spMultiResult0
+        {
+            public string Column1 { get; set; }
+            public int Column2 { get; set; }
+        }
+
+        [Source(From = "[dbo].[spMultiResult][1]")]
+        private class spMultiResult1
+        {
+            public string Column1 { get; set; }
+            public DateTimeOffset Column2 { get; set; }
+            public int Column3 { get; set; }
+        }
+
+        private class spMultiResultModel : Utils.Wolf.Model.ResultModel
+        {
+            public spMultiResult0[] Table0 { get; set; }
+            public spMultiResult1[] Table1 { get; set; }
+        }
+
+        private readonly IDataConnection connection;
+        public MultipleResultSets(Fixtures.WolfTestDatabaseSqlServerConnection wolfTestDatabaseSqlServerConnection)
+        {
+            this.connection = wolfTestDatabaseSqlServerConnection.Connection;
+        }
+
+        [Fact]
+        public async Task Multi_Tables()
+        {
+            var result = await this.connection.NewRequest()
+                .Add(new spMultiResult())
+                .ExecuteAsync()
+                .ToDataSetAsync();
+
+            Assert.Equal(2, result.Tables.Count);
+        }
+
+        [Fact]
+        public async Task Multi_Bind()
+        {
+            var result = await this.connection.NewRequest()
+                .Add(new spMultiResult())
+                .ExecuteAsync()
+                .ToModelAsync<spMultiResultModel>();
+        }
+    }
+}

@@ -17,13 +17,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		public string Schema { get; private set; }
 		public string Name { get; private set; }
+		public int? Index { get; private set; }
 
-		public QualifiedSqlName(string Schema, string Name)
+		public QualifiedSqlName(string Schema, string Name, string index = null)
 		{
 			this.Schema = Schema;
 			if (string.IsNullOrEmpty(this.Schema))
 				this.Schema = DEFAULT_SCHEMA;
 			this.Name = Name;
+			if (null != index && int.TryParse(index, out var i))
+				this.Index = i;
 		}
 
 		public static QualifiedSqlName From(System.Data.DataTable dt)
@@ -36,17 +39,25 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
 		public static QualifiedSqlName Parse(string fqName)
 		{
-			var m = Regex.Match(fqName, @"^(?:\[?(?<schema>[^\n\r\[\]]+)]?\.)*\[?(?<name>[^\n\r\[\]]+)]?$");
+			var m = Regex.Match(fqName, @"^(\[?(?<schema>\w+)\]?\.)?\[?(?<name>\w+)\]?(\[(?<index>\d+)\])?$");
 			if (m.Success)
-				return new QualifiedSqlName(m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? fqName);
+				return new QualifiedSqlName(m.Groups["schema"].Value ?? string.Empty, m.Groups["name"].Value ?? fqName, m.Groups["index"].Value);
 			else
 				return new QualifiedSqlName(string.Empty, fqName);
 		}
 
 		public override string ToString()
 		{
-			return $"[{Schema}].[{Name}]";
+			return this.Index.HasValue ? $"[{Schema}].[{Name}][{Index}]" : $"[{Schema}].[{Name}]";
 		}
+
+        public bool Equals(QualifiedSqlName other)
+        {
+			return null != other
+				&& other.Schema.Equals(this.Schema)
+				&& other.Name.Equals(this.Name)
+				&& Nullable.Equals(this.Index, other.Index);
+        }
 
 		public string ToDisplayString()
 		{

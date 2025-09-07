@@ -80,10 +80,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return ds.Tables[fqName.Name, fqName.Schema];
 
 			// ** Now normalise all ds table names
-			var normalisedName = fqName.ToString();
+			//var normalisedName = fqName.ToString();
 
 			foreach (DataTable dt in ds.Tables)
-				if (QualifiedSqlName.Parse(dt.TableName).ToString().Equals(normalisedName))
+				if (QualifiedSqlName.Parse(dt.TableName).Equals(fqName))
 					return dt;
 
 			return null;

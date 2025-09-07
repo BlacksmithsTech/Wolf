@@ -68,6 +68,8 @@ namespace Blacksmiths.Utils.Wolf
 
         public static async Task<Model.SimpleResultModel<T>> ToSimpleModelAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>();
 
+		public static async Task<T> ToModelAsync<T>(this Task<IFluentResult> result) where T : Model.ResultModel, new() => (await result).ToModel<T>();
+
         public static async Task<List<T>> ToListAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results;
 
 		public static async Task<T> ToFirstAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results.First();

@@ -40,38 +40,38 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// The timespan, to the nearest second, before a single command execution times out
 		/// </summary>
-        TimeSpan? CommandTimeout { get; set; }
-    }
+		TimeSpan? CommandTimeout { get; set; }
+	}
 
-    public sealed class DataRequestItem
-    {
-        /// <summary>
-        /// The model type(s) of the result data
-        /// </summary>
-        internal Type[] Types { get; set; }
+	public sealed class DataRequestItem
+	{
+		/// <summary>
+		/// The model type(s) of the result data
+		/// </summary>
+		internal Type[] Types { get; set; }
 
-        /// <summary>
-        /// The database command driving the result
-        /// </summary>
-        internal IDataRequestCommand Command { get; set; }
+		/// <summary>
+		/// The database command driving the result
+		/// </summary>
+		internal IDataRequestCommand Command { get; set; }
 
 		internal WolfCommandBinding ToCommandBinding() => new WolfCommandBinding()
 		{
 			RequestItem = this,
 		};
-    }
+	}
 
-    public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestOptions
+	public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestOptions
 	{
 		// *************************************************
 		// Fields
 		// *************************************************
 
-        // *************************************************
-        // Properties
-        // *************************************************
+		// *************************************************
+		// Properties
+		// *************************************************
 
-        public DataConnection Connection { get; private set; }
+		public DataConnection Connection { get; private set; }
 
 		public bool UseTransaction { get; set; }
 
@@ -83,11 +83,11 @@ namespace Blacksmiths.Utils.Wolf
 
 		public TimeSpan? CommandTimeout { get; set; }
 
-        // *************************************************
-        // Constructor
-        // *************************************************
+		// *************************************************
+		// Constructor
+		// *************************************************
 
-        public DataRequest(DataConnection connection)
+		public DataRequest(DataConnection connection)
 		{
 			if (null == connection)
 				throw new ArgumentNullException("connection may not be null");
@@ -112,20 +112,20 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		public DataRequest WithCommandTimeout(int milliseconds) => this.WithCommandTimeout(TimeSpan.FromMilliseconds(milliseconds));
 
-        /// <summary>
-        /// Specifies that this request will run all commands with a given timeout timespan
-        /// </summary>
-        public DataRequest WithCommandTimeout(TimeSpan? commandTimeout = null)
-        {
-            this.CommandTimeout = commandTimeout;
-            return this;
-        }
+		/// <summary>
+		/// Specifies that this request will run all commands with a given timeout timespan
+		/// </summary>
+		public DataRequest WithCommandTimeout(TimeSpan? commandTimeout = null)
+		{
+			this.CommandTimeout = commandTimeout;
+			return this;
+		}
 
-        /// <summary>
-        /// Adds a new item (command) to the request.
-        /// </summary>
-        /// <param name="item">Item to add</param>
-        /// <returns></returns>
+		/// <summary>
+		/// Adds a new item (command) to the request.
+		/// </summary>
+		/// <param name="item">Item to add</param>
+		/// <returns></returns>
 		public DataRequest Add(IDataRequestCommand item)
 		{
 			this.Add(new DataRequestItem() { Command = item });
@@ -137,21 +137,46 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		public DataRequest Add<TResult>(IDataRequestCommand item)
 		{
-            this.Add(new DataRequestItem() { Command = item, Types = [typeof(TResult)] });
-            return this;
-        }
+			this.Add(new DataRequestItem() { Command = item, Types = [typeof(TResult)] });
+			return this;
+		}
 
-        /// <summary>
-        /// Advanced. Opens a database connection and transaction (if requested), where the consumer is in control of the disposal.
-        /// </summary>
-		public IFluentResult OpenConnection()
+		/// <summary>
+		/// Advanced. Opens a database connection and transaction (if requested), where the consumer is in control of the disposal.
+		/// </summary>
+		public DataResult OpenConnection()
 		{
 			return this.Connection.OpenConnection(this);
 		}
 
-        internal IFluentResult OpenConnection(DataResult result)
+		internal DataResult OpenConnection(DataResult result)
 		{
 			return this.Connection.OpenConnection(this, result);
 		}
 	}
+
+	public static class DataRequestExtensions
+	{
+		/// <summary>
+		/// Executes the entire request and for convienience returns the return value of the last command in the collection
+		/// </summary>
+		/// <param name="dataRequest"></param>
+		/// <param name="cancellationToken"></param>
+		/// <returns>Return value of the last command in the collection</returns>
+        public static async Task<int> ExecuteAsync(this DataRequest dataRequest, CancellationToken cancellationToken = default)
+        {
+			int result = -1;
+			using (var connection = dataRequest.OpenConnection())
+				while (!connection.IsConsumed)
+					result = await connection.ExecuteNextAsync(cancellationToken);
+			return result;
+        }
+
+  //      public static async Task<List<T>> QueryListAsync<T>(this DataRequest dataRequest, CancellationToken cancellationToken = default)
+		//{
+		//	using (var connection = dataRequest.OpenConnection())
+		//		return await connection.QueryListAsync<T>(cancellationToken);
+		//}
+
+    }
 }

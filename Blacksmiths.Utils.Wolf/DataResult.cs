@@ -15,11 +15,6 @@ using System.Threading.Tasks;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public interface IFluentResult : IDisposable
-	{
-		Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default);
-    }
-
 	///// <summary>
 	///// Asyncronous helpers for cleaner consumer code
 	///// </summary>
@@ -41,35 +36,52 @@ namespace Blacksmiths.Utils.Wolf
     /// <summary>
     /// Binds wolf command results to it's associated wolf request
     /// </summary>
-    public class DataResult : IFluentResult, IDisposable
+    public class DataResult : IDisposable
 	{
 		internal IProvider Provider { get; set; }
+		public bool IsConsumed => null == this.GetNextUnconsumedCommand();
 		public DbTransaction Transaction { get; set; }
 		public DbConnection Connection { get; set; }
 		public WolfCommandBinding[] Commands { get; set; }
 		public DataRequest Request { get; set; }
 
+		/// <summary>
+		/// Opens the next grid of results and streams the row data into T.
+		/// </summary>
+		/// <typeparam name="T">Type of data to stream</typeparam>
+		/// <param name="cancellationToken"></param>
+		/// <returns>Row data of type T</returns>
 		public async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default)
 		{
 			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
             nextCommand.Reader ??= await this.EngineAsync(
 				nextCommand,
-				async (commandBinding) => await this.Connection.QueryMultipleAsync(commandBinding), 
+				async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition), 
 				cancellationToken);
 
 			var result = await nextCommand.Reader.ReadAsync<T>(buffered: false);
 			return result;
 		}
 
-		public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Executes the next command in the request and returns only the return value, discarding any result sets
+		/// </summary>
+		/// <param name="cancellationToken"></param>
+		/// <returns>Return value of the command</returns>
+		public async Task<int> ExecuteNextAsync(CancellationToken cancellationToken = default)
 		{
 			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
             nextCommand.isConsumed = true;
 
-            return await this.EngineAsync(
+            await this.EngineAsync(
                 nextCommand,
-                async (commandBinding) => await this.Connection.ExecuteAsync(commandBinding),
+                async (commandDefinition) => await this.Connection.ExecuteAsync(commandDefinition),	//Dapper returns number of rows. Discarded.
 				cancellationToken);
+
+			if (nextCommand.RequestItem.Command is IStoredProcedure sp)
+				return sp.ReturnValue.Value;
+			else
+				return -1;
         }
 
 		private WolfCommandBinding GetNextUnconsumedCommandOrThrow()
@@ -98,8 +110,9 @@ namespace Blacksmiths.Utils.Wolf
 				{
 					var commandDefinition = this.ToCommandDefinition(commandBinding, cancellationToken);
 					var result = await operationAsync(commandDefinition);
-					//TODO: Bind
-					return result;
+					if (commandBinding.RequestItem.Command is IStoredProcedure sp)
+						sp.SetDynamicParameters((DynamicParameters)commandDefinition.Parameters);
+                    return result;
 				}
 				catch (DbException ex) when (this.Provider.isRetriedError(ex))
 				{
@@ -134,19 +147,8 @@ namespace Blacksmiths.Utils.Wolf
         }
     }
 
-	public interface IFluentResultSp<T> : IFluentResult where T : StoredProcedure
+	public static class DataResultExtensions
 	{
-		T ToStoredProcedure();
-	}
-
-	public class DataResultSp<T> : DataResult, IFluentResultSp<T> where T : StoredProcedure
-	{
-		public T ToStoredProcedure()
-		{
-			if (1 == this.Commands.Length)
-				return this.Commands[0].RequestItem.Command as T;
-			else
-				return null;
-		}
+		public static async Task<List<T>> QueryNextListAsync<T>(this DataResult dataResult, CancellationToken cancellationToken = default) => [.. await dataResult.StreamNextResultSetAsync<T>(cancellationToken)];
 	}
 }

@@ -23,6 +23,7 @@ namespace Blacksmiths.Utils.Wolf
 		string ProcedureName { get; set; }
 		int? ReturnValue { get; set; }
 		DynamicParameters GetDynamicParameters();
+		void SetDynamicParameters(DynamicParameters dynamicParameters);
 	}
 
 	public class StoredProcedure : IStoredProcedure, IDataRequestCommand, IEnumerable<StoredProcedure.ISpParameter>
@@ -485,17 +486,25 @@ namespace Blacksmiths.Utils.Wolf
 				this._procedureName = $"[{thisType.Name}]";
 		}
 
+		private const string C_RETURN_VALUE = "return_value";
+
         DynamicParameters IStoredProcedure.GetDynamicParameters()
         {
-            if (null == this._dbParameters)
-            {
-                this._dbParameters = new List<ISpParameter>();
-                this.ReflectMembers();
-            }
 			var result = new DynamicParameters();
 			foreach (var param in this)
 				result.Add(param.Name, param.Value, param.ValueType, param.Direction, param.Length);
+			result.Add(C_RETURN_VALUE, null, DbType.Int32, ParameterDirection.ReturnValue);
 			return result;
+        }
+
+        void IStoredProcedure.SetDynamicParameters(DynamicParameters dynamicParameters)
+        {
+			foreach (var paramName in dynamicParameters.ParameterNames)
+			{
+				var param = this[paramName];
+				if (null != param) param.Value = dynamicParameters.Get<object>(paramName);
+            }
+			((IStoredProcedure)this).ReturnValue = dynamicParameters.Get<int>(C_RETURN_VALUE);
         }
     }
 

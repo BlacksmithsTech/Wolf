@@ -4,6 +4,7 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Blacksmiths.Utils.Wolf.Exceptions;
 using Blacksmiths.Utils.Wolf.Utility;
 using Dapper;
 using System;
@@ -54,9 +55,60 @@ namespace Blacksmiths.Utils.Wolf
 		public async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default)
 		{
 			var nextCommand = this.Commands.FirstOrDefault(c => null == c.Reader || !c.Reader.IsConsumed);
-			//TODO: Resiliance
-			nextCommand.Reader ??= await this.Connection.QueryMultipleAsync(nextCommand.ToCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken));
+			nextCommand.Reader ??= await this.JitterAsync(
+				nextCommand.RequestItem.Command,
+				async () => await this.Connection.QueryMultipleAsync(this.ToCommandDefinition(nextCommand, cancellationToken)));
+			nextCommand.Executed = true;
 			return await nextCommand.Reader.ReadAsync<T>(buffered: false);
+		}
+
+		public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
+		{
+            var nextCommand = this.Commands.FirstOrDefault(c => !c.Executed);
+            nextCommand.Executed = true;
+			return await this.JitterAsync(
+                nextCommand.RequestItem.Command,
+                async () => await this.Connection.ExecuteAsync(this.ToCommandDefinition(nextCommand, cancellationToken)));
+        }
+
+		private CommandDefinition ToCommandDefinition(WolfCommandBinding commandBinding, CancellationToken cancellationToken)
+			=> commandBinding.ToCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken);
+
+		private async Task<T> JitterAsync<T>(IDataRequestCommand requestItem, Func<Task<T>> operationAsync, int minMs = 10, int maxMs = 100, int maxAttempts = 3)
+		{
+            minMs = Math.Max(0, minMs);
+            maxMs = Math.Max(minMs, maxMs);
+
+			var i = 0;
+			while (true)
+			{
+				try
+				{
+					return await operationAsync();
+				}
+				catch (DbException ex) when (this.Provider.isRetriedError(ex))
+				{
+					if (i >= maxAttempts)
+						throw;
+
+					var jitterMs = minMs == maxMs ? minMs : new Random().Next(minMs, maxMs + 1);
+
+					object dbCommand = null;
+					if (requestItem is StoredProcedure sp)
+						dbCommand = new { ((IStoredProcedure)sp).ProcedureName, Parameters = sp.ToList() };
+
+					if (jitterMs > 0)
+					{
+						Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying in {jitterMs}ms", dbCommand);
+						await Task.Delay(jitterMs);
+					}
+					else
+					{
+						Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying immediately", dbCommand);
+					}
+				}
+				i++;
+			}
 		}
 
 		public void Dispose()

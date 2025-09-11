@@ -4,9 +4,11 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Blacksmiths.Utils.Wolf.Utility;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Data.Common;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +43,25 @@ namespace Blacksmiths.Utils.Wolf
         TimeSpan? CommandTimeout { get; set; }
     }
 
-	public sealed class DataRequest : Collection<IDataRequestItem>, IDataRequestOptions
+    public sealed class DataRequestItem
+    {
+        /// <summary>
+        /// The model type(s) of the result data
+        /// </summary>
+        internal Type[] Types { get; set; }
+
+        /// <summary>
+        /// The database command driving the result
+        /// </summary>
+        internal IDataRequestCommand Command { get; set; }
+
+		internal WolfCommandBinding ToCommandBinding() => new WolfCommandBinding()
+		{
+			RequestItem = this,
+		};
+    }
+
+    public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestOptions
 	{
 		// *************************************************
 		// Fields
@@ -102,89 +122,36 @@ namespace Blacksmiths.Utils.Wolf
         }
 
         /// <summary>
-        /// Adds a new item (command) to the request. It is not executed until you call Execute()
+        /// Adds a new item (command) to the request.
         /// </summary>
         /// <param name="item">Item to add</param>
         /// <returns></returns>
-		public new DataRequest Add(IDataRequestItem item)
+		public DataRequest Add(IDataRequestCommand item)
 		{
-			return this.Add(item, (string)null);
-		}
-
-        /// <summary>
-        /// Adds a new item (command) to the request. It is not executed until you call Execute(). Specifies the name of a DataTable you would like the result data to be applied to.
-        /// </summary>
-        /// <param name="item">Item to add</param>
-        /// <param name="Target">The name of the supplied DataTable will be used when applying the result data</param>
-        /// <returns></returns>
-        public DataRequest Add(IDataRequestItem item, System.Data.DataTable Target)
-		{
-			var fqName = Utility.QualifiedSqlName.Parse(Target.TableName);
-			if (!Target.TableName.Equals(fqName.Name))
-				Target.TableName = fqName.Name;
-			if (!Target.Namespace.Equals(fqName.Schema))
-				Target.Namespace = fqName.Schema;
-			return this.Add(item, fqName.ToString());
-		}
-
-        /// <summary>
-        /// Adds a new item (command) to the request. It is not executed until you call Execute(). Specifies the name of the table you would like the result data to be applied to.
-        /// </summary>
-        /// <param name="item">Item to add</param>
-        /// <param name="TargetTableName">The name of a table which will be used when applying the result data</param>
-        /// <returns></returns>
-		public DataRequest Add(IDataRequestItem item, string TargetTableName)
-		{
-			if (!string.IsNullOrEmpty(TargetTableName))
-				item.TableName = Utility.QualifiedSqlName.Parse(TargetTableName);
-			base.Add(item);
+			this.Add(new DataRequestItem() { Command = item });
 			return this;
 		}
 
-        /// <summary>
-        /// Executes the items within this request against the database.
-        /// </summary>
-        /// <returns>Result commands</returns>
-		public IFluentResult Execute(CancellationToken cancellationToken = default)
+		/// <summary>
+		/// Adds a new command to the request with the specified model result type, indicating this command returns up to 1 result set of type TResult
+		/// </summary>
+		public DataRequest Add<TResult>(IDataRequestCommand item)
 		{
-			return this.Connection.Fetch(this, null, cancellationToken);
-		}
-
-        /// <summary>
-        /// Executes the items within this request against the database.
-        /// </summary>
-        /// <returns>Result commands</returns>
-        public async Task<IFluentResult> ExecuteAsync(CancellationToken cancellationToken = default)
-        {
-            return await this.Connection.FetchAsync(this, null, cancellationToken);
+            this.Add(new DataRequestItem() { Command = item, Types = [typeof(TResult)] });
+            return this;
         }
 
-        internal IFluentResult Execute(DataResult result, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Advanced. Opens a database connection and transaction (if requested), where the consumer is in control of the disposal.
+        /// </summary>
+		public IFluentResult OpenConnection()
 		{
-			return this.Connection.Fetch(this, result, cancellationToken);
+			return this.Connection.OpenConnection(this);
 		}
 
-        internal async Task<IFluentResult> ExecuteAsync(DataResult result, CancellationToken cancellationToken = default)
-        {
-            return await this.Connection.FetchAsync(this, result, cancellationToken);
-        }
-
-        // *************************************************
-        // Utility
-        // *************************************************
-
-        protected override void InsertItem(int index, IDataRequestItem item)
+        internal IFluentResult OpenConnection(DataResult result)
 		{
-			if (null == item)
-				throw new ArgumentNullException("Cannot insert a null data request item");
-			base.InsertItem(index, item);
-		}
-
-		protected override void SetItem(int index, IDataRequestItem item)
-		{
-			if (null == item)
-				throw new ArgumentNullException("Cannot set a null data request item");
-			base.SetItem(index, item);
+			return this.Connection.OpenConnection(this, result);
 		}
 	}
 }

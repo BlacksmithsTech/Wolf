@@ -6,6 +6,7 @@
  */
 using Blacksmiths.Utils.Wolf.SqlServer.Data;
 using Blacksmiths.Utils.Wolf.Utility;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.Server;
 using System;
@@ -14,38 +15,17 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace Blacksmiths.Utils.Wolf.SqlServer
 {
 	public class StoredProcedureProvider : IStoredProcedureProvider
 	{
-		public Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null)
-		{
-			var cmd = connection.CreateCommand();
-			cmd.CommandText = sp.ProcedureName;
-			cmd.CommandType = System.Data.CommandType.StoredProcedure;
-			cmd.Transaction = transaction;
-
-			var boundParams = sp.Select(p => this.ToDbParameter(p, cmd)).ToArray();
-			cmd.Parameters.AddRange(boundParams.Select(bp => bp.DbParameter).ToArray());
-
-			return new Utility.WolfCommandBinding()
-			{
-				DbCommand = cmd,
-				Parameters = boundParams,
-				WolfRequestItem = sp
-			};
-		}
-
-		public Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.ISpParameter p, DbCommand command)
-		{
-			return new Utility.WolfParameterDbBinding()
-			{
-				DbParameter = p.ToDbParameter(command),
-				WolfParameter = p
-			};
-		}
-	}
+		public CommandDefinition ToCommandDefinition(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)
+			=> new CommandDefinition(((IStoredProcedure)sp).ProcedureName, ((IStoredProcedure)sp).GetDynamicParameters(), transaction, commandTimeoutSeconds, CommandType.StoredProcedure,
+                flags: CommandFlags.None,
+                cancellationToken: cancellationToken);
+    }
 
 	//interface ISpParameterSqlServer
 	//{

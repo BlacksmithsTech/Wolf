@@ -5,8 +5,10 @@
  * (C) 2019 Blacksmiths Technology Ltd
  */
 using Blacksmiths.Utils.Wolf.Model;
+using Dapper;
 using System;
 using System.Data.Common;
+using System.Threading;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -39,14 +41,11 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IStoredProcedureProvider
 	{
-		Utility.WolfCommandBinding ToDbCommand(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null);
-		Utility.WolfParameterDbBinding ToDbParameter(StoredProcedure.ISpParameter p, DbCommand command);
+		CommandDefinition ToCommandDefinition(StoredProcedure sp, DbConnection connection, DbTransaction transaction = null, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default);
 	}
 
-	public interface IDataRequestItem
+	public interface IDataRequestCommand
 	{
-		Utility.QualifiedSqlName TableName { get; set; }
-
-		Utility.WolfCommandBinding GetDbCommand(IProvider provider, DbConnection connection, DbTransaction transaction);
+        CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default);
 	}
 }

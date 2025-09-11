@@ -23,15 +23,4 @@ namespace Blacksmiths.Utils.Wolf.Exceptions
             this.Request = request;
         }
     }
-
-    public class CommitExecutionException : DbExecutionException
-    {
-        public ModelProcessor ModelProcessor { get; private set; }
-
-        public CommitExecutionException(ModelProcessor modelProcessor, Exception ex)
-            : base(ex)
-        {
-            this.ModelProcessor = modelProcessor;
-        }
-    }
 }

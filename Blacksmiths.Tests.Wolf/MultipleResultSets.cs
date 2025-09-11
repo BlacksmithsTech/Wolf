@@ -46,24 +46,34 @@ namespace Blacksmiths.Tests.Wolf
             this.connection = wolfTestDatabaseSqlServerConnection.Connection;
         }
 
-        [Fact]
-        public async Task Multi_Tables()
-        {
-            var result = await this.connection.NewRequest()
-                .Add(new spMultiResult())
-                .ExecuteAsync()
-                .ToDataSetAsync();
+        //[Fact]
+        //public async Task Multi_Bind()
+        //{
+        //    var result = await this.connection.NewRequest()
+        //        .Add(new spMultiResult())
+        //        .ExecuteAsync()
+        //        .ToModelAsync<spMultiResultModel>();
+        //}
 
-            Assert.Equal(2, result.Tables.Count);
-        }
+        //[Fact]
+        //public async Task Multi_Tables()
+        //{
+        //    var result = await this.connection.NewRequest()
+        //        .Add(new spMultiResult())
+        //        .ExecuteAsync()
+        //        .ToDataSetAsync();
+
+        //    Assert.Equal(2, result.Tables.Count);
+        //}
 
         [Fact]
         public async Task Multi_Bind()
         {
-            var result = await this.connection.NewRequest()
+            using var connection = this.connection.NewRequest()
                 .Add(new spMultiResult())
-                .ExecuteAsync()
-                .ToModelAsync<spMultiResultModel>();
+                .OpenConnection();
+            var r1 = (await connection.StreamNextResultSetAsync<spMultiResult0>()).ToList();
+            var r2 = (await connection.StreamNextResultSetAsync<spMultiResult1>()).ToList();
         }
     }
 }

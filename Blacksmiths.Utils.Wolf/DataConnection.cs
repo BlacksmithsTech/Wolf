@@ -4,13 +4,15 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
+using Dapper;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Blacksmiths.Utils.Wolf
 {
@@ -21,35 +23,6 @@ namespace Blacksmiths.Utils.Wolf
         /// </summary>
         /// <returns></returns>
 		DataRequest NewRequest(Action<IDataRequestOptions> setOptions = null);
-
-        /// <summary>
-        /// Specifies a data model as a Wolf result model to perform an action with
-        /// </summary>
-        /// <param name="model">A Wolf result model</param>
-        /// <returns>Fluent model action</returns>
-        IFluentModelAction WithModel(Model.ResultModel model);
-
-        /// <summary>
-        /// Specifies a data model as ADO.NET DataTables to perform an action with
-        /// </summary>
-        /// <param name="dataTables">One or more ADO.NET DataTables which provide the model</param>
-        /// <returns>Fluent model action</returns>
-        IFluentModelAction WithModel(DataTable[] dataTables);
-
-        /// <summary>
-        /// Specifies a data model as an ADO.NET DataSet to perform an action with
-        /// </summary>
-        /// <param name="dataSet">An ADO.NET DataSet which provides the model</param>
-        /// <returns>Fluent model action</returns>
-        IFluentModelAction WithModel(DataSet dataSet);
-
-        /// <summary>
-        /// Specifies a data model as objects to perform an action with
-        /// </summary>
-        /// <typeparam name="T">Type of objects which represent the model</typeparam>
-        /// <param name="modelObjects">An object or array of objects which represent the data model</param>
-        /// <returns>Fluent model action</returns>
-		IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new();
 	}
 
 	public interface IServiceLocator
@@ -117,255 +90,154 @@ namespace Blacksmiths.Utils.Wolf
 			return ret;
 		}
 
-        /// <summary>
-        /// Specifies a data model as a Wolf result model to perform an action with
-        /// </summary>
-        /// <param name="dataSet">A Wolf result model</param>
-        /// <returns>Fluent model action</returns>
-        public IFluentModelAction WithModel(Model.ResultModel model)
-        {
-            return this.WithModel<Model.ResultModel>(model);
-        }
-
-        /// <summary>
-        /// Specifies a data model as ADO.NET DataTables to perform an action with
-        /// </summary>
-        /// <param name="dataSet">One or more ADO.NET DataTables which provide the model</param>
-        /// <returns>Fluent model action</returns>
-        public IFluentModelAction WithModel(DataTable[] dataTables)
-        {
-            return this.WithModel<DataTable>(dataTables);
-        }
-
-        /// <summary>
-        /// Specifies a data model as an ADO.NET DataSet to perform an action with
-        /// </summary>
-        /// <param name="dataSet">An ADO.NET DataSet which provides the model</param>
-        /// <returns>Fluent model action</returns>
-        public IFluentModelAction WithModel(DataSet dataSet)
-        {
-            return this.WithModel<DataSet>(dataSet);
-        }
-
-        /// <summary>
-        /// Specifies a data model as objects to perform an action with
-        /// </summary>
-        /// <typeparam name="T">Type of objects which represent the model</typeparam>
-        /// <param name="modelObjects">An object or array of objects which represent the data model</param>
-        /// <returns>Fluent model action</returns>
-        public IFluentModelAction WithModel<T>(params T[] modelObjects) where T : class, new()
-		{
-			if (null == modelObjects)
-				modelObjects = new T[0];
-
-			modelObjects = modelObjects.Where(o => null != o).ToArray();
-
-			if (modelObjects.Length > 0)
-			{
-				if (modelObjects[0] is Model.ResultModel model)
-				{
-					if (1 == modelObjects.Length)
-						return new ModelProcessor(model, this);
-					else
-						throw new ArgumentException("When using a strongly typed model, only 1 strongly typed model must be supplied");
-				}
-				else if (modelObjects[0] is DataSet ds)
-				{
-					if (1 == modelObjects.Length)
-						return new ModelProcessor(new Model.ResultModel(ds), this);
-					else
-						throw new ArgumentException("When using a DataSet as a model, only 1 DataSet must be supplied");
-				}
-				else if (modelObjects[0] is DataTable dt)
-				{
-					var dtds = new DataSet();
-					foreach (var mdt in modelObjects.Cast<DataTable>())
-						if (null == mdt.DataSet)
-							dtds.Tables.Add(dt);
-						else
-							throw new ArgumentException($"DataTable '{dt.TableName}' belongs to a DataSet. To work with this model, pass the DataSet to .WithModel() rather than the DataTable");
-					return new ModelProcessor(new Model.ResultModel(dtds), this);
-				}
-			}
-
-			if(typeof(DataSet).IsAssignableFrom(typeof(T)) || typeof(DataTable).IsAssignableFrom(typeof(T)))
-			{
-				// ** Empty model returned for datasets
-				return new ModelProcessor(new Model.ResultModel(), this);
-			}
-			else
-			{
-				// ** Loose objects. Create a model to represent them and then use an ad-hoc processor to switch to an overwrite persistance behaviour
-				var SimpleModel = Model.ResultModel.CreateSimpleResultModel(modelObjects);
-				return new AdHocModelProcessor(SimpleModel, this);
-			}
-		}
-
         // *************************************************
         // Engine room - Fetch Request
         // *************************************************
 
-        internal DataResult Fetch(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default) => this.FetchAsync(request, result, cancellationToken).ConfigureAwait(false).GetAwaiter().GetResult();
-
-        internal Task<DataResult> FetchAsync(DataRequest request, DataResult result = null, CancellationToken cancellationToken = default)
+        internal DataResult OpenConnection(DataRequest request, DataResult result = null)
 		{
 			if (null == request || 0 == request.Count)
 				return null;
 
-			result = result ?? new DataResult();
-			result.Request = request;
+			result ??= new DataResult();
+            result.Provider = this.Provider;
+            result.Request = request;
+            result.Connection = this.Provider.GetConnectionProvider().ToDbConnection();
 
-			short batchAttempt = 0;
-			short maxBatchAttempts = 1;
-			short maxCommandAttempts = 1;
-			if(request.UseTransaction)
-				maxBatchAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
-			else
-				maxCommandAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
+            if (request.UseTransaction)
+            {
+                result.Connection.Open();
+                result.Transaction = result.Connection.BeginTransaction();
+            }
 
-            Exceptions.RequestExecutionException batchRetryException = null;
-			string batchTraceLabel;
+			result.Commands = request.Select(ri => ri.ToCommandBinding()).ToArray();
 
-			bool cancellationDelegateRegistered = false;
+   //         short batchAttempt = 0;
+			//short maxBatchAttempts = 1;
+			//short maxCommandAttempts = 1;
+			//if(request.UseTransaction)
+			//	maxBatchAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
+			//else
+			//	maxCommandAttempts = Math.Max((short)1, request.MaximumAttempts.GetValueOrDefault(1));
 
-			// Execution loop (resiliance)
-			do
-			{
-                if (cancellationToken.IsCancellationRequested)
-                    break;
+   //         Exceptions.RequestExecutionException batchRetryException = null;
+			//string batchTraceLabel;
 
-                if (null != batchRetryException)
-                    this.Jitter(batchRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
-                batchRetryException = null;
-                batchAttempt++;
-				batchTraceLabel = $"Batch execution attempt {batchAttempt} of {maxBatchAttempts}";
+			//// Execution loop (resiliance)
+			//do
+			//{
+   //             if (null != batchRetryException)
+   //                 this.Jitter(batchRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
+   //             batchRetryException = null;
+   //             batchAttempt++;
+			//	batchTraceLabel = $"Batch execution attempt {batchAttempt} of {maxBatchAttempts}";
 
-                // ** Connect to the database
-                Utility.Logging.BeginTrace(batchTraceLabel);
+   //             // ** Connect to the database
+   //             Utility.Logging.BeginTrace(batchTraceLabel);
 
-				using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
-				{
-					System.Data.Common.DbTransaction dbTransaction = null;
-					if (request.UseTransaction)
-					{
-						dbConnection.Open();
-						dbTransaction = dbConnection.BeginTransaction();
-					}
+			//	using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
+			//	{
+			//		System.Data.Common.DbTransaction dbTransaction = null;
+			//		if (request.UseTransaction)
+			//		{
+			//			dbConnection.Open();
+			//			dbTransaction = dbConnection.BeginTransaction();
+			//		}
 
-					var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.GetDbCommand(this.Provider, dbConnection, dbTransaction)));
-					result.Commands = wolfWork.ToArray();
-					Utility.WolfCommandBinding lastCommandBinding = null;
+			//		var wolfWork = new List<Utility.WolfCommandBinding>(request.Select(ri => ri.ToCommandBinding(this.Provider, dbConnection, dbTransaction, (int?)request.CommandTimeout?.TotalSeconds, cancellationToken)));
+			//		result.Commands = wolfWork.ToArray();
+			//		Utility.WolfCommandBinding lastCommandBinding = null;
 
-					// Cancellation support
-					if (!cancellationDelegateRegistered)
-					{
-						cancellationDelegateRegistered = true;
-						cancellationToken.Register(() =>
-						{
-							lastCommandBinding?.DbCommand?.Cancel();	//cancel currently executing command
-						});
-					}
+			//		try
+			//		{
+			//			// ** Process the commands
+			//			foreach (var wolfCommand in wolfWork)
+			//			{
+			//				lastCommandBinding = wolfCommand;
+			//				short commandAttempt = 0;
+   //                         Exceptions.RequestExecutionException commandRetryException = null;
+   //                         string commandTraceLabel;
 
-					try
-					{
-						// ** Process the commands
-						foreach (var wolfCommand in wolfWork)
-						{
-							lastCommandBinding = wolfCommand;
-							short commandAttempt = 0;
-                            Exceptions.RequestExecutionException commandRetryException = null;
-                            string commandTraceLabel;
+   //                         do
+   //                         {
+   //                             if (null != commandRetryException)
+   //                                 this.Jitter(commandRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
+   //                             commandRetryException = null;
+   //                             commandAttempt++;
+   //                             commandTraceLabel = $"{wolfCommand.CommandDefinition.CommandText} execution attempt {commandAttempt} of {maxCommandAttempts}";
+   //                             Utility.Logging.BeginTrace(commandTraceLabel);
 
-                            if (cancellationToken.IsCancellationRequested)//cancelled before we execute the next command
-                                break;
+   //                             try
+   //                             {
+			//						// ** Get a data adapter and fill a dataset
+			//						wolfCommand.Reader = await dbConnection.QueryMultipleAsync(wolfCommand.CommandDefinition);
+			//					}
+			//					catch (Exception ex)
+			//					{
+			//						if (commandAttempt < maxCommandAttempts && this.Provider.isRetriedError(ex as DbException))
+			//							commandRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+			//						else if(!cancellationToken.IsCancellationRequested)//SqlClient provides no good exception type or error code for the exception which is thrown during cancellation. Simply assume if we're here this exception was due to cancellation.
+			//							throw;
+			//					}
+			//					finally
+			//					{
+   //                                 Utility.Logging.EndTrace(commandTraceLabel);
+   //                             }
 
-                            do
-                            {
-                                if (null != commandRetryException)
-                                    this.Jitter(commandRetryException, request.RetryJitterMinimumMs, request.RetryJitterMaximumMs);
-                                commandRetryException = null;
-                                commandAttempt++;
-                                commandTraceLabel = $"{wolfCommand.DbCommand.CommandText} execution attempt {commandAttempt} of {maxCommandAttempts}";
-                                Utility.Logging.BeginTrace(commandTraceLabel);
+   //                         } while (null != commandRetryException);
 
-								if (request.CommandTimeout.HasValue)
-									wolfCommand.DbCommand.CommandTimeout = (int)Math.Round(request.CommandTimeout.Value.TotalSeconds);
+			//				if (cancellationToken.IsCancellationRequested)	// cancelled after the command execution completed
+			//					break;
+   //                     }
 
-                                try
-                                {
-									// ** Get a data adapter and fill a dataset
-									var dbAdapter = this.Provider.GetDataAdapter(wolfCommand.DbCommand);
-									dbAdapter.Fill(wolfCommand.ResultData);			// No "FillAsync". Thread here is probably hotter than it ought to be.
-								}
-								catch (Exception ex)
-								{
-									if (commandAttempt < maxCommandAttempts && this.Provider.isRetriedError(ex as DbException))
-										commandRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
-									else if(!cancellationToken.IsCancellationRequested)//SqlClient provides no good exception type or error code for the exception which is thrown during cancellation. Simply assume if we're here this exception was due to cancellation.
-										throw;
-								}
-								finally
-								{
-                                    Utility.Logging.EndTrace(commandTraceLabel);
-                                }
+			//			dbTransaction?.Commit();
+			//		}
+			//		catch (Exception ex)
+			//		{
+			//			try
+			//			{
+			//				dbTransaction?.Rollback();
+			//			}
+			//			catch(Exception rollbackEx)
+			//			{
+			//				Utility.Logging.Log(Utility.LogLevel.Information, "A transaction rollback threw an exception {rollbackEx}. Usually this means the transaction was already rolled back.", rollbackEx);
+			//			}
 
-                            } while (null != commandRetryException);
+   //                     if (batchAttempt < maxBatchAttempts && this.Provider.isRetriedError(ex as DbException))
+   //                         batchRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+   //                     else
+   //                         throw new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
+   //                 }
+   //             }
 
-							if (cancellationToken.IsCancellationRequested)	// cancelled after the command execution completed
-								break;
+			//	Utility.Logging.EndTrace(batchTraceLabel);
+			//} while (null != batchRetryException);
 
-                            // ** The data adapter will now have executed the command. Perform binding back to the request objects
-                            wolfCommand.Bind();
-                        }
-
-						dbTransaction?.Commit();
-					}
-					catch (Exception ex)
-					{
-						try
-						{
-							dbTransaction?.Rollback();
-						}
-						catch(Exception rollbackEx)
-						{
-							Utility.Logging.Log(Utility.LogLevel.Information, "A transaction rollback threw an exception {rollbackEx}. Usually this means the transaction was already rolled back.", rollbackEx);
-						}
-
-                        if (batchAttempt < maxBatchAttempts && this.Provider.isRetriedError(ex as DbException))
-                            batchRetryException = new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
-                        else
-                            throw new Exceptions.RequestExecutionException(request, ex) { CommandBinding = lastCommandBinding };
-                    }
-                }
-
-				Utility.Logging.EndTrace(batchTraceLabel);
-			} while (null != batchRetryException);
-
-			cancellationToken.ThrowIfCancellationRequested();
-			return Task.FromResult(result);
+			//cancellationToken.ThrowIfCancellationRequested();
+			return result;
 		}
 
-		private void Jitter(Exceptions.RequestExecutionException ex, int? minMs, int? maxMs)
-		{
-			minMs = Math.Max(0, minMs.GetValueOrDefault(0));
-			maxMs = Math.Max(minMs.Value, maxMs.GetValueOrDefault(0));
-            var jitterMs = minMs.Value == maxMs.Value ? minMs.Value : new Random().Next(minMs.Value, maxMs.Value + 1);
+		//private void Jitter(Exceptions.RequestExecutionException ex, int? minMs, int? maxMs)
+		//{
+		//	minMs = Math.Max(0, minMs.GetValueOrDefault(0));
+		//	maxMs = Math.Max(minMs.Value, maxMs.GetValueOrDefault(0));
+  //          var jitterMs = minMs.Value == maxMs.Value ? minMs.Value : new Random().Next(minMs.Value, maxMs.Value + 1);
 
-            var wri = ex.CommandBinding?.WolfRequestItem;
-			object dbCommand = null;
-            if (wri is StoredProcedure sp)
-                dbCommand = new { sp.ProcedureName, Parameters = sp.ToList() };
+  //          var wri = ex.CommandBinding?.RequestCommand;
+		//	object dbCommand = null;
+  //          if (wri is StoredProcedure sp)
+  //              dbCommand = new { ((IStoredProcedure)sp).ProcedureName, Parameters = sp.ToList() };
 
-            if (jitterMs > 0)
-			{
-				Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying in {jitterMs}ms", dbCommand);
-				System.Threading.Thread.Sleep(jitterMs);
-			}
-			else
-			{
-                Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying immediately", dbCommand);
-            }
-        }
+  //          if (jitterMs > 0)
+		//	{
+		//		Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying in {jitterMs}ms", dbCommand);
+		//		System.Threading.Thread.Sleep(jitterMs);
+		//	}
+		//	else
+		//	{
+  //              Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying immediately", dbCommand);
+  //          }
+  //      }
 
         internal void FetchSchema(DataTable dt)
         {
@@ -393,174 +265,6 @@ namespace Blacksmiths.Utils.Wolf
 
 			Utility.Logging.EndTrace($"Fetching PK information for '{Utility.QualifiedSqlName.From(dt).ToDisplayString()}'");
         }
-
-		// *************************************************
-		// Engine room - Commit
-		// *************************************************
-
-		//private class CommitAction
-		//{
-		//	public System.Data.Common.DbDataAdapter adapter;
-		//	public IEnumerable<DataRow> insertUpdateRows;
-		//	public IEnumerable<DataRow> deleteRows;
-		//}
-
-		internal CommitResult Commit(ModelProcessor processor)
-		{
-			if (null == processor)
-				throw new ArgumentNullException($"{nameof(processor)} may not be null");
-
-			if(null != this.ServiceProvider)
-			{
-				var modelReviewer = this.ServiceProvider.GetService(typeof(IModelReviewer)) as IModelReviewer;
-				if (null != modelReviewer)
-					modelReviewer.ReviewModel(processor);
-			}
-
-			var ds = processor.ToDataSetForCommit();
-			CommitResult ret = new CommitResult();
-
-			if (null == ds)
-				return ret;
-
-			// ** Connect to the database
-			using (var dbConnection = this.Provider.GetConnectionProvider().ToDbConnection())
-			{
-				dbConnection.Open();
-				var dbTransaction = dbConnection.BeginTransaction();
-
-				try
-				{
-					var orderedTables = this.OrderTablesForCommit(ds);
-					var adapterDictionary = new Dictionary<DataTable, System.Data.Common.DbDataAdapter>();
-					var rowsToCommit = new List<DataRow>(ds.Tables.Cast<DataTable>().Sum(dt => dt.Rows.Count));
-
-					foreach (var table in orderedTables)
-					{
-						if (!Utility.DataTableHelpers.HasChanges(table))
-							continue;
-
-						var dbAdapter = this.Provider.GetDataAdapter(table, dbConnection, dbTransaction);
-						var modelLinkCollection = Model.ModelLinkCollection.FromDataTable(table);
-						var tableTarget = Utility.DataTableHelpers.GetTarget(table);
-
-						if ((tableTarget?.CommitUsingSprocs).GetValueOrDefault())
-						{
-							if (null != tableTarget.InsertUsing)
-								dbAdapter.InsertCommand = this.PrepCommand(tableTarget.InsertUsing, processor.ParameterValues, dbConnection, dbTransaction);
-							if (null != tableTarget.UpdateUsing)
-								dbAdapter.UpdateCommand = this.PrepCommand(tableTarget.UpdateUsing, processor.ParameterValues, dbConnection, dbTransaction);
-							if (null != tableTarget.DeleteUsing)
-								dbAdapter.DeleteCommand = this.PrepCommand(tableTarget.DeleteUsing, processor.ParameterValues, dbConnection, dbTransaction);
-						}
-						else
-						{
-							//TODO: DbCommandBuilder is paid for by an additional meta query to the DB. Probably can generate these commands by hand.
-							var dbBuilder = processor.GetCommandBuilder(dbAdapter);
-							dbAdapter.InsertCommand = this.PrepCommand(dbBuilder.GetInsertCommand(), dbTransaction);
-							dbAdapter.UpdateCommand = this.PrepCommand(dbBuilder.GetUpdateCommand(), dbTransaction);
-							dbAdapter.DeleteCommand = this.PrepCommand(dbBuilder.GetDeleteCommand(), dbTransaction);
-
-							var syncFlags = this.SyncSchemaInfo(table, dbBuilder);
-
-							if (syncFlags.HasFlag(SyncResultFlags.HasIdentity))
-							{
-								this.Provider.EnableIdentityColumnSyncing(dbAdapter, dbConnection, dbTransaction, Utility.DataTableHelpers.GetIdentityColumn(table).ColumnName, modelLinkCollection.ApplyIdentityValue);
-							}
-						}
-
-						// ** Run processor actions
-						processor.RaisePreCommitActions(table);
-
-						// ** Prepare the DataAdapter
-						this.CreateTableMappings(dbAdapter.TableMappings.Add(table.TableName, table.TableName), table);
-						dbAdapter.MissingMappingAction = MissingMappingAction.Error;
-						dbAdapter.MissingSchemaAction = MissingSchemaAction.Error;
-						dbAdapter.ContinueUpdateOnError = false;
-
-						// ** Prepare the DB change.
-						//Utility.PerfDebuggers.BeginTrace("Row ordering");
-						//var commitRows = this.OrderRowsForCommit(table).ToArray();
-						//Utility.PerfDebuggers.EndTrace("Row ordering");
-
-						//commitActions.Add(new CommitAction() { adapter = dbAdapter, insertUpdateRows = this.OrderRowsForInsert(table), deleteRows = this.OrderRowsForDeleteUpdate(table) });
-						//ret.AffectedRowCount += dbAdapter.Update(commitRows);
-
-						adapterDictionary.Add(table, dbAdapter);
-						rowsToCommit.AddRange(this.GetRowsForCommit(table));
-					}
-
-					DataTable currentTable = null;
-					System.Data.Common.DbDataAdapter currentAdapter = null;
-					var batch = new List<DataRow>(rowsToCommit.Count);
-
-					//var debugRowsToCommit = rowsToCommit.OrderBy(r => r, new Utility.DebugDataRowComparer()).ToArray();
-					var debugRowsToCommit = new Utility.DataRowCollection(rowsToCommit);
-					debugRowsToCommit.Sort();
-
-					var commitPlan = new System.Text.StringBuilder();
-					commitPlan.AppendLine("** Commit Plan **");
-					foreach (var row in debugRowsToCommit)
-						commitPlan.AppendLine(Utility.DataRowHelpers.PrintRow(row));
-
-					Utility.Logging.Log(Utility.LogLevel.Debug, commitPlan.ToString());
-
-					foreach (var row in debugRowsToCommit)
-					{
-						if(currentTable != row.Table)
-						{
-							if(batch.Count > 0)
-							{
-								ret.AffectedRowCount += currentAdapter.Update(batch.ToArray());
-								batch.Clear();
-							}
-							currentTable = row.Table;
-							currentAdapter = adapterDictionary[currentTable];
-						}
-
-						batch.Add(row);
-					}
-
-					if (batch.Count > 0)
-					{
-						ret.AffectedRowCount += currentAdapter.Update(batch.ToArray());
-					}
-
-					dbTransaction.Commit();
-				}
-				catch(Exception ex)
-				{
-					dbTransaction.Rollback();
-					throw new Exceptions.CommitExecutionException(processor, ex);
-				}
-			}
-
-			return ret;
-		}
-
-		private System.Data.Common.DbCommand PrepCommand(Type commandSprocType, IDictionary<string, object> parameters, System.Data.Common.DbConnection connection, System.Data.Common.DbTransaction trans)
-		{
-			if (!typeof(StoredProcedure).IsAssignableFrom(commandSprocType))
-				throw new ArgumentException("When using InsertUsing, UpdateUsing or DeleteUsing, the type specified must be a StoredProcedure");
-			var sproc = Activator.CreateInstance(commandSprocType) as StoredProcedure;
-			var command = sproc.GetDbCommand(this.Provider, connection, trans);
-			foreach (var param in command.Parameters)
-				if (new[] { ParameterDirection.InputOutput, ParameterDirection.Input }.Contains(param.DbParameter.Direction)) //input params need binding to the source dt
-				{
-					if (!parameters.Keys.Contains(param.DbParameter.ParameterName))
-						param.DbParameter.SourceColumn = param.DbParameter.ParameterName;
-					else
-						param.DbParameter.Value = parameters[param.DbParameter.ParameterName];
-				}
-
-			return command.DbCommand;
-		}
-
-		private System.Data.Common.DbCommand PrepCommand(System.Data.Common.DbCommand cmd, System.Data.Common.DbTransaction trans)
-		{
-			cmd.Transaction = trans;
-			return cmd;
-		}
 
 		[Flags]
 		private enum SyncResultFlags

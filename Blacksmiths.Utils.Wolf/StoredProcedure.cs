@@ -5,6 +5,7 @@
  * (C) 2019 Blacksmiths Technology Ltd
  */
 using Blacksmiths.Utils.Wolf.Utility;
+using Dapper;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -17,7 +18,14 @@ using static Blacksmiths.Utils.Wolf.StoredProcedure;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	public class StoredProcedure : IDataRequestItem, IEnumerable<StoredProcedure.ISpParameter>
+	public interface IStoredProcedure
+	{
+		string ProcedureName { get; set; }
+		int? ReturnValue { get; set; }
+		DynamicParameters GetDynamicParameters();
+	}
+
+	public class StoredProcedure : IStoredProcedure, IDataRequestCommand, IEnumerable<StoredProcedure.ISpParameter>
 	{
 		// *************************************************
 		// Inner objects
@@ -251,7 +259,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets or sets the stored procedure name
 		/// </summary>
 		[Attribution.Ignore]
-		public string ProcedureName
+		string IStoredProcedure.ProcedureName
 		{
 			get
 			{
@@ -290,13 +298,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets or sets the current return value of the stored procedure
 		/// </summary>
 		[Attribution.Parameter(Direction = System.Data.ParameterDirection.ReturnValue)]
-		public int? ReturnValue { get; set; }
-
-		QualifiedSqlName IDataRequestItem.TableName
-		{
-			get { return this._targetTableName ?? Utility.QualifiedSqlName.Parse(this.ProcedureName); }
-			set { this._targetTableName = value; }
-		}
+		int? IStoredProcedure.ReturnValue { get; set; }
 
 		// *************************************************
 		// Indexer
@@ -327,7 +329,7 @@ namespace Blacksmiths.Utils.Wolf
 		public StoredProcedure(string name = null)
 		{
 			if (null != name)
-				this.ProcedureName = name;
+                ((IStoredProcedure)this).ProcedureName = name;
 		}
 
 		// *************************************************
@@ -399,16 +401,14 @@ namespace Blacksmiths.Utils.Wolf
 		// Contract (IDataRequestItem)
 		// *************************************************
 
-		public Utility.WolfCommandBinding GetDbCommand(IProvider provider, DbConnection connection, DbTransaction transaction)
-		{
-			return provider.GetStoredProcedureProvider().ToDbCommand(this, connection, transaction);
-		}
+		public CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default) => 
+			provider.GetStoredProcedureProvider().ToCommandDefinition(this, connection, transaction, commandTimeoutSeconds, cancellationToken);
 
-		// *************************************************
-		// Contract (IEnumerable)
-		// *************************************************
+        // *************************************************
+        // Contract (IEnumerable)
+        // *************************************************
 
-		public IEnumerator<ISpParameter> GetEnumerator()
+        public IEnumerator<ISpParameter> GetEnumerator()
 		{
 			return this.DbParameters.GetEnumerator();
 		}
@@ -479,19 +479,32 @@ namespace Blacksmiths.Utils.Wolf
 			if (null == this._procedureName)
 				this._procedureName = $"[{thisType.Name}]";
 		}
-	}
 
-	public static class StoredProcedureExtentions
-	{
-		public static IFluentResultSp<T> Execute<T>(this T sp, IDataConnection connection) where T : StoredProcedure
-		{
-			return (IFluentResultSp<T>)connection.NewRequest().Add(sp).Execute(new DataResultSp<T>());
-		}
-
-		public static async System.Threading.Tasks.Task<IFluentResultSp<T>> ExecuteAsync<T>(this T sp, IDataConnection connection, CancellationToken cancellationToken = default) where T : StoredProcedure
-		{
-			return (IFluentResultSp<T>)await connection.NewRequest().Add(sp).ExecuteAsync(new DataResultSp<T>(), cancellationToken);
-
+        DynamicParameters IStoredProcedure.GetDynamicParameters()
+        {
+            if (null == this._dbParameters)
+            {
+                this._dbParameters = new List<ISpParameter>();
+                this.ReflectMembers();
+            }
+			var result = new DynamicParameters();
+			foreach (var param in this)
+				result.Add(param.Name, param.Value);//Not finished. Needs typing, null can't be inferred.
+			return result;
         }
     }
+
+	//public static class StoredProcedureExtentions
+	//{
+	//	public static IFluentResultSp<T> Execute<T>(this T sp, IDataConnection connection) where T : StoredProcedure
+	//	{
+	//		return (IFluentResultSp<T>)connection.NewRequest().Add(sp).OpenConnection(new DataResultSp<T>());
+	//	}
+
+	//	public static async System.Threading.Tasks.Task<IFluentResultSp<T>> ExecuteAsync<T>(this T sp, IDataConnection connection, CancellationToken cancellationToken = default) where T : StoredProcedure
+	//	{
+	//		return (IFluentResultSp<T>)await connection.NewRequest().Add(sp).ExecuteAsync(new DataResultSp<T>(), cancellationToken);
+
+ //       }
+ //   }
 }

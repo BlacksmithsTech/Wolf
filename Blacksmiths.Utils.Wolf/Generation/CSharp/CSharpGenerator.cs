@@ -11,6 +11,7 @@ using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Dapper;
 
 namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 {
@@ -207,14 +208,14 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		public ModelDef CreateModelDef(IProvider provider, DbConnection connection, StoredProcedure sp)
 		{
 			ModelDef Ret = null;
-			var Cmd = sp.GetDbCommand(provider, connection, null);
-			using (var Reader = Cmd.DbCommand.ExecuteReader(CommandBehavior.SchemaOnly))
+			var Cmd = sp.ToCommandDefinition(provider, connection, null);
+			using (var Reader = connection.ExecuteReader(Cmd, CommandBehavior.SchemaOnly))
 			{
 				var Schema = Reader.GetSchemaTable();
 				if(null != Schema)
 				{
 					Ret = new ModelDef();
-					Ret.Name = sp.ProcedureName;
+					Ret.Name = ((IStoredProcedure)sp).ProcedureName;
 
 					const string ADO_COL_NAME = "ColumnName";
 					const string ADO_COL_ORDINAL = "ColumnOrdinal";
@@ -258,14 +259,14 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					}
 					catch
 					{
-                        this.WriteLog($"WARNING: Data type for {Ret.ProcedureName}{ParamName} failed to resolve to a .NET type. This can occur if the parameter is a TVP (not implemented yet). The parameter will be skipped and will assume string during generation");
+                        this.WriteLog($"WARNING: Data type for {((IStoredProcedure)Ret).ProcedureName}{ParamName} failed to resolve to a .NET type. This can occur if the parameter is a TVP (not implemented yet). The parameter will be skipped and will assume string during generation");
                         Param.ValueTypeName = "System.String";
 						Param.Skip = true;
                     }
                 }
 				else
 				{
-					this.WriteLog($"WARNING: Data type for {Ret.ProcedureName}{ParamName} could not be determined. Will assume string during generation");
+					this.WriteLog($"WARNING: Data type for {((IStoredProcedure)Ret).ProcedureName}{ParamName} could not be determined. Will assume string during generation");
 					Param.ValueTypeName = "System.String";
 				}
 
@@ -296,10 +297,10 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		{
 			var sb = new IndentableStringBuilder();
 
-			var SpName = Utility.QualifiedSqlName.Parse(sp.ProcedureName);
+			var SpName = Utility.QualifiedSqlName.Parse(((IStoredProcedure)sp).ProcedureName);
 			var ClassName = EncodeSymbol(SpName.Name);
 			if (!SpName.Name.Equals(ClassName) || !string.IsNullOrEmpty(SpName.Schema))
-				sb.AppendLine($@"[Procedure(Name = ""{sp.ProcedureName}"")]");
+				sb.AppendLine($@"[Procedure(Name = ""{((IStoredProcedure)sp).ProcedureName}"")]");
 			sb.AppendLine($"public class {ClassName} : StoredProcedure");
 			sb.AppendLine("{");
 			sb.Indent();

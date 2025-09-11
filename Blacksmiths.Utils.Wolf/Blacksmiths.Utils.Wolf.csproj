@@ -18,6 +18,7 @@
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 	<ItemGroup>
+		<PackageReference Include="Dapper" Version="2.1.66" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions " Version="5.0.0" />
 	</ItemGroup>
 	<ItemGroup>

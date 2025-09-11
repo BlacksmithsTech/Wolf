@@ -19,7 +19,11 @@ namespace Blacksmiths.Tests.Wolf
             public DateTimeOffset? ValueInDt { get; set; }
             public bool? ValueInBit { get; set; }
             public string OptionalValueStr { get; set; }
+
+            [Parameter(Direction = System.Data.ParameterDirection.InputOutput)]
             public string ValueOutStr { get; set; }
+
+            [Parameter(Direction = System.Data.ParameterDirection.InputOutput)]
             public DateTimeOffset? ValueOutDt { get; set; }
         }
 
@@ -66,11 +70,15 @@ namespace Blacksmiths.Tests.Wolf
         [Fact]
         public async Task Execute_StoredProcedure()
         {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure() { ValueInStr = "Hello world", ValueInDt = now };
             var resultCode = await this.connection.NewRequest()
-                .Add(new spStoredProcedure())
+                .Add(sproc)
                 .ExecuteAsync();
 
             Assert.Equal(99, resultCode);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
         }
 
         [Fact]

@@ -4,15 +4,12 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
-using Blacksmiths.Utils.Wolf.Exceptions;
 using Blacksmiths.Utils.Wolf.Utility;
 using Dapper;
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -54,27 +51,42 @@ namespace Blacksmiths.Utils.Wolf
 
 		public async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default)
 		{
-			var nextCommand = this.Commands.FirstOrDefault(c => null == c.Reader || !c.Reader.IsConsumed);
-			nextCommand.Reader ??= await this.JitterAsync(
-				nextCommand.RequestItem.Command,
-				async () => await this.Connection.QueryMultipleAsync(this.ToCommandDefinition(nextCommand, cancellationToken)));
-			nextCommand.Executed = true;
-			return await nextCommand.Reader.ReadAsync<T>(buffered: false);
+			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
+            nextCommand.Reader ??= await this.EngineAsync(
+				nextCommand,
+				async (commandBinding) => await this.Connection.QueryMultipleAsync(commandBinding), 
+				cancellationToken);
+
+			var result = await nextCommand.Reader.ReadAsync<T>(buffered: false);
+			return result;
 		}
 
 		public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
 		{
-            var nextCommand = this.Commands.FirstOrDefault(c => !c.Executed);
-            nextCommand.Executed = true;
-			return await this.JitterAsync(
-                nextCommand.RequestItem.Command,
-                async () => await this.Connection.ExecuteAsync(this.ToCommandDefinition(nextCommand, cancellationToken)));
+			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
+            nextCommand.isConsumed = true;
+
+            return await this.EngineAsync(
+                nextCommand,
+                async (commandBinding) => await this.Connection.ExecuteAsync(commandBinding),
+				cancellationToken);
         }
 
-		private CommandDefinition ToCommandDefinition(WolfCommandBinding commandBinding, CancellationToken cancellationToken)
+		private WolfCommandBinding GetNextUnconsumedCommandOrThrow()
+		{
+			var result = this.GetNextUnconsumedCommand();
+			if(null == result)
+                throw new InvalidOperationException("There are no more commands remaining in this request to execute");
+			return result;
+        }
+
+        private WolfCommandBinding GetNextUnconsumedCommand() 
+			=> this.Commands.FirstOrDefault(c => !c.isConsumed);
+
+        private CommandDefinition ToCommandDefinition(WolfCommandBinding commandBinding, CancellationToken cancellationToken)
 			=> commandBinding.ToCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken);
 
-		private async Task<T> JitterAsync<T>(IDataRequestCommand requestItem, Func<Task<T>> operationAsync, int minMs = 10, int maxMs = 100, int maxAttempts = 3)
+		private async Task<T> EngineAsync<T>(WolfCommandBinding commandBinding, Func<CommandDefinition, Task<T>> operationAsync, CancellationToken cancellationToken, int minMs = 10, int maxMs = 100, int maxAttempts = 3)
 		{
             minMs = Math.Max(0, minMs);
             maxMs = Math.Max(minMs, maxMs);
@@ -84,7 +96,10 @@ namespace Blacksmiths.Utils.Wolf
 			{
 				try
 				{
-					return await operationAsync();
+					var commandDefinition = this.ToCommandDefinition(commandBinding, cancellationToken);
+					var result = await operationAsync(commandDefinition);
+					//TODO: Bind
+					return result;
 				}
 				catch (DbException ex) when (this.Provider.isRetriedError(ex))
 				{
@@ -94,8 +109,8 @@ namespace Blacksmiths.Utils.Wolf
 					var jitterMs = minMs == maxMs ? minMs : new Random().Next(minMs, maxMs + 1);
 
 					object dbCommand = null;
-					if (requestItem is StoredProcedure sp)
-						dbCommand = new { ((IStoredProcedure)sp).ProcedureName, Parameters = sp.ToList() };
+					if (commandBinding.RequestItem.Command is StoredProcedure sp)
+						dbCommand = new { ((IStoredProcedure)sp).ProcedureName, Parameters = sp.ToList() };	//Clone for logging reasons
 
 					if (jitterMs > 0)
 					{

@@ -52,7 +52,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
             dbp.ParameterName = this.Name;
             dbp.Value = null != this.Value ? this.Value : DBNull.Value;
             dbp.Direction = this.Direction;
-            dbp.Size = this.Length;
+			dbp.Size = this.Length ?? -1;
 			dbp.SqlDbType = this.ValueTypeSql;
 			dbp.TypeName = this.TvpQualifiedName;
             return dbp;

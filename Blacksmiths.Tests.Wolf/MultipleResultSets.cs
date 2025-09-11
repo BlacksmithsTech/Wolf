@@ -19,14 +19,12 @@ namespace Blacksmiths.Tests.Wolf
         {
         }
 
-        [Source(From = "[dbo].[spMultiResult][0]")]
         private class spMultiResult0
         {
             public string Column1 { get; set; }
             public int Column2 { get; set; }
         }
 
-        [Source(From = "[dbo].[spMultiResult][1]")]
         private class spMultiResult1
         {
             public string Column1 { get; set; }
@@ -34,7 +32,7 @@ namespace Blacksmiths.Tests.Wolf
             public int Column3 { get; set; }
         }
 
-        private class spMultiResultModel : Utils.Wolf.Model.ResultModel
+        private class spMultiResultModel
         {
             public spMultiResult0[] Table0 { get; set; }
             public spMultiResult1[] Table1 { get; set; }

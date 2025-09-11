@@ -4,7 +4,6 @@
  *
  * (C) 2019 Blacksmiths Technology Ltd
  */
-using Blacksmiths.Utils.Wolf.Model;
 using Dapper;
 using System;
 using System.Data.Common;

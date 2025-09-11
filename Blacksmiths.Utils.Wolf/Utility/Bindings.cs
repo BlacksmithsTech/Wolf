@@ -20,9 +20,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	/// </summary>
 	public sealed class WolfCommandBinding : IDisposable
 	{
+		private bool? _isConsumed;
+
 		//public CommandDefinition CommandDefinition { get; set; }
 		public DataRequestItem RequestItem { get; set; }
-		internal bool Executed { get; set; }
+		internal bool isConsumed
+		{
+			get => this._isConsumed ?? (this.Reader?.IsConsumed).GetValueOrDefault();
+			set => this._isConsumed = value;
+		}
+
 		internal SqlMapper.GridReader Reader { get; set; }
 
 		internal CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)

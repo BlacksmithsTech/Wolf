@@ -48,10 +48,15 @@ namespace Blacksmiths.Utils.Wolf
 			/// </summary>
             ParameterDirection Direction { get; set; }
 
-			/// <summary>
-			/// Length of the parameter
-			/// </summary>
-            int Length { get; set; }
+            /// <summary>
+            /// Optional. Gets or sets the data type of the parameter. If one is not supplied, a type is inferred from the value where one has been provided. If you expect to handle nulls, this property should be set.
+            /// </summary>
+            public DbType? ValueType { get; set; }
+
+            /// <summary>
+            /// Length of the parameter
+            /// </summary>
+            int? Length { get; set; }
 
 			/// <summary>
 			/// Converts the definition into an ADO.NET database parameter
@@ -79,7 +84,7 @@ namespace Blacksmiths.Utils.Wolf
 
 			public System.Data.ParameterDirection Direction { get; set; }
 
-			public int Length { get; set; } = -1;
+			public int? Length { get; set; }
 
 			/// <summary>
 			/// Optional. Gets or sets the data type of the parameter. If one is not supplied, a type is inferred from the value where one has been provided. If you expect to handle nulls, this property should be set.
@@ -99,7 +104,7 @@ namespace Blacksmiths.Utils.Wolf
                 dbp.ParameterName = this.Name;
                 dbp.Value = null != this.Value ? this.Value : DBNull.Value;
                 dbp.Direction = this.Direction;
-                dbp.Size = this.Length;
+				dbp.Size = this.Length ?? -1;
                 if (this.ValueType.HasValue)
                     dbp.DbType = this.ValueType.Value;
                 else if (null == this.Value)
@@ -489,7 +494,7 @@ namespace Blacksmiths.Utils.Wolf
             }
 			var result = new DynamicParameters();
 			foreach (var param in this)
-				result.Add(param.Name, param.Value);//Not finished. Needs typing, null can't be inferred.
+				result.Add(param.Name, param.Value, param.ValueType, param.Direction, param.Length);
 			return result;
         }
     }

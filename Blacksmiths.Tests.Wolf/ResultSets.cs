@@ -153,7 +153,7 @@ namespace Blacksmiths.Tests.Wolf
         public async Task Query_StoredProcedure_Targeted_Single()
         {
             var now = DateTimeOffset.UtcNow;
-            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
+            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true };
             var row = await this.connection.NewRequest()
                 .Add(sproc)
                 .QuerySingleAsync();
@@ -164,7 +164,51 @@ namespace Blacksmiths.Tests.Wolf
 
             Assert.Equal("Hello world", row.ValueInStr);
             Assert.Equal(now, row.ValueInDt);
-            Assert.Equal("Test", row.OptionalValueStr);
+            Assert.Null(row.OptionalValueStr);
+            Assert.True(row.ValueInBit);
+            Assert.Equal("Fixed", row.FixedValue);
+        }
+
+        [Fact]
+        public async Task Map_StoredProcedure_Targeted()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true };
+            var rows = await this.connection.NewRequest()
+                .Add(sproc)
+                .MapAsync();
+
+            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
+            Assert.Single(rows);
+
+            var row = rows[0];
+            Assert.Equal("Hello world", row.ValueInStr);
+            Assert.Equal(now, row.ValueInDt);
+            Assert.Null(row.OptionalValueStr);
+            Assert.True(row.ValueInBit);
+            Assert.Equal("Fixed", row.FixedValue);
+        }
+
+        [Fact]
+        public async Task Map_StoredProcedure_Tuple()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true };
+            var tuple = await this.connection.NewRequest()
+                .Add(sproc)
+                .MapSingleAsync<(spStoredProcedureResult result1, spStoredProcedureResult result2)>();
+
+            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
+
+            var row = tuple.result1;
+
+            Assert.Equal("Hello world", row.ValueInStr);
+            Assert.Equal(now, row.ValueInDt);
+            Assert.Null(row.OptionalValueStr);
             Assert.True(row.ValueInBit);
             Assert.Equal("Fixed", row.FixedValue);
         }

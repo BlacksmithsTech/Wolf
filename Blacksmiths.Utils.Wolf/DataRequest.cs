@@ -60,6 +60,14 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			RequestItem = this,
 		};
+
+        public override string ToString()
+        {
+			if (this.Command is IStoredProcedure sp)
+				return sp.ProcedureName;
+			else
+				return base.ToString();
+        }
 	}
 
 	//public interface IDataRequestFluentExecutable
@@ -91,6 +99,24 @@ namespace Blacksmiths.Utils.Wolf
         /// <param name="cancellationToken"></param>
         /// <returns>Return value of the last command in the collection</returns>
         Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+
+		/// <summary>
+		/// Executes the entire request and maps the results into a collection of TGraph
+		/// </summary>
+		/// <typeparam name="TGraph">Object graph type to be mapped from source data</typeparam>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+		Task<List<TGraph>> MapAsync<TGraph>(CancellationToken cancellationToken = default);
+
+        ///// <summary>
+        ///// Executes the entire request and maps the results into the provided TGraph
+        ///// </summary>
+        ///// <typeparam name="TGraph">Type of graph</typeparam>
+        ///// <param name="instance">An instance to map the results into</param>
+        ///// <param name="cancellationToken"></param>
+        ///// <returns></returns>
+        //Task<TGraph> MapAsync<TGraph>(TGraph instance, CancellationToken cancellationToken = default);
+
     }
 
     public interface IDataRequestEmpty : IDataRequest
@@ -121,11 +147,18 @@ namespace Blacksmiths.Utils.Wolf
     public interface IDataRequestSingleCommand<TResult> : IDataRequestSingleCommand
 	{
 		/// <summary>
-		/// Executes the single command as a query, buffering the results into a model of TResult
+		/// Executes the single command as a query, buffering the results into a model defined by the command
 		/// </summary>
 		/// <param name="cancellationToken"></param>
 		/// <returns></returns>
         Task<List<TResult>> QueryAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Executes the entire request and maps the results into a collection type defined by the command
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<List<TResult>> MapAsync(CancellationToken cancellationToken = default);
     }
 
     public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestEmpty, IDataRequestSingleCommand, IDataRequestOptions
@@ -235,16 +268,42 @@ namespace Blacksmiths.Utils.Wolf
             return result;
         }
 
-		IDataRequestSingleCommand IDataRequestEmpty.Add(IDataRequestCommand item) => (IDataRequestSingleCommand)this.Add(item);
+		public async Task<List<TGraph>> MapAsync<TGraph>(CancellationToken cancellationToken = default)
+			=> Utility.GraphMapper.MapList<TGraph>(await this.BufferAsync(cancellationToken));
+
+        //public async Task<TGraph> MapAsync<TGraph>(TGraph instance, CancellationToken cancellationToken = default)
+        //    => Utility.GraphMapper.MapList(instance, await this.BufferAsync(cancellationToken));
+
+        private async Task<Dictionary<Type, List<object>>> BufferAsync(CancellationToken cancellationToken = default)
+		{
+			var result = new Dictionary<Type, List<object>>();
+			using var connection = this.OpenConnection();
+			
+			while (!connection.IsConsumed)
+			{
+				var rows = await connection.StreamNextResultSetAsync(cancellationToken);
+				var rowType = connection.CurrentCommand.RequestItem.Types[connection.ResultIndex.Value];
+				if (!result.ContainsKey(rowType))
+					result.Add(rowType, new List<object>(rows));
+				else
+					result[rowType].AddRange(rows);
+			}
+
+			return result;
+        }
+
+        IDataRequestSingleCommand IDataRequestEmpty.Add(IDataRequestCommand item) => (IDataRequestSingleCommand)this.Add(item);
 
 		IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand item) => new DataRequestSingleCommand<TResult>(this.Add(item));
-        IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand<TResult> item) => new DataRequestSingleCommand<TResult>(this.Add(item));
+        IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand<TResult> item) => new DataRequestSingleCommand<TResult>(this.Add<TResult>(item));
 
         async Task<List<TResult>> IDataRequestSingleCommand.QueryAsync<TResult>(CancellationToken cancellationToken)
 		{
 			using(var connection = this.OpenConnection())
 				return await connection.QueryNextListAsync<TResult>(cancellationToken);
         }
+
+		
     }
 
 	public class DataRequestSingleCommand<TTargetedResult> : IDataRequestSingleCommand<TTargetedResult>
@@ -257,7 +316,13 @@ namespace Blacksmiths.Utils.Wolf
 
 		public Task<int> ExecuteAsync(CancellationToken cancellationToken = default) => this.request.ExecuteAsync(cancellationToken);
 
-		public DataResult OpenConnection() => this.request.OpenConnection();
+		public Task<List<TGraph>> MapAsync<TGraph>(CancellationToken cancellationToken = default) => this.request.MapAsync<TGraph>(cancellationToken);
+
+		public Task<List<TTargetedResult>> MapAsync(CancellationToken cancellationToken = default) => this.request.MapAsync<TTargetedResult>(cancellationToken);
+
+		//public Task<TGraph> MapAsync<TGraph>(TGraph instance, CancellationToken cancellationToken = default) => this.request.MapAsync(instance, cancellationToken);
+
+        public DataResult OpenConnection() => this.request.OpenConnection();
 
 		public Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default) => ((IDataRequestSingleCommand)this.request).QueryAsync<TResult>(cancellationToken);
 
@@ -290,13 +355,31 @@ namespace Blacksmiths.Utils.Wolf
                 return (await connection.StreamNextResultSetAsync<TResult>(cancellationToken)).SingleOrDefault();
         }
 
-		public static Task<TResult> QueryFirstAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
-			=> QueryFirstAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> QueryFirstAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => QueryFirstAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
         public static Task<TResult> QueryFirstOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
             => QueryFirstOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
         public static Task<TResult> QuerySingleAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
             => QuerySingleAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
         public static Task<TResult> QuerySingleOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
             => QuerySingleOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+
+        public static async Task<TResult> MapFirstAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+			=> (await dataRequest.MapAsync<TResult>(cancellationToken)).First();
+		public static async Task<TResult> MapFirstOrDefaultAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+			=> (await dataRequest.MapAsync<TResult>(cancellationToken)).FirstOrDefault();
+        public static async Task<TResult> MapSingleAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+            => (await dataRequest.MapAsync<TResult>(cancellationToken)).Single();
+        public static async Task<TResult> MapSingleOrDefaultAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+            => (await dataRequest.MapAsync<TResult>(cancellationToken)).SingleOrDefault();
+
+		public static Task<TResult> MapFirstAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+			=> MapFirstAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> MapFirstOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => MapFirstOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> MapSingleAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => MapSingleAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> MapSingleOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => MapSingleOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
     }
 }

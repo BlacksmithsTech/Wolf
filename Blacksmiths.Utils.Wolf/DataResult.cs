@@ -15,45 +15,71 @@ using System.Threading.Tasks;
 
 namespace Blacksmiths.Utils.Wolf
 {
-	///// <summary>
-	///// Asyncronous helpers for cleaner consumer code
-	///// </summary>
-	//public static class DataResultExtensions
-	//{
-	//	public static async Task<DataSet> ToDataSetAsync(this Task<IFluentResult> result) => (await result).ToDataSet();
-
- //       public static async Task<Model.SimpleResultModel<T>> ToSimpleModelAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>();
-
-	//	public static async Task<T> ToModelAsync<T>(this Task<IFluentResult> result) where T : Model.ResultModel, new() => (await result).ToModel<T>();
-
- //       public static async Task<List<T>> ToListAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results;
-
-	//	public static async Task<T> ToFirstAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results.First();
-
-	//	public static async Task<T> ToFirstOrDefaultAsync<T>(this Task<IFluentResult> result) where T : class, new() => (await result).ToSimpleModel<T>().Results.FirstOrDefault();
- //   }
-
     /// <summary>
     /// Binds wolf command results to it's associated wolf request
     /// </summary>
     public class DataResult : IDisposable
 	{
+		private WolfCommandBinding _currentCommand;
+		private int? _currentCommandResultIndex;
+
 		internal IProvider Provider { get; set; }
 		public bool IsConsumed => null == this.GetNextUnconsumedCommand();
 		public DbTransaction Transaction { get; set; }
 		public DbConnection Connection { get; set; }
 		public WolfCommandBinding[] Commands { get; set; }
+		public WolfCommandBinding CurrentCommand => this._currentCommand;
+		public int? ResultIndex => this._currentCommandResultIndex;
 		public DataRequest Request { get; set; }
 
-		/// <summary>
-		/// Opens the next grid of results and streams the row data into T.
-		/// </summary>
-		/// <typeparam name="T">Type of data to stream</typeparam>
-		/// <param name="cancellationToken"></param>
-		/// <returns>Row data of type T</returns>
-		public async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Opens the next grid of results and streams the row data into a type specified during request composition
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Row data of type T</returns>
+        public async Task<IEnumerable<object>> StreamNextResultSetAsync(CancellationToken cancellationToken = default)
+        {
+            var nextCommand = this.MoveToNextUnconsumedCommandOrThrow();
+			if (this.ResultIndex.Value >= (nextCommand.RequestItem.Types?.Length).GetValueOrDefault())
+				throw new InvalidOperationException($"No result type specified for result set {this.ResultIndex.Value + 1:N0} of '{nextCommand}'");
+			var resultType = nextCommand.RequestItem.Types[this.ResultIndex.Value];
+
+            nextCommand.Reader ??= await this.EngineAsync(
+                nextCommand,
+                async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition),
+                cancellationToken);
+
+            var result = await nextCommand.Reader.ReadAsync(resultType, buffered: false);
+            return result;
+        }
+
+        /// <summary>
+        /// Opens the next grid of results and streams the row data into the specified type.
+        /// </summary>
+		/// <param name="resultType">Type of data to stream</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Row data of type T</returns>
+        public async Task<IEnumerable<object>> StreamNextResultSetAsync(Type resultType, CancellationToken cancellationToken = default)
+        {
+            var nextCommand = this.MoveToNextUnconsumedCommandOrThrow();
+            nextCommand.Reader ??= await this.EngineAsync(
+                nextCommand,
+                async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition),
+                cancellationToken);
+
+            var result = await nextCommand.Reader.ReadAsync(resultType, buffered: false);
+            return result;
+        }
+
+        /// <summary>
+        /// Opens the next grid of results and streams the row data into T.
+        /// </summary>
+        /// <typeparam name="T">Type of data to stream</typeparam>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Row data of type T</returns>
+        public async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(CancellationToken cancellationToken = default)
 		{
-			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
+			var nextCommand = this.MoveToNextUnconsumedCommandOrThrow();
             nextCommand.Reader ??= await this.EngineAsync(
 				nextCommand,
 				async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition), 
@@ -78,7 +104,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// <returns>Return value of the command</returns>
 		public async Task<int> ExecuteNextAsync(CancellationToken cancellationToken = default)
 		{
-			var nextCommand = this.GetNextUnconsumedCommandOrThrow();
+			var nextCommand = this.MoveToNextUnconsumedCommandOrThrow();
             nextCommand.isConsumed = true;
 
             await this.EngineAsync(
@@ -94,11 +120,22 @@ namespace Blacksmiths.Utils.Wolf
 				return -1;
         }
 
-		private WolfCommandBinding GetNextUnconsumedCommandOrThrow()
+		private WolfCommandBinding MoveToNextUnconsumedCommandOrThrow()
 		{
 			var result = this.GetNextUnconsumedCommand();
 			if(null == result)
                 throw new InvalidOperationException("There are no more commands remaining in this request to execute");
+
+			if(result != this._currentCommand)
+			{
+				this._currentCommand = result;
+				this._currentCommandResultIndex = 0;
+			}
+			else
+			{
+				this._currentCommandResultIndex++;
+			}
+
 			return result;
         }
 

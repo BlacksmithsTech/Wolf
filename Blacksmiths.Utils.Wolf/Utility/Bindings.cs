@@ -56,6 +56,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
         //internal CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)
         //	=> this.RequestItem.Command.ToCommandDefinition(provider, connection, transaction, commandTimeoutSeconds, cancellationToken);
 
+        public override string ToString()
+        {
+			return this.RequestItem.ToString();
+        }
+
         public void Dispose()
         {
 			this.Reader?.Dispose();

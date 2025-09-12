@@ -34,20 +34,7 @@ namespace Blacksmiths.Utils.Wolf.Attribution
 	/// On model members, ignores the member during reads (todo) and commits
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Property, AllowMultiple = false)]
-	public sealed class Ignore : Attribute
-	{
-		///// <summary>
-		///// Ignore this property as a parameter for a stored procedure
-		///// </summary>
-		//public bool IgnoreAsParameter { get; set; } = true;
-
-		/// <summary>
-		/// Non functional. Reserved.
-		/// </summary>
-		public bool IgnoreDuringRequest { get; set; } = true;
-
-		public bool IgnoreDuringCommit { get; set; } = true;
-	}
+	public sealed class Ignore : Attribute { }
 
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	public sealed class Procedure : Attribute

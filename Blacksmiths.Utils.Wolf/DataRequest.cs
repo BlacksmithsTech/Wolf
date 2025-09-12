@@ -79,11 +79,20 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IDataRequest
 	{
-		Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
-		DataResult OpenConnection();
+        /// <summary>
+        /// Advanced. Opens a database connection and transaction (if requested), where the consumer is in control of the disposal.
+        /// </summary>
+        DataResult OpenConnection();
+
+        /// <summary>
+        /// Executes the entire request and for convienience returns the return value of the last command in the collection
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns>Return value of the last command in the collection</returns>
+        Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
     }
 
-	public interface IDataRequestEmpty : IDataRequest
+    public interface IDataRequestEmpty : IDataRequest
 	{
         /// <summary>
         /// Adds a new item (command) to the request.
@@ -93,17 +102,30 @@ namespace Blacksmiths.Utils.Wolf
         IDataRequestSingleCommand Add(IDataRequestCommand item);
 
 		IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand item);
+
+        IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand<TResult> item);
     }
 
-	public interface IDataRequestSingleCommand : IDataRequest
+    public interface IDataRequestSingleCommand : IDataRequest
 	{
-		Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default);
-	}
+        /// <summary>
+        /// Executes the single command as a query, buffering the results into a model of TResult
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default);
+    }
 
     public interface IDataRequestSingleCommand<TResult> : IDataRequestSingleCommand
 	{
-
-	}
+		/// <summary>
+		/// Executes the single command as a query, buffering the results into a model of TResult
+		/// </summary>
+		/// <param name="cancellationToken"></param>
+		/// <returns></returns>
+        Task<List<TResult>> QueryAsync(CancellationToken cancellationToken = default);
+    }
 
     public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestEmpty, IDataRequestSingleCommand, IDataRequestOptions
 	{
@@ -215,15 +237,16 @@ namespace Blacksmiths.Utils.Wolf
 		IDataRequestSingleCommand IDataRequestEmpty.Add(IDataRequestCommand item) => (IDataRequestSingleCommand)this.Add(item);
 
 		IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand item) => new DataRequestSingleCommand<TResult>(this.Add(item));
+        IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand<TResult> item) => new DataRequestSingleCommand<TResult>(this.Add(item));
 
-		async Task<List<TResult>> IDataRequestSingleCommand.QueryAsync<TResult>(CancellationToken cancellationToken)
+        async Task<List<TResult>> IDataRequestSingleCommand.QueryAsync<TResult>(CancellationToken cancellationToken)
 		{
 			using(var connection = this.OpenConnection())
 				return await connection.QueryNextListAsync<TResult>(cancellationToken);
         }
     }
 
-	public class DataRequestSingleCommand<T> : IDataRequestSingleCommand<T>
+	public class DataRequestSingleCommand<TTargetedResult> : IDataRequestSingleCommand<TTargetedResult>
 	{
 		private readonly IDataRequest request;
 		public DataRequestSingleCommand(IDataRequest request)
@@ -236,6 +259,8 @@ namespace Blacksmiths.Utils.Wolf
 		public DataResult OpenConnection() => this.request.OpenConnection();
 
 		public Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default) => ((IDataRequestSingleCommand)this.request).QueryAsync<TResult>(cancellationToken);
+
+        public Task<List<TTargetedResult>> QueryAsync(CancellationToken cancellationToken = default) => ((IDataRequestSingleCommand)this.request).QueryAsync<TTargetedResult>(cancellationToken);
     }
 
 	//public static class DataRequestExtensions

@@ -47,4 +47,6 @@ namespace Blacksmiths.Utils.Wolf
 	{
         CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default);
 	}
+
+	public interface IDataRequestCommand<TDefaultResult> : IDataRequestCommand { }
 }

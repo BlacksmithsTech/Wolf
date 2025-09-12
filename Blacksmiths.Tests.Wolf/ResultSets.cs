@@ -13,7 +13,22 @@ namespace Blacksmiths.Tests.Wolf
         }
 
         [Procedure(Name = "[dbo].[spStoredProcedure]")]
-        private class spStoredProcedure : StoredProcedure
+        private class spStoredProcedure_Untargeted : StoredProcedure
+        {
+            public string ValueInStr { get; set; }
+            public DateTimeOffset? ValueInDt { get; set; }
+            public bool? ValueInBit { get; set; }
+            public string OptionalValueStr { get; set; }
+
+            [Parameter(Direction = System.Data.ParameterDirection.InputOutput)]
+            public string ValueOutStr { get; set; }
+
+            [Parameter(Direction = System.Data.ParameterDirection.InputOutput)]
+            public DateTimeOffset? ValueOutDt { get; set; }
+        }
+
+        [Procedure(Name = "[dbo].[spStoredProcedure]")]
+        private class spStoredProcedure_Targeted : StoredProcedure, IDataRequestCommand<spStoredProcedureResult>
         {
             public string ValueInStr { get; set; }
             public DateTimeOffset? ValueInDt { get; set; }
@@ -80,7 +95,7 @@ namespace Blacksmiths.Tests.Wolf
         public async Task Execute_StoredProcedure()
         {
             var now = DateTimeOffset.UtcNow;
-            var sproc = new spStoredProcedure() { ValueInStr = "Hello world", ValueInDt = now };
+            var sproc = new spStoredProcedure_Untargeted() { ValueInStr = "Hello world", ValueInDt = now };
             var resultCode = await this.connection.NewRequest()
                 .Add(sproc)
                 .ExecuteAsync();
@@ -91,10 +106,10 @@ namespace Blacksmiths.Tests.Wolf
         }
 
         [Fact]
-        public async Task Query_StoredProcedure()
+        public async Task Query_StoredProcedure_Untargeted()
         {
             var now = DateTimeOffset.UtcNow;
-            var sproc = new spStoredProcedure() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
+            var sproc = new spStoredProcedure_Untargeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
             var rows = await this.connection.NewRequest()
                 .Add(sproc)
                 .QueryAsync<spStoredProcedureResult>();
@@ -111,6 +126,29 @@ namespace Blacksmiths.Tests.Wolf
             Assert.True(row.ValueInBit);
             Assert.Equal("Fixed", row.FixedValue);
         }
+
+        [Fact]
+        public async Task Query_StoredProcedure_Targeted()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
+            var rows = await this.connection.NewRequest()
+                .Add(sproc)
+                .QueryAsync();
+
+            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
+            Assert.Single(rows);
+
+            var row = rows[0];
+            Assert.Equal("Hello world", row.ValueInStr);
+            Assert.Equal(now, row.ValueInDt);
+            Assert.Equal("Test", row.OptionalValueStr);
+            Assert.True(row.ValueInBit);
+            Assert.Equal("Fixed", row.FixedValue);
+        }
+
 
         [Fact]
         public async Task Multi_Stream()

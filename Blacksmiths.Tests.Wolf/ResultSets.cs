@@ -32,6 +32,15 @@ namespace Blacksmiths.Tests.Wolf
         {
         }
 
+        private class spStoredProcedureResult
+        {
+            public string ValueInStr { get; set; }
+            public DateTimeOffset? ValueInDt { get; set; }
+            public bool? ValueInBit { get; set; }
+            public string OptionalValueStr { get; set; }
+            public string FixedValue { get; set; }
+        }
+
         private class spMultiResult0
         {
             public string Column1 { get; set; }
@@ -60,7 +69,7 @@ namespace Blacksmiths.Tests.Wolf
         [Fact]
         public async Task Execute_MissingParams()
         {
-            await Assert.ThrowsAsync<DbException>(async () => {
+            await Assert.ThrowsAsync<Microsoft.Data.SqlClient.SqlException>(async () => {
                 await this.connection.NewRequest()
                     .Add(new spStoredProcedure_MissingParams())
                     .ExecuteAsync();
@@ -82,6 +91,28 @@ namespace Blacksmiths.Tests.Wolf
         }
 
         [Fact]
+        public async Task Query_StoredProcedure()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
+            var rows = await this.connection.NewRequest()
+                .Add(sproc)
+                .QueryAsync<spStoredProcedureResult>();
+
+            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
+            Assert.Single(rows);
+
+            var row = rows[0];
+            Assert.Equal("Hello world", row.ValueInStr);
+            Assert.Equal(now, row.ValueInDt);
+            Assert.Equal("Test", row.OptionalValueStr);
+            Assert.True(row.ValueInBit);
+            Assert.Equal("Fixed", row.FixedValue);
+        }
+
+        [Fact]
         public async Task Multi_Stream()
         {
             using var connection = this.connection.NewRequest()
@@ -89,6 +120,9 @@ namespace Blacksmiths.Tests.Wolf
                 .OpenConnection();
             var r1 = (await connection.StreamNextResultSetAsync<spMultiResult0>()).ToList();
             var r2 = (await connection.StreamNextResultSetAsync<spMultiResult1>()).ToList();
+
+            Assert.Single(r1);
+            Assert.Single(r2);
         }
     }
 }

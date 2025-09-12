@@ -64,7 +64,15 @@ namespace Blacksmiths.Utils.Wolf
 		}
 
 		/// <summary>
-		/// Executes the next command in the request and returns only the return value, discarding any result sets
+		/// Binds the return value and output parameters to the last command which was executed in this result
+		/// </summary>
+		public void BindLastParameters()
+		{
+			this.Commands.Last(c => c.isConsumed)?.Bind();
+		}
+
+		/// <summary>
+		/// Executes the next command in the request, binds to the command parameters, and returns only the return value, discarding any result sets
 		/// </summary>
 		/// <param name="cancellationToken"></param>
 		/// <returns>Return value of the command</returns>
@@ -77,6 +85,8 @@ namespace Blacksmiths.Utils.Wolf
                 nextCommand,
                 async (commandDefinition) => await this.Connection.ExecuteAsync(commandDefinition),	//Dapper returns number of rows. Discarded.
 				cancellationToken);
+
+			nextCommand.Bind();
 
 			if (nextCommand.RequestItem.Command is IStoredProcedure sp)
 				return sp.ReturnValue.Value;
@@ -95,8 +105,8 @@ namespace Blacksmiths.Utils.Wolf
         private WolfCommandBinding GetNextUnconsumedCommand() 
 			=> this.Commands.FirstOrDefault(c => !c.isConsumed);
 
-        private CommandDefinition ToCommandDefinition(WolfCommandBinding commandBinding, CancellationToken cancellationToken)
-			=> commandBinding.ToCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken);
+   //     private CommandDefinition ToCommandDefinition(WolfCommandBinding commandBinding, CancellationToken cancellationToken)
+			//=> commandBinding.ToCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken);
 
 		private async Task<T> EngineAsync<T>(WolfCommandBinding commandBinding, Func<CommandDefinition, Task<T>> operationAsync, CancellationToken cancellationToken, int minMs = 10, int maxMs = 100, int maxAttempts = 3)
 		{
@@ -108,16 +118,19 @@ namespace Blacksmiths.Utils.Wolf
 			{
 				try
 				{
-					var commandDefinition = this.ToCommandDefinition(commandBinding, cancellationToken);
-					var result = await operationAsync(commandDefinition);
-					if (commandBinding.RequestItem.Command is IStoredProcedure sp)
-						sp.SetDynamicParameters((DynamicParameters)commandDefinition.Parameters);
+					//var commandDefinition = this.ToCommandDefinition(commandBinding, cancellationToken);
+					var result = await operationAsync(commandBinding.SetCommandDefinition(this.Provider, this.Connection, this.Transaction, (int?)this.Request.CommandTimeout?.TotalSeconds, cancellationToken));
+					//if (commandBinding.RequestItem.Command is IStoredProcedure sp)
+					//	sp.SetDynamicParameters((DynamicParameters)commandDefinition.Parameters);
                     return result;
 				}
 				catch (DbException ex) when (this.Provider.isRetriedError(ex))
 				{
 					if (i >= maxAttempts)
+					{
+                        commandBinding.Exception = ex;
 						throw;
+                    }
 
 					var jitterMs = minMs == maxMs ? minMs : new Random().Next(minMs, maxMs + 1);
 
@@ -135,7 +148,13 @@ namespace Blacksmiths.Utils.Wolf
 						Utility.Logging.Log(Utility.LogLevel.Warning, $"A retryable database error was encountered {{@DbCommand}}. Retrying immediately", dbCommand);
 					}
 				}
-				i++;
+                catch (Exception ex)
+                {
+                    commandBinding.Exception = ex;
+					throw;
+                }
+
+                i++;
 			}
 		}
 
@@ -149,6 +168,11 @@ namespace Blacksmiths.Utils.Wolf
 
 	public static class DataResultExtensions
 	{
-		public static async Task<List<T>> QueryNextListAsync<T>(this DataResult dataResult, CancellationToken cancellationToken = default) => [.. await dataResult.StreamNextResultSetAsync<T>(cancellationToken)];
+		public static async Task<List<T>> QueryNextListAsync<T>(this DataResult dataResult, CancellationToken cancellationToken = default)
+		{
+            List<T> result = [.. await dataResult.StreamNextResultSetAsync<T>(cancellationToken)];
+			dataResult.BindLastParameters();
+			return result;
+        }
 	}
 }

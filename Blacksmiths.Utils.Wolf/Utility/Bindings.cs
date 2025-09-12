@@ -20,8 +20,9 @@ namespace Blacksmiths.Utils.Wolf.Utility
 	/// </summary>
 	public sealed class WolfCommandBinding : IDisposable
 	{
+		private bool bound;
 		private bool? _isConsumed;
-
+		private CommandDefinition? _commandDefinition;
 		//public CommandDefinition CommandDefinition { get; set; }
 		public DataRequestItem RequestItem { get; set; }
 		internal bool isConsumed
@@ -31,13 +32,34 @@ namespace Blacksmiths.Utils.Wolf.Utility
 		}
 
 		internal SqlMapper.GridReader Reader { get; set; }
+		internal Exception Exception { get; set; }
+		internal CommandDefinition SetCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)
+		{
+			if (this._commandDefinition.HasValue)
+				throw new InvalidOperationException("The command definition is already set");
+			this._commandDefinition = this.RequestItem.Command.ToCommandDefinition(provider, connection, transaction, commandTimeoutSeconds, cancellationToken);
+			return this._commandDefinition.Value;
+        }
 
-		internal CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)
-			=> this.RequestItem.Command.ToCommandDefinition(provider, connection, transaction, commandTimeoutSeconds, cancellationToken);
+		internal void Bind()
+		{
+			if (!bound														// Not yet bound
+				&& this.RequestItem.Command is IStoredProcedure sp			// Command was a stored procedure
+				&& this._commandDefinition.HasValue							// Command was executed
+				&& null == this.Exception)									// Command didn't throw
+			{
+				sp.SetDynamicParameters((DynamicParameters)this._commandDefinition.Value.Parameters);
+				bound = true;
+			}
+		}
+
+        //internal CommandDefinition ToCommandDefinition(IProvider provider, DbConnection connection, DbTransaction transaction, int? commandTimeoutSeconds = null, CancellationToken cancellationToken = default)
+        //	=> this.RequestItem.Command.ToCommandDefinition(provider, connection, transaction, commandTimeoutSeconds, cancellationToken);
 
         public void Dispose()
         {
 			this.Reader?.Dispose();
+            this.Bind();
         }
     }
 }

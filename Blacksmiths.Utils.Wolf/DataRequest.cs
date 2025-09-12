@@ -61,7 +61,51 @@ namespace Blacksmiths.Utils.Wolf
 		};
 	}
 
-	public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestOptions
+	//public interface IDataRequestFluentExecutable
+	//{
+	//	/// <summary>
+	//	/// Executes the entire request and for convienience returns the return value of the last command in the collection
+	//	/// </summary>
+	//	/// <param name="cancellationToken"></param>
+	//	/// <returns>Return value of the last command in the collection</returns>
+	//	Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+ //   }
+
+	//public interface IDataRequestFluentSingleCommand : IDataRequestFluentExecutable
+	//{
+	//	Task<List<T>> QueryListAsync<T>(CancellationToken cancellationToken = default);
+
+ //   }
+
+	public interface IDataRequest
+	{
+		Task<int> ExecuteAsync(CancellationToken cancellationToken = default);
+		DataResult OpenConnection();
+    }
+
+	public interface IDataRequestEmpty : IDataRequest
+	{
+        /// <summary>
+        /// Adds a new item (command) to the request.
+        /// </summary>
+        /// <param name="item">Item to add</param>
+        /// <returns></returns>
+        IDataRequestSingleCommand Add(IDataRequestCommand item);
+
+		IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand item);
+    }
+
+	public interface IDataRequestSingleCommand : IDataRequest
+	{
+		Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default);
+	}
+
+    public interface IDataRequestSingleCommand<TResult> : IDataRequestSingleCommand
+	{
+
+	}
+
+    public sealed class DataRequest : Collection<DataRequestItem>, IDataRequestEmpty, IDataRequestSingleCommand, IDataRequestOptions
 	{
 		// *************************************************
 		// Fields
@@ -126,7 +170,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		/// <param name="item">Item to add</param>
 		/// <returns></returns>
-		public DataRequest Add(IDataRequestCommand item)
+		public IDataRequest Add(IDataRequestCommand item)
 		{
 			this.Add(new DataRequestItem() { Command = item });
 			return this;
@@ -153,30 +197,69 @@ namespace Blacksmiths.Utils.Wolf
 		{
 			return this.Connection.OpenConnection(this, result);
 		}
-	}
 
-	public static class DataRequestExtensions
-	{
 		/// <summary>
 		/// Executes the entire request and for convienience returns the return value of the last command in the collection
 		/// </summary>
-		/// <param name="dataRequest"></param>
 		/// <param name="cancellationToken"></param>
 		/// <returns>Return value of the last command in the collection</returns>
-        public static async Task<int> ExecuteAsync(this DataRequest dataRequest, CancellationToken cancellationToken = default)
+		public async Task<int> ExecuteAsync(CancellationToken cancellationToken = default)
         {
-			int result = -1;
-			using (var connection = dataRequest.OpenConnection())
-				while (!connection.IsConsumed)
-					result = await connection.ExecuteNextAsync(cancellationToken);
-			return result;
+            int result = -1;
+            using (var connection = this.OpenConnection())
+                while (!connection.IsConsumed)
+                    result = await connection.ExecuteNextAsync(cancellationToken);
+            return result;
         }
 
-  //      public static async Task<List<T>> QueryListAsync<T>(this DataRequest dataRequest, CancellationToken cancellationToken = default)
-		//{
-		//	using (var connection = dataRequest.OpenConnection())
-		//		return await connection.QueryListAsync<T>(cancellationToken);
-		//}
+		IDataRequestSingleCommand IDataRequestEmpty.Add(IDataRequestCommand item) => (IDataRequestSingleCommand)this.Add(item);
 
+		IDataRequestSingleCommand<TResult> IDataRequestEmpty.Add<TResult>(IDataRequestCommand item) => new DataRequestSingleCommand<TResult>(this.Add(item));
+
+		async Task<List<TResult>> IDataRequestSingleCommand.QueryAsync<TResult>(CancellationToken cancellationToken)
+		{
+			using(var connection = this.OpenConnection())
+				return await connection.QueryNextListAsync<TResult>(cancellationToken);
+        }
     }
+
+	public class DataRequestSingleCommand<T> : IDataRequestSingleCommand<T>
+	{
+		private readonly IDataRequest request;
+		public DataRequestSingleCommand(IDataRequest request)
+		{
+			this.request = request;
+		}
+
+		public Task<int> ExecuteAsync(CancellationToken cancellationToken = default) => this.request.ExecuteAsync(cancellationToken);
+
+		public DataResult OpenConnection() => this.request.OpenConnection();
+
+		public Task<List<TResult>> QueryAsync<TResult>(CancellationToken cancellationToken = default) => ((IDataRequestSingleCommand)this.request).QueryAsync<TResult>(cancellationToken);
+    }
+
+	//public static class DataRequestExtensions
+	//{
+	//	/// <summary>
+	//	/// Executes the entire request and for convienience returns the return value of the last command in the collection
+	//	/// </summary>
+	//	/// <param name="dataRequest"></param>
+	//	/// <param name="cancellationToken"></param>
+	//	/// <returns>Return value of the last command in the collection</returns>
+ //       public static async Task<int> ExecuteAsync(this DataRequest dataRequest, CancellationToken cancellationToken = default)
+ //       {
+	//		int result = -1;
+	//		using (var connection = dataRequest.OpenConnection())
+	//			while (!connection.IsConsumed)
+	//				result = await connection.ExecuteNextAsync(cancellationToken);
+	//		return result;
+ //       }
+
+ // //      public static async Task<List<T>> QueryListAsync<T>(this DataRequest dataRequest, CancellationToken cancellationToken = default)
+	//	//{
+	//	//	using (var connection = dataRequest.OpenConnection())
+	//	//		return await connection.QueryListAsync<T>(cancellationToken);
+	//	//}
+
+ //   }
 }

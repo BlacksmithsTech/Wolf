@@ -22,7 +22,7 @@ namespace Blacksmiths.Utils.Wolf
         /// Creates a new data request object, which you can use to batch up a number of database commands.
         /// </summary>
         /// <returns></returns>
-		DataRequest NewRequest(Action<IDataRequestOptions> setOptions = null);
+		IDataRequestEmpty NewRequest(Action<IDataRequestOptions> setOptions = null);
 	}
 
 	public interface IServiceLocator
@@ -82,7 +82,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Creates a new request for data
 		/// </summary>
 		/// <returns>A new data request</returns>
-		public DataRequest NewRequest(Action<IDataRequestOptions> setOptions = null)
+		public IDataRequestEmpty NewRequest(Action<IDataRequestOptions> setOptions = null)
 		{
 			var ret = new DataRequest(this);
 			if (null != setOptions)

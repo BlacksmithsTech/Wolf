@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -263,28 +264,39 @@ namespace Blacksmiths.Utils.Wolf
         public Task<List<TTargetedResult>> QueryAsync(CancellationToken cancellationToken = default) => ((IDataRequestSingleCommand)this.request).QueryAsync<TTargetedResult>(cancellationToken);
     }
 
-	//public static class DataRequestExtensions
-	//{
-	//	/// <summary>
-	//	/// Executes the entire request and for convienience returns the return value of the last command in the collection
-	//	/// </summary>
-	//	/// <param name="dataRequest"></param>
-	//	/// <param name="cancellationToken"></param>
-	//	/// <returns>Return value of the last command in the collection</returns>
- //       public static async Task<int> ExecuteAsync(this DataRequest dataRequest, CancellationToken cancellationToken = default)
- //       {
-	//		int result = -1;
-	//		using (var connection = dataRequest.OpenConnection())
-	//			while (!connection.IsConsumed)
-	//				result = await connection.ExecuteNextAsync(cancellationToken);
-	//		return result;
- //       }
+	public static class DataRequestExtensions
+	{
+		public static async Task<TResult> QueryFirstAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+		{
+			using (var connection = dataRequest.OpenConnection())
+				return (await connection.StreamNextResultSetAsync<TResult>(cancellationToken)).First();
+		}
 
- // //      public static async Task<List<T>> QueryListAsync<T>(this DataRequest dataRequest, CancellationToken cancellationToken = default)
-	//	//{
-	//	//	using (var connection = dataRequest.OpenConnection())
-	//	//		return await connection.QueryListAsync<T>(cancellationToken);
-	//	//}
+        public static async Task<TResult> QueryFirstOrDefaultAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+        {
+            using (var connection = dataRequest.OpenConnection())
+                return (await connection.StreamNextResultSetAsync<TResult>(cancellationToken)).FirstOrDefault();
+        }
 
- //   }
+        public static async Task<TResult> QuerySingleAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+        {
+			using (var connection = dataRequest.OpenConnection())
+				return (await connection.StreamNextResultSetAsync<TResult>(cancellationToken)).Single();
+        }
+
+        public static async Task<TResult> QuerySingleOrDefaultAsync<TResult>(this IDataRequestSingleCommand dataRequest, CancellationToken cancellationToken = default)
+        {
+            using (var connection = dataRequest.OpenConnection())
+                return (await connection.StreamNextResultSetAsync<TResult>(cancellationToken)).SingleOrDefault();
+        }
+
+		public static Task<TResult> QueryFirstAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+			=> QueryFirstAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> QueryFirstOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => QueryFirstOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> QuerySingleAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => QuerySingleAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+        public static Task<TResult> QuerySingleOrDefaultAsync<TResult>(this IDataRequestSingleCommand<TResult> dataRequest, CancellationToken cancellationToken = default)
+            => QuerySingleOrDefaultAsync<TResult>((IDataRequestSingleCommand)dataRequest, cancellationToken);
+    }
 }

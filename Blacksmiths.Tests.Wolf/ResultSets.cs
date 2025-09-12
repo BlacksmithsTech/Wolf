@@ -149,6 +149,26 @@ namespace Blacksmiths.Tests.Wolf
             Assert.Equal("Fixed", row.FixedValue);
         }
 
+        [Fact]
+        public async Task Query_StoredProcedure_Targeted_Single()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure_Targeted() { ValueInStr = "Hello world", ValueInDt = now, ValueInBit = true, OptionalValueStr = "Test" };
+            var row = await this.connection.NewRequest()
+                .Add(sproc)
+                .QuerySingleAsync();
+
+            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
+            Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
+
+            Assert.Equal("Hello world", row.ValueInStr);
+            Assert.Equal(now, row.ValueInDt);
+            Assert.Equal("Test", row.OptionalValueStr);
+            Assert.True(row.ValueInBit);
+            Assert.Equal("Fixed", row.FixedValue);
+        }
+
 
         [Fact]
         public async Task Multi_Stream()

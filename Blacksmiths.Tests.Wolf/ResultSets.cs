@@ -69,10 +69,32 @@ namespace Blacksmiths.Tests.Wolf
             public int Column3 { get; set; }
         }
 
-        private class spMultiResultModel
+        [Procedure(Name = "[dbo].[spGetCustomers]")]
+        private class spGetCustomers : StoredProcedure, IDataRequestCommand<Customer>
         {
-            public spMultiResult0[] Table0 { get; set; }
-            public spMultiResult1[] Table1 { get; set; }
+        }
+
+        [Procedure(Name = "[dbo].[spGetOrders]")]
+        private class spGetOrders: StoredProcedure, IDataRequestCommand<Order>
+        {
+        }
+
+        public class Customer
+        {
+            public int CustomerID { get; set; }
+            public string CustomerName { get; set; }
+            public string Email { get; set; }
+
+            [Relation(nameof(CustomerID))]
+            public Order[] Orders { get; set; }
+        }
+
+        public class Order
+        {
+            public int OrderID { get; set; }
+            public int CustomerID { get; set; }
+            public DateTime OrderDate { get; set; }
+            public decimal OrderAmount { get; set; }
         }
 
         private readonly IDataConnection connection;
@@ -211,6 +233,19 @@ namespace Blacksmiths.Tests.Wolf
             Assert.Null(row.OptionalValueStr);
             Assert.True(row.ValueInBit);
             Assert.Equal("Fixed", row.FixedValue);
+        }
+
+        [Fact]
+        public async Task Map_StoredProcedure_Graph()
+        {
+            var now = DateTimeOffset.UtcNow;
+            var sproc = new spStoredProcedure_Untargeted() { ValueInStr = "Hello world", ValueInDt = now };
+
+            var customers = await this.connection.NewRequest()
+                .Add(new spGetCustomers())
+                .Add(new spGetOrders())
+                //.Add<spStoredProcedureResult>(sproc)
+                .MapAsync();
         }
 
 

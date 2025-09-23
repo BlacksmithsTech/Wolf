@@ -126,7 +126,7 @@ namespace Blacksmiths.Utils.Wolf.Utility
             return propertyType;
         }
 
-        private static List<TGraph> ApplyRelationFilter<TGraph>(TGraph parentInstance, List<object> childData, Relation relation, Type targetPropertyType)
+        private static List<object> ApplyRelationFilter<TGraph>(TGraph parentInstance, List<object> childData, Relation relation, Type targetPropertyType)
         {
             if (!relation.IsValid())
             {
@@ -135,11 +135,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
             var parentType = typeof(TGraph);
             var childType = GetTargetType(targetPropertyType);
-            if (childType == null) return new List<TGraph>();
+            if (childType == null) return new List<object>();
 
-            var filteredData = new List<TGraph>();
+            var filteredData = new List<object>();
 
-            foreach (var childItem in childData.OfType<TGraph>())
+            foreach (var childItem in childData)
             {
                 bool matches = true;
                 for (int i = 0; i < relation.ParentFieldNames.Length; i++)
@@ -191,7 +191,11 @@ namespace Blacksmiths.Utils.Wolf.Utility
         {
             if (targetPropertyType.IsArray)
             {
-                return value.ToArray();
+                var result = Array.CreateInstance(GetTargetType(targetPropertyType), value.Count);
+                for (var i = 0; i < value.Count; i++)
+                    result.SetValue(value[i], i);
+
+                return result;
             }
             else if (targetPropertyType is System.Collections.IList)
             {

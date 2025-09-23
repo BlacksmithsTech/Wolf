@@ -85,9 +85,16 @@ namespace Blacksmiths.Utils.Wolf
 				async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition), 
 				cancellationToken);
 
-			var result = await nextCommand.Reader.ReadAsync<T>(buffered: false);
-			return result;
-		}
+			try
+			{
+				return await nextCommand.Reader.ReadAsync<T>(buffered: false);
+			}
+			catch(InvalidOperationException ioe) when ("No columns were selected".Equals(ioe.Message))
+			{
+				// The sproc not returning may be intentional behaviour.
+				return new List<T>();
+			}
+        }
 
 		/// <summary>
 		/// Binds the return value and output parameters to the last command which was executed in this result

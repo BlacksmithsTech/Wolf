@@ -14,6 +14,7 @@ using System.Data;
 using System.Data.Common;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using static Blacksmiths.Utils.Wolf.StoredProcedure;
 
@@ -512,17 +513,21 @@ namespace Blacksmiths.Utils.Wolf
         }
     }
 
-	//public static class StoredProcedureExtentions
-	//{
-	//	public static IFluentResultSp<T> Execute<T>(this T sp, IDataConnection connection) where T : StoredProcedure
-	//	{
-	//		return (IFluentResultSp<T>)connection.NewRequest().Add(sp).OpenConnection(new DataResultSp<T>());
-	//	}
+	public static class DataRequestCommandExtentions
+	{
+		public static IDataRequestSingle AsRequest(this IDataRequestCommand sproc, IDataConnection connection)
+			=> connection.NewRequest().Add(sproc);
 
-	//	public static async System.Threading.Tasks.Task<IFluentResultSp<T>> ExecuteAsync<T>(this T sp, IDataConnection connection, CancellationToken cancellationToken = default) where T : StoredProcedure
-	//	{
-	//		return (IFluentResultSp<T>)await connection.NewRequest().Add(sp).ExecuteAsync(new DataResultSp<T>(), cancellationToken);
+        public static IDataRequestSingle<TResult> AsRequest<TResult>(this IDataRequestCommand<TResult> sproc, IDataConnection connection)
+            => connection.NewRequest().Add(sproc);
 
- //       }
- //   }
+		public static Task<int> ExecuteAsync(this IDataRequestCommand sproc, IDataConnection connection, CancellationToken cancellationToken = default)
+			=> connection.NewRequest().Add(sproc).ExecuteAsync(cancellationToken);
+
+        public static async Task<T> ExecuteNonQueryAsync<T>(this T sproc, IDataConnection connection, CancellationToken cancellationToken = default) where T : IDataRequestCommand
+		{
+			await connection.NewRequest().Add(sproc).ExecuteAsync(cancellationToken);
+			return sproc;
+		}
+    }
 }

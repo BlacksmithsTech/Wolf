@@ -61,31 +61,26 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
         private static TGraph CreateAndMapInstance<TGraph>(Dictionary<Type, List<object>> rowCollection)
         {
-            try
-            {
-                var instance = Activator.CreateInstance<TGraph>();
-                MapProperties(instance, rowCollection);
-                return instance;
-            }
-            catch
-            {
-                return default(TGraph);
-            }
+            return MapProperties(Activator.CreateInstance<TGraph>(), rowCollection);
         }
 
-        private static void MapProperties<TGraph>(TGraph instance, Dictionary<Type, List<object>> rowCollection)
+        private static TGraph MapProperties<TGraph>(TGraph instance, Dictionary<Type, List<object>> rowCollection)
         {
-            var properties = typeof(TGraph).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var members = typeof(TGraph).GetMembers(BindingFlags.Public | BindingFlags.Instance);
 
-            foreach (var property in properties)
+            foreach (var member in members)
             {
-                if (!property.CanWrite) continue;
+                var property = member as PropertyInfo;
+                var field = member as FieldInfo;
 
-                var relationAttribute = property.GetCustomAttribute<Relation>();
-                var propertyType = property.PropertyType;
+                if (null == property && null == field) continue;
+                if (null != property && !property.CanWrite) continue;
+                
+                var relationAttribute = member.GetCustomAttribute<Relation>();
+                var memberType = property?.PropertyType ?? field.FieldType;
 
                 // Check if property type is in rowCollection keys
-                var targetType = GetTargetType(propertyType);
+                var targetType = GetTargetType(memberType);
                 if (targetType != null && rowCollection.ContainsKey(targetType))
                 {
                     var sourceData = rowCollection[targetType];
@@ -93,16 +88,18 @@ namespace Blacksmiths.Utils.Wolf.Utility
                     if (relationAttribute != null)
                     {
                         // Apply relation filtering
-                        var filteredData = ApplyRelationFilter(instance, sourceData, relationAttribute, propertyType);
-                        SetPropertyValue(instance, property, filteredData, propertyType);
+                        var filteredData = ApplyRelationFilter(instance, sourceData, relationAttribute, memberType);
+                        instance = (TGraph)SetPropertyValue(instance, member, filteredData, memberType);
                     }
                     else
                     {
                         // Direct mapping without relation filtering
-                        SetPropertyValue(instance, property, sourceData, propertyType);
+                        instance = (TGraph)SetPropertyValue(instance, member, sourceData, memberType);
                     }
                 }
             }
+
+            return instance;
         }
 
         private static Type GetTargetType(Type propertyType)
@@ -177,12 +174,17 @@ namespace Blacksmiths.Utils.Wolf.Utility
             return filteredData;
         }
 
-        private static void SetPropertyValue<T>(T instance, PropertyInfo property, List<T> value, Type targetPropertyType)
+        private static object SetPropertyValue<T>(object instance, MemberInfo member, List<T> value, Type targetPropertyType)
         {
-            if (value == null) return;
+            if (value == null) return instance;
 
             var convertedValue = ConvertToTargetType<T>(value, targetPropertyType);
-            property.SetValue(instance, convertedValue);
+            if (member is PropertyInfo property)
+                property.SetValue(instance, convertedValue);
+            else if (member is FieldInfo field)
+                field.SetValue(instance, convertedValue);
+
+            return instance;
         }
 
         private static object ConvertToTargetType<T>(List<T> value, Type targetPropertyType)
@@ -191,17 +193,13 @@ namespace Blacksmiths.Utils.Wolf.Utility
             {
                 return value.ToArray();
             }
-            else if (targetPropertyType == typeof(List<T>))
+            else if (targetPropertyType is System.Collections.IList)
             {
                 return value;
             }
-            else if(targetPropertyType == typeof(T))
-            {
-                return value.SingleOrDefault();
-            }
             else
             {
-                throw new InvalidOperationException($"Could not map to '{targetPropertyType}'");
+                return value.SingleOrDefault();
             }
         }
     }

@@ -284,7 +284,7 @@ namespace Blacksmiths.Utils.Wolf
 				var rows = await connection.StreamNextResultSetAsync(cancellationToken);
 				var rowType = connection.CurrentCommand.RequestItem.Types[connection.ResultIndex.Value];
 				if (!result.ContainsKey(rowType))
-					result.Add(rowType, new List<object>(rows));
+					result.Add(rowType, [.. rows]);
 				else
 					result[rowType].AddRange(rows);
 			}

@@ -45,7 +45,13 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
 
                 var record = new SqlDataRecord(metaData);
                 foreach (var column in this.Columns)
-                    record.SetValue(column.Ordinal, column.Accessor.GetValue(value) ?? DBNull.Value);
+                {
+                    var v = column.Accessor.GetValue(value);
+                    if (null != v)
+                        record.SetValue(column.Ordinal, v);
+                    else
+                        record.SetDBNull(column.Ordinal);
+                }
                 yield return record;
             }
         }
@@ -75,6 +81,8 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
             switch (dbType)
             {
                 case SqlDbType.NVarChar:
+                    if (0 == attrColumn.Length)
+                        throw new InvalidOperationException($"NVARCHAR type '{columnName}' did not specify a field length");
                     return new SqlMetaData(columnName, dbType, attrColumn.Length);
 
                 default:

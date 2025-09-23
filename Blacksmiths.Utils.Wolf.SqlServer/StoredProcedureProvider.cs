@@ -41,7 +41,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 		public SqlDbType ValueTypeSql { get; } = SqlDbType.Structured;
 
         public SpParameterSqlServerTvp(string name, string tvpQualifiedName, ParameterDirection direction = ParameterDirection.Input, IEnumerable<SqlDataRecord> value = null)
-			: base(name, direction, value) 
+			: base(name, value.AsTableValuedParameter(tvpQualifiedName), direction, DbType.Object) 
 		{
 			this.TvpQualifiedName = tvpQualifiedName;
 		}
@@ -68,7 +68,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 
         public override object Value
         {
-            get { return this._tvpConverter.ToRecords((object[])this._property.GetValue(this._instance)); }
+            get { return this._tvpConverter.ToRecords((object[])this._property.GetValue(this._instance)).AsTableValuedParameter(this.TvpQualifiedName); }
 			set
 			{ 
 				// Intentionally blank. UDTs are read only.

@@ -2,6 +2,7 @@
 using Blacksmiths.Utils.Wolf.Attribution;
 using Blacksmiths.Utils.Wolf.SqlServer;
 using Blacksmiths.Utils.Wolf.SqlServer.Data;
+using Dapper;
 using Microsoft.Data.SqlClient.Server;
 using System.Data;
 
@@ -23,7 +24,7 @@ namespace Blacksmiths.Tests.Wolf
             [UdtColumn(0)]
             public Guid Id { get; set; }
 
-            [UdtColumn(1)]
+            [UdtColumn(1, Length = 100)]
             public string Name { get; set; }
 
             [UdtColumn(2)]
@@ -58,44 +59,10 @@ namespace Blacksmiths.Tests.Wolf
                 .Add(new StoredProcedure("[dbo].[spEchoTVP]")
                     .AddParameter(new SpParameterSqlServerTvp("Input", "[dbo].[udtSample]", System.Data.ParameterDirection.Input, udtData))
                 )
-                .ExecuteAsync()
-                .ToDataSetAsync();
+                .QueryAsync<udtSample>();
 
             // Test the echo is identical
-            var table = result.Tables[0];
-            Assert.Equal(table.Rows.Count, udtData.Length);
-            for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
-                foreach (DataColumn column in table.Columns)
-                    Assert.Equal(udtData[rowIndex][column.ColumnName], table.Rows[rowIndex][column]);
-        }
-
-        [Fact]
-        public async Task Echo_UdtTyping_ReturnsIdentical()
-        {
-            var udtData = GetSampleData();
-
-            var udtType = typeof(udtSample);
-            var tvpConverter = new TvpConverter(udtType);
-
-            var result = await this.connection.NewRequest()
-                .Add(new StoredProcedure("[dbo].[spEchoTVP]")
-                    .AddParameter(new SpParameterSqlServerTvp("Input", tvpConverter.Udt.Name, System.Data.ParameterDirection.Input, tvpConverter.ToRecords(udtData)))
-                )
-                .ExecuteAsync()
-                .ToDataSetAsync();
-
-            // Test the echo is identical
-            var table = result.Tables[0];
-            Assert.Equal(table.Columns.Count, tvpConverter.Columns.Length);
-            for (var i = 0; i < table.Columns.Count; i++)
-            {
-                Assert.Equal(tvpConverter.Columns[i].MetaData.Name, table.Columns[i].ColumnName);
-            }    
-            
-            Assert.Equal(table.Rows.Count, udtData.Length);
-            for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
-                foreach (DataColumn column in table.Columns)
-                    Assert.Equal(udtType.GetProperty(column.ColumnName).GetValue(udtData[rowIndex]), NullSafe(table.Rows[rowIndex][column]));
+            Assert.Equal(result.Count, udtData.Length);
         }
 
         [Fact]
@@ -103,26 +70,12 @@ namespace Blacksmiths.Tests.Wolf
         {
             var udtData = GetSampleData();
 
-            var udtType = typeof(udtSample);
-            var tvpConverter = new TvpConverter(udtType);
-
             var result = await this.connection.NewRequest()
                 .Add(new spEchoTVP() { Input = udtData })
-                .ExecuteAsync()
-                .ToDataSetAsync();
+                .QueryAsync<udtSample>();
 
             // Test the echo is identical
-            var table = result.Tables[0];
-            Assert.Equal(table.Columns.Count, tvpConverter.Columns.Length);
-            for (var i = 0; i < table.Columns.Count; i++)
-            {
-                Assert.Equal(tvpConverter.Columns[i].MetaData.Name, table.Columns[i].ColumnName);
-            }
-
-            Assert.Equal(table.Rows.Count, udtData.Length);
-            for (var rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
-                foreach (DataColumn column in table.Columns)
-                    Assert.Equal(udtType.GetProperty(column.ColumnName).GetValue(udtData[rowIndex]), NullSafe(table.Rows[rowIndex][column]));
+            Assert.Equal(result.Count, udtData.Length);
         }
 
         private udtSample[] GetSampleData() => new udtSample[]

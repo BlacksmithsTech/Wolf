@@ -9,6 +9,7 @@ using Dapper;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
@@ -92,11 +93,12 @@ namespace Blacksmiths.Utils.Wolf
 			/// </summary>
 			public DbType? ValueType { get; set; }
 
-			public SpParameter(string name, ParameterDirection direction = ParameterDirection.Input, object value = null)
+			public SpParameter(string name, object value = null, ParameterDirection direction = ParameterDirection.Input, DbType? dbType = null)
 			{
 				this.Name = name;
 				this._value = value;
 				this.Direction = direction;
+				this.ValueType = dbType;
 			}
 
 			public virtual DbParameter ToDbParameter(DbCommand command)
@@ -166,8 +168,8 @@ namespace Blacksmiths.Utils.Wolf
 				set { base.Value = value; }
 			}
 
-			public SpParameter(string name, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input, T value = default)
-				: base(name, direction, value)
+			public SpParameter(string name, T value = default, ParameterDirection direction = ParameterDirection.Input, DbType? dbType = null)
+				: base(name, value, direction)
 			{
 				this.ValueType = InferValueType(typeof(T));
 			}
@@ -184,13 +186,15 @@ namespace Blacksmiths.Utils.Wolf
                 set { this._property.SetValue(this._instance, value, null); }
             }
 
-            public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
-                : base(name)
+            public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property, DbType? dbType)
+                : base(name, dbType: dbType.GetValueOrDefault(InferValueType(property.PropertyType)))
             {
                 this._instance = instance;
                 this._property = property;
-				this.ValueType = InferValueType(this._property.PropertyType);
             }
+
+            public BoundSpParameter(string name, object instance, System.Reflection.PropertyInfo property)
+				: this(name, instance, property, null) { }
         }
 
         //public class BoundSpParameter : ISpParameter
@@ -358,7 +362,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// <param name="p">Name of parameter</param>
 		public StoredProcedure AddParameter<T>(string name, T value = default, System.Data.ParameterDirection direction = System.Data.ParameterDirection.Input)
 		{
-			return this.AddParameter(new SpParameter<T>(name, direction, value));
+			return this.AddParameter(new SpParameter<T>(name, value, direction));
 		}
 
 		/// <summary>

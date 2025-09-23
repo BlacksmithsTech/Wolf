@@ -15,23 +15,6 @@ namespace Blacksmiths.Utils.Wolf.Utility
 {
 	public static class ReflectionHelper
 	{
-		public static Array ArrayFromList(Type CollectionType, System.Collections.IList Collection)
-		{
-			var a = Array.CreateInstance(CollectionType, Collection.Count);
-            Collection.CopyTo(a, 0);
-            return a;
-		}
-
-        public static System.Collections.IList ListFromList(Type collectionType, IEnumerable<object> collection = null)
-        {
-            var t = typeof(List<>).MakeGenericType(collectionType);
-            var l = (System.Collections.IList)Activator.CreateInstance(t);
-            if (null != collection)
-                foreach (var value in collection)
-                    l.Add(value);
-            return l;
-        }
-
         public static object GetValue(MemberInfo Member, object source)
 		{
 			if (Member is FieldInfo fi)
@@ -72,68 +55,13 @@ namespace Blacksmiths.Utils.Wolf.Utility
 				return null;
 		}
 
-        public static Type GetMemberTypeOrGenericType(MemberInfo Member)
-        {
-            var t = GetMemberType(Member);
-            if (t.IsGenericType)
-                return t.GetGenericArguments()[0];
-            else
-                return t;
-        }
-
-        public static Type GetCollectionType(MemberInfo Member)
+        public static Type GetMemberCollectionType(MemberInfo Member)
 		{
 			var mt = GetMemberType(Member);
 			if (mt.IsArray)
 				return mt.GetElementType();
 			else
 				return mt.GetInterfaces().FirstOrDefault(i => i.IsGenericType && typeof(ICollection<>).Equals(i.GetGenericTypeDefinition()))?.GetGenericArguments()[0];
-		}
-
-		public static bool IsAssignable(Type x, Type y)
-		{
-			y = Nullable.GetUnderlyingType(y) ?? y;
-			var assignable = x.IsAssignableFrom(y);
-            if(!assignable)
-			{
-                // ** .NET can't automatically make the assignment. Can Wolf assist?
-                assignable = (typeof(string) == x && y.IsEnum)
-                || (typeof(byte) == x && new[] { typeof(short), typeof(int), typeof(long) }.Contains(y))
-                || (typeof(short) == x && new[] { typeof(int), typeof(long) }.Contains(y))
-                || (typeof(int) == x && new[] { typeof(long) }.Contains(y));
-            }
-            return assignable;
-		}
-
-		public static bool IsPrimitive(Type x)
-		{
-			// ** Wolf defines primitive types as those that should be data bound directly to a column
-			var PrimitiveTypes = new[]
-			{
-				typeof(bool),
-				typeof(byte),
-				typeof(sbyte),
-				typeof(short),
-				typeof(ushort),
-				typeof(int),
-				typeof(uint),
-				typeof(long),
-				typeof(ulong),
-				typeof(IntPtr),
-				typeof(UIntPtr),
-				typeof(char),
-				typeof(double),
-				typeof(float),
-				typeof(string),
-				typeof(DateTime),
-				typeof(Guid),
-				typeof(decimal),
-				typeof(TimeSpan),
-				typeof(DateTimeOffset),
-                typeof(Enum),
-			};
-
-			return PrimitiveTypes.Any(t => IsAssignable(t, x));
 		}
 	}
 

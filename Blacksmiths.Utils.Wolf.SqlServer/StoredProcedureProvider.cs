@@ -83,7 +83,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 
 			// Get the member type (not its array or collection)
 			//this._memberType = ReflectionHelper.GetMemberType(property);
-			this._memberType = ReflectionHelper.GetCollectionType(property);
+			this._memberType = ReflectionHelper.GetMemberCollectionType(property);
 			if (null == this._memberType)
 				throw new ArgumentException($"Property '{property}' must be a collection to use as a table valued parameter");
 

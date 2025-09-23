@@ -129,16 +129,19 @@ namespace Blacksmiths.Utils.Wolf
 
     public interface IDataRequestEmpty : IDataRequest
 	{
-  //      /// <summary>
-  //      /// Adds a new item (command) to the request.
-  //      /// </summary>
-  //      /// <param name="item">Item to add</param>
-  //      /// <returns></returns>
-  //      IDataRequestSingleCommand Add(IDataRequestCommand item);
+        IDataRequestEmpty WithTransaction(bool useTransaction = true);
+        IDataRequestEmpty WithCommandTimeout(int milliseconds);
+        IDataRequestEmpty WithCommandTimeout(TimeSpan? commandTimeout = null);
+        //      /// <summary>
+        //      /// Adds a new item (command) to the request.
+        //      /// </summary>
+        //      /// <param name="item">Item to add</param>
+        //      /// <returns></returns>
+        //      IDataRequestSingleCommand Add(IDataRequestCommand item);
 
-		//IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand item);
+        //IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand item);
 
-  //      IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand<TResult> item);
+        //      IDataRequestSingleCommand<TResult> Add<TResult>(IDataRequestCommand<TResult> item);
     }
 
 	public interface IDataRequestSingle : IDataRequestExecutable { }
@@ -235,7 +238,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Specifies that this request will run all commands within a transaction
 		/// </summary>
-		public DataRequest WithTransaction(bool useTransaction = true)
+		public IDataRequestEmpty WithTransaction(bool useTransaction = true)
 		{
 			this.UseTransaction = useTransaction;
 			return this;
@@ -244,12 +247,12 @@ namespace Blacksmiths.Utils.Wolf
 		/// <summary>
 		/// Specifies that this request will run all commands with a given timeout timespan in milliseconds
 		/// </summary>
-		public DataRequest WithCommandTimeout(int milliseconds) => this.WithCommandTimeout(TimeSpan.FromMilliseconds(milliseconds));
+		public IDataRequestEmpty WithCommandTimeout(int milliseconds) => this.WithCommandTimeout(TimeSpan.FromMilliseconds(milliseconds));
 
 		/// <summary>
 		/// Specifies that this request will run all commands with a given timeout timespan
 		/// </summary>
-		public DataRequest WithCommandTimeout(TimeSpan? commandTimeout = null)
+		public IDataRequestEmpty WithCommandTimeout(TimeSpan? commandTimeout = null)
 		{
 			this.CommandTimeout = commandTimeout;
 			return this;

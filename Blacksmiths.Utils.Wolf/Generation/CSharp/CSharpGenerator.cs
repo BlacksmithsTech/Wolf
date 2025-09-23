@@ -83,23 +83,15 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				{
 					try
 					{
-						var sp = this.CreateSp(connection, types, (string)spRow[ADO_SCHEMA], (string)spRow[ADO_NAME], !options.DefaultSchema.Equals((string)spRow[ADO_SCHEMA]));
+                        bool hasModel = false;
 
-						if (options.StoredProcedures.Enabled)
-						{
-							this.AddEntity(Ret, new Entity()
-							{
-								Name = (string)spRow[ADO_NAME],
-								Schema = (string)spRow[ADO_SCHEMA],
-								Type = EntityType.StoredProcedure,
-								Generate = () => this.GenerateCode(sp)
-							});
-						}
+                        var sp = this.CreateSp(connection, types, (string)spRow[ADO_SCHEMA], (string)spRow[ADO_NAME], !options.DefaultSchema.Equals((string)spRow[ADO_SCHEMA]));
 
-						if (options.Models.Enabled)
-						{
-							var ModelDef = this.CreateModelDef(dc.Provider, connection, sp);
+                        if (options.Models.Enabled)
+                        {
+                            var ModelDef = this.CreateModelDef(dc.Provider, connection, sp);
 							if (null != ModelDef)
+							{
 								this.AddEntity(Ret, new Entity()
 								{
 									Name = (string)spRow[ADO_NAME],
@@ -107,6 +99,19 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 									Type = EntityType.Model,
 									Generate = () => this.GenerateCode(ModelDef, options)
 								});
+								hasModel = true;
+							}
+                        }
+
+                        if (options.StoredProcedures.Enabled)
+						{
+							this.AddEntity(Ret, new Entity()
+							{
+								Name = (string)spRow[ADO_NAME],
+								Schema = (string)spRow[ADO_SCHEMA],
+								Type = EntityType.StoredProcedure,
+								Generate = () => this.GenerateCode(sp, hasModel)
+							});
 						}
 					}
 					catch(DbException dbex)
@@ -217,7 +222,7 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 					Ret = new ModelDef();
 					Ret.Name = ((IStoredProcedure)sp).ProcedureName;
 
-					const string ADO_COL_NAME = "ColumnName";
+                    const string ADO_COL_NAME = "ColumnName";
 					const string ADO_COL_ORDINAL = "ColumnOrdinal";
 					const string ADO_COL_TYPE = "DataType";
 					const string ADO_COL_SIZE = "ColumnSize";
@@ -293,15 +298,20 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 			return Ret;
 		}
 
-		private string GenerateCode(StoredProcedure sp)
+		private string GenerateCode(StoredProcedure sp, bool hasModel)
 		{
 			var sb = new IndentableStringBuilder();
 
-			var SpName = Utility.QualifiedSqlName.Parse(((IStoredProcedure)sp).ProcedureName);
-			var ClassName = EncodeSymbol(SpName.Name);
-			if (!SpName.Name.Equals(ClassName) || !string.IsNullOrEmpty(SpName.Schema))
+			var spName = Utility.QualifiedSqlName.Parse(((IStoredProcedure)sp).ProcedureName);
+			var ClassName = EncodeSymbol(spName.Name);
+			if (!spName.Name.Equals(ClassName) || !string.IsNullOrEmpty(spName.Schema))
 				sb.AppendLine($@"[Procedure(Name = ""{((IStoredProcedure)sp).ProcedureName}"")]");
-			sb.AppendLine($"public class {ClassName} : StoredProcedure");
+
+			string defaultResultType = string.Empty;
+			if (hasModel)
+				defaultResultType = $", IDataRequestCommand<{Regex.Replace(spName.Name, "^sp", "db")}>";
+
+            sb.AppendLine($"public class {ClassName} : StoredProcedure{defaultResultType}");
 			sb.AppendLine("{");
 			sb.Indent();
 			foreach (var Param in sp.OfType<StoredProcedure.CodeGenSpParameter>())
@@ -339,12 +349,10 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 		private string GenerateCode(ModelDef md, GenerationOptions options)
 		{
 			var sb = new IndentableStringBuilder();
-			var MdlName = Utility.QualifiedSqlName.Parse(md.Name);
+			var modelName = Regex.Replace(Utility.QualifiedSqlName.Parse(md.Name).Name, "^sp", "db");
 
-			var ClassName = EncodeSymbol(MdlName.Name);
-			if (!MdlName.Name.Equals(ClassName) || !string.IsNullOrEmpty(MdlName.Schema))
-				sb.AppendLine($@"[Source(From = ""{md.Name}"")]");
-			sb.AppendLine($"public class {ClassName}");
+			var className = EncodeSymbol(modelName);
+			sb.AppendLine($"public class {className}");
 			sb.AppendLine("{");
 			sb.Indent();
 			foreach (var Field in md)
@@ -352,33 +360,17 @@ namespace Blacksmiths.Utils.Wolf.Generation.CSharp
 				var FieldName = EncodeSymbol(Field.Name);
 
 				var ValueTypeName = Field.TypeName;
-				var ParamType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
+				var paramType = this.CSharpTypes.ContainsKey(ValueTypeName) ? this.CSharpTypes[ValueTypeName] : ValueTypeName;
                 var Comment = Field.Commented ? "//" : string.Empty;
 				var TypeDef = Type.GetType(ValueTypeName);
 
-				string AttrName = null;
-				string AttrLength = null;
-				string AttrNullable = null;
-
-				if (!Field.Name.Equals(FieldName))
-					AttrName = $@"From = ""{Field.Name}""";
-				if (Field.Length > -1 && ValueTypeName.Equals("System.String", StringComparison.CurrentCultureIgnoreCase))
-					AttrLength = $@"Length = {Field.Length}";
                 if (!Field.AllowNulls)
                 {
-					if (!TypeDef.IsValueType)
-						AttrNullable = "Nullable = false";
-                    ParamType = ParamType.Trim('?');
+                    paramType = paramType.Trim('?');
                 }
 
-				var AttrParamsSource = String.Join(", ", new[] { AttrName }.Where(a => null != a));
-				if (!string.IsNullOrEmpty(AttrParamsSource))
-					sb.AppendLine($@"{Comment}[Source({AttrParamsSource})]");
-				var AttrParamsConstraints = String.Join(", ", new[] { AttrLength,AttrNullable }.Where(a => null != a));
-				if (!string.IsNullOrEmpty(AttrParamsConstraints))
-					sb.AppendLine($@"{Comment}[Constraint({AttrParamsConstraints})]");
-				var Virtual = options.Models.VirtualMembers ? "virtual " : string.Empty;
-				sb.AppendLine($"{Comment}public {Virtual}{ParamType} {FieldName} {{ get; set; }}");
+				var @virtual = options.Models.VirtualMembers ? "virtual " : string.Empty;
+				sb.AppendLine($"{Comment}public {@virtual}{paramType} {FieldName} {{ get; set; }}");
 			}
 			sb.Outdent();
 			sb.AppendLine("}");

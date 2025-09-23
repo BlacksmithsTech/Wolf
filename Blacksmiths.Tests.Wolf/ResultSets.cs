@@ -252,6 +252,7 @@ namespace Blacksmiths.Tests.Wolf
             Assert.Equal(2, tuple.customers[0].Orders.Length);
             Assert.Equal(1, tuple.customers[1].Orders.Length);
             Assert.Equal(1, tuple.customers[2].Orders.Length);
+            Assert.Equal("Hello world output", sproc.ValueOutStr);
         }
 
         [Fact]

@@ -309,7 +309,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Gets or sets the current return value of the stored procedure
 		/// </summary>
 		[Attribution.Parameter(Direction = System.Data.ParameterDirection.ReturnValue)]
-		int? IStoredProcedure.ReturnValue { get; set; }
+		public int? ReturnValue { get; set; }
 
 		// *************************************************
 		// Indexer
@@ -498,7 +498,7 @@ namespace Blacksmiths.Utils.Wolf
 			var result = new DynamicParameters();
 			foreach (var param in this)
 				result.Add(param.Name, param.Value, param.ValueType, param.Direction, param.Length);
-			result.Add(C_RETURN_VALUE, null, DbType.Int32, ParameterDirection.ReturnValue);
+			//result.Add(C_RETURN_VALUE, null, DbType.Int32, ParameterDirection.ReturnValue);
 			return result;
         }
 
@@ -509,7 +509,7 @@ namespace Blacksmiths.Utils.Wolf
 				var param = this[paramName];
 				if (null != param) param.Value = dynamicParameters.Get<object>(paramName);
             }
-			((IStoredProcedure)this).ReturnValue = dynamicParameters.Get<int>(C_RETURN_VALUE);
+			//((IStoredProcedure)this).ReturnValue = dynamicParameters.Get<int>(C_RETURN_VALUE);
         }
     }
 

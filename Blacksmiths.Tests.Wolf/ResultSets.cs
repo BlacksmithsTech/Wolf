@@ -137,7 +137,7 @@ namespace Blacksmiths.Tests.Wolf
                 .Add(sproc)
                 .QueryAsync<spStoredProcedureResult>();
 
-            Assert.Equal(99, ((IStoredProcedure)sproc).ReturnValue);
+            Assert.Equal(99, sproc.ReturnValue);
             Assert.Equal("Hello world output", sproc.ValueOutStr);
             Assert.Equal(now.AddDays(1), sproc.ValueOutDt);
             Assert.Single(rows);

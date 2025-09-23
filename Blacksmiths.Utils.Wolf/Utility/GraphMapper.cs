@@ -147,8 +147,8 @@ namespace Blacksmiths.Utils.Wolf.Utility
                     var parentFieldName = relation.ParentFieldNames[i];
                     var childFieldName = relation.ChildFieldNames[i];
 
-                    var parentProperty = parentType.GetProperty(parentFieldName);
-                    var childProperty = childType.GetProperty(childFieldName);
+                    var parentProperty = MemberAccessor.Create(parentType.GetProperty(parentFieldName));
+                    var childProperty = MemberAccessor.Create(childType.GetProperty(childFieldName));
 
                     if (parentProperty == null || childProperty == null)
                     {

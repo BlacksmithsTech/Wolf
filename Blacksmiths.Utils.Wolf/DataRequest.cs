@@ -145,7 +145,10 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IDataRequestMulti : IDataRequestExecutable { }
 	public interface IDataRequestExecutable<TResult> : IDataRequestExecutable { }
 	public interface IDataRequestSingle<TResult> : IDataRequestExecutable<TResult> { }
-	public interface IDataRequestMulti<TResult> : IDataRequestExecutable<TResult> { }
+	public interface IDataRequestMulti<TResult> : IDataRequestExecutable<TResult> 
+	{
+		IDataRequestMulti<TResult> Add<TExplicitResult>(IDataRequestCommand item);
+    }
 
  //   public interface IDataRequestMultiCommand : IDataRequest
  //   {
@@ -382,7 +385,10 @@ namespace Blacksmiths.Utils.Wolf
 			return this;
         }
 
-		public Task<int> ExecuteAsync(CancellationToken cancellationToken = default) => ((IDataRequestExecutable)this.request).ExecuteAsync(cancellationToken);
+        IDataRequestMulti<TTargetedResult> IDataRequestMulti<TTargetedResult>.Add<TExplicitResult>(IDataRequestCommand item)
+            => (IDataRequestMulti<TTargetedResult>)this.Add<TExplicitResult>(item);
+
+        public Task<int> ExecuteAsync(CancellationToken cancellationToken = default) => ((IDataRequestExecutable)this.request).ExecuteAsync(cancellationToken);
 		public Task<List<TGraph>> MapAsync<TGraph>(CancellationToken cancellationToken = default) => ((IDataRequestExecutable)this.request).MapAsync<TGraph>(cancellationToken);
     }
 

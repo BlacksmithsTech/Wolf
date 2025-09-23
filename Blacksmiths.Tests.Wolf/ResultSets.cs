@@ -1,5 +1,6 @@
 ﻿using Blacksmiths.Utils.Wolf;
 using Blacksmiths.Utils.Wolf.Attribution;
+using System;
 using System.Data.Common;
 
 namespace Blacksmiths.Tests.Wolf
@@ -236,16 +237,35 @@ namespace Blacksmiths.Tests.Wolf
         }
 
         [Fact]
-        public async Task Map_StoredProcedure_Graph()
+        public async Task Map_StoredProcedure_Graph_Tuple()
         {
             var now = DateTimeOffset.UtcNow;
             var sproc = new spStoredProcedure_Untargeted() { ValueInStr = "Hello world", ValueInDt = now };
 
+            var tuple = await this.connection.NewRequest()
+                .Add(new spGetCustomers())
+                .Add(new spGetOrders())
+                .Add<spStoredProcedureResult>(sproc)
+                .MapSingleAsync <(Customer[] customers, spStoredProcedureResult result)>();
+
+            Assert.Equal(3, tuple.customers.Length);
+            Assert.Equal(2, tuple.customers[0].Orders.Length);
+            Assert.Equal(1, tuple.customers[1].Orders.Length);
+            Assert.Equal(1, tuple.customers[2].Orders.Length);
+        }
+
+        [Fact]
+        public async Task Map_StoredProcedure_Graph_Targeted()
+        {
             var customers = await this.connection.NewRequest()
                 .Add(new spGetCustomers())
                 .Add(new spGetOrders())
-                //.Add<spStoredProcedureResult>(sproc)
                 .MapAsync();
+
+            Assert.Equal(3, customers.Count);
+            Assert.Equal(2, customers[0].Orders.Length);
+            Assert.Equal(1, customers[1].Orders.Length);
+            Assert.Equal(1, customers[2].Orders.Length);
         }
 
 

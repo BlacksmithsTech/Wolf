@@ -152,8 +152,10 @@ namespace Blacksmiths.Utils.Wolf.Utility
         {
             if (m is PropertyInfo pi)
                 return new PropertyAccessor(pi);
+            else if (m is FieldInfo fi)
+                return new MemberAccessor(fi);
             else
-                return new MemberAccessor(m);
+                return null;
         }
 
         internal virtual object GetValue(object source)

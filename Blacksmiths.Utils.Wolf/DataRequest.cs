@@ -105,7 +105,7 @@ namespace Blacksmiths.Utils.Wolf
 
 	public interface IDataRequestCommandCollection : IDataRequest
 	{
-		IDataRequestCommandCollection Add(IDataRequestCommand item);
+		IDataRequestCommandCollection Add(IDataRequestCommand item, params Type[] resultTypes);
 		IDataRequestCommandCollection Add<TResult>(IDataRequestCommand item);
     }
 
@@ -267,9 +267,9 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		/// <param name="item">Item to add</param>
 		/// <returns></returns>
-		public IDataRequestCommandCollection Add(IDataRequestCommand item)
+		public IDataRequestCommandCollection Add(IDataRequestCommand item, params Type[] resultTypes)
 		{
-			this.Add(new DataRequestItem() { Command = item });
+			this.Add(new DataRequestItem() { Command = item, Types = resultTypes });
 			return this;
 		}
 
@@ -277,10 +277,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// Adds a new command to the request with the specified model result type, indicating this command returns up to 1 result set of type TResult
 		/// </summary>
 		public IDataRequestCommandCollection Add<TResult>(IDataRequestCommand item)
-		{
-			this.Add(new DataRequestItem() { Command = item, Types = [typeof(TResult)] });
-			return this;
-		}
+			=> Add(item, typeof(TResult));
 
 		/// <summary>
 		/// Advanced. Opens a database connection and transaction (if requested), where the consumer is in control of the disposal.
@@ -381,9 +378,9 @@ namespace Blacksmiths.Utils.Wolf
 		}
 
 		public DataResult OpenConnection() => this.request.OpenConnection();
-		public IDataRequestCommandCollection Add(IDataRequestCommand item)
+		public IDataRequestCommandCollection Add(IDataRequestCommand item, params Type[] resultTypes)
 		{
-			this.request.Add(item);
+			this.request.Add(item, resultTypes);
 			return this;
 		}
 		public IDataRequestCommandCollection Add<TResult>(IDataRequestCommand item)
@@ -410,7 +407,7 @@ namespace Blacksmiths.Utils.Wolf
 		public static IDataRequestSingle<TDefaultResult> Add<TDefaultResult>(this IDataRequestEmpty dataRequest, IDataRequestCommand<TDefaultResult> command)
 			=> Add<TDefaultResult>(dataRequest, (IDataRequestCommand)command);
 
-        public static IDataRequestSingle Add(this IDataRequestEmpty dataRequest, IDataRequestCommand command) => (IDataRequestSingle)((IDataRequestCommandCollection)dataRequest).Add(command);
+        public static IDataRequestSingle Add(this IDataRequestEmpty dataRequest, IDataRequestCommand command, params Type[] resultTypes) => (IDataRequestSingle)((IDataRequestCommandCollection)dataRequest).Add(command, resultTypes);
 
         // Add - From Single, Untargeted
 
@@ -419,7 +416,7 @@ namespace Blacksmiths.Utils.Wolf
         public static IDataRequestMulti<TDefaultResult> Add<TDefaultResult>(this IDataRequestSingle dataRequest, IDataRequestCommand<TDefaultResult> command)
             => Add<TDefaultResult>(dataRequest, (IDataRequestCommand)command);
 
-        public static IDataRequestMulti Add(this IDataRequestSingle dataRequest, IDataRequestCommand command) => (IDataRequestMulti)((IDataRequestCommandCollection)dataRequest).Add(command);
+        public static IDataRequestMulti Add(this IDataRequestSingle dataRequest, IDataRequestCommand command, params Type[] resultTypes) => (IDataRequestMulti)((IDataRequestCommandCollection)dataRequest).Add(command, resultTypes);
 
         // Add - From Single, Targeted
 
@@ -433,6 +430,9 @@ namespace Blacksmiths.Utils.Wolf
 
         public static IDataRequestMulti<TDefaultResult> Add<TDefaultResult>(this IDataRequestMulti dataRequest, IDataRequestCommand<TDefaultResult> command)
             => Add<TDefaultResult>(dataRequest, (IDataRequestCommand)command);
+
+        public static IDataRequestMulti Add(this IDataRequestMulti dataRequest, IDataRequestCommand command, params Type[] resultTypes) => (IDataRequestMulti)((IDataRequestCommandCollection)dataRequest).Add(command, resultTypes);
+
 
         // Add - From Multi, Targeted
 

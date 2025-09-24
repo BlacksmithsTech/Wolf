@@ -57,13 +57,13 @@ namespace Blacksmiths.Tests.Wolf
             public string FixedValue { get; set; }
         }
 
-        private class spMultiResult0
+        private class spMultiResult1
         {
             public string Column1 { get; set; }
             public int Column2 { get; set; }
         }
 
-        private class spMultiResult1
+        private class spMultiResult2
         {
             public string Column1 { get; set; }
             public DateTimeOffset Column2 { get; set; }
@@ -313,11 +313,22 @@ namespace Blacksmiths.Tests.Wolf
             using var connection = this.connection.NewRequest()
                 .Add(new spMultiResult())
                 .OpenConnection();
-            var r1 = (await connection.StreamNextResultSetAsync<spMultiResult0>()).ToList();
-            var r2 = (await connection.StreamNextResultSetAsync<spMultiResult1>()).ToList();
+            var r1 = (await connection.StreamNextResultSetAsync<spMultiResult1>()).ToList();
+            var r2 = (await connection.StreamNextResultSetAsync<spMultiResult2>()).ToList();
 
             Assert.Single(r1);
             Assert.Single(r2);
+        }
+
+        [Fact]
+        public async Task Multi_Map()
+        {
+            var result = await this.connection.NewRequest()
+                .Add(new spMultiResult(), typeof(spMultiResult1), typeof(spMultiResult2))
+                .MapSingleAsync<(spMultiResult1[] result1, spMultiResult2[] result2)>();
+
+            Assert.Single(result.result1);
+            Assert.Single(result.result2);
         }
     }
 }

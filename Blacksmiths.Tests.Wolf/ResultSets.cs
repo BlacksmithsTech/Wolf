@@ -98,6 +98,26 @@ namespace Blacksmiths.Tests.Wolf
             public decimal OrderAmount { get; set; }
         }
 
+        public class CustomerColumnMapped
+        {
+            public int CustomerID { get; set; }
+            public string CustomerName { get; set; }
+            public string Email { get; set; }
+
+            [Relation(nameof(CustomerID))]
+            public OrderColumnMapped[] Orders { get; set; }
+        }
+
+        public class OrderColumnMapped
+        {
+            public int OrderID { get; set; }
+            public int CustomerID { get; set; }
+            public DateTime OrderDate { get; set; }
+
+            [Column("OrderAmount")]
+            public decimal Amount { get; set; }
+        }
+
         private readonly IDataConnection connection;
         public ResultSets(Fixtures.WolfTestDatabaseSqlServerConnection wolfTestDatabaseSqlServerConnection)
         {
@@ -267,6 +287,23 @@ namespace Blacksmiths.Tests.Wolf
             Assert.Equal(2, customers[0].Orders.Length);
             Assert.Equal(1, customers[1].Orders.Length);
             Assert.Equal(1, customers[2].Orders.Length);
+        }
+
+        [Fact]
+        public async Task Map_StoredProcedure_Graph_ColumnMapped()
+        {
+            ColumnAttributeTypeMap.SetTypeMap<OrderColumnMapped>();
+
+            var customers = await this.connection.NewRequest()
+                .Add<CustomerColumnMapped>(new spGetCustomers())
+                .Add<OrderColumnMapped>(new spGetOrders())
+                .MapAsync();
+
+            Assert.Equal(3, customers.Count);
+            Assert.Equal(2, customers[0].Orders.Length);
+            Assert.Equal(1, customers[1].Orders.Length);
+            Assert.Equal(1, customers[2].Orders.Length);
+            Assert.Equal(250, customers[0].Orders[0].Amount);
         }
 
 

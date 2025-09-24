@@ -147,7 +147,11 @@ namespace Blacksmiths.Utils.Wolf
 	public interface IDataRequestSingle : IDataRequestExecutable { }
 	public interface IDataRequestMulti : IDataRequestExecutable { }
 	public interface IDataRequestExecutable<TResult> : IDataRequestExecutable { }
-	public interface IDataRequestSingle<TResult> : IDataRequestExecutable<TResult> { }
+	public interface IDataRequestSingle<TResult> : IDataRequestExecutable<TResult> 
+	{
+        IDataRequestSingle<TResult> Add<TExplicitResult>(IDataRequestCommand item);
+    }
+
 	public interface IDataRequestMulti<TResult> : IDataRequestExecutable<TResult> 
 	{
 		IDataRequestMulti<TResult> Add<TExplicitResult>(IDataRequestCommand item);
@@ -388,6 +392,8 @@ namespace Blacksmiths.Utils.Wolf
 			return this;
         }
 
+        IDataRequestSingle<TTargetedResult> IDataRequestSingle<TTargetedResult>.Add<TExplicitResult>(IDataRequestCommand item)
+            => (IDataRequestSingle<TTargetedResult>)this.Add<TExplicitResult>(item);
         IDataRequestMulti<TTargetedResult> IDataRequestMulti<TTargetedResult>.Add<TExplicitResult>(IDataRequestCommand item)
             => (IDataRequestMulti<TTargetedResult>)this.Add<TExplicitResult>(item);
 

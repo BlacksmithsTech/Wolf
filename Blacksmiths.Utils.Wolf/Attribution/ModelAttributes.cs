@@ -40,4 +40,17 @@ namespace Blacksmiths.Utils.Wolf.Attribution
             return this.ParentFieldNames.Length == this.ChildFieldNames.Length;
         }
     }
+
+    /// <summary>
+    /// Provides a custom source column name for the type mapping. To use this attribute, register the declaring type with ColumnAttributeTypeMap.SetTypeMap&lt;T&gt;.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    public sealed class ColumnAttribute : Attribute
+    {
+        public string Name { get; }
+        public ColumnAttribute(string name)
+        {
+            this.Name = name;
+        }
+    }
 }

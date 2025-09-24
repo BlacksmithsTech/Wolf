@@ -32,6 +32,19 @@ namespace Blacksmiths.Utils.Wolf
 		public int? ResultIndex => this._currentCommandResultIndex;
 		public DataRequest Request { get; set; }
 
+        private async Task<IEnumerable<T>> StreamNextResultSetAsync<T>(Func<Task<IEnumerable<T>>> readFunc)
+        {
+            try
+            {
+                return await readFunc();
+            }
+            catch (InvalidOperationException ioe) when ("No columns were selected".Equals(ioe.Message))
+            {
+                // The sproc not returning may be intentional behaviour.
+                return new List<T>();
+            }
+        }
+
         /// <summary>
         /// Opens the next grid of results and streams the row data into a type specified during request composition
         /// </summary>
@@ -49,8 +62,7 @@ namespace Blacksmiths.Utils.Wolf
                 async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition),
                 cancellationToken);
 
-            var result = await nextCommand.Reader.ReadAsync(resultType, buffered: false);
-            return result;
+			return await this.StreamNextResultSetAsync(async () => await nextCommand.Reader.ReadAsync(resultType, buffered: false));
         }
 
         /// <summary>
@@ -67,8 +79,7 @@ namespace Blacksmiths.Utils.Wolf
                 async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition),
                 cancellationToken);
 
-            var result = await nextCommand.Reader.ReadAsync(resultType, buffered: false);
-            return result;
+            return await this.StreamNextResultSetAsync(async () => await nextCommand.Reader.ReadAsync(resultType, buffered: false));
         }
 
         /// <summary>
@@ -85,15 +96,7 @@ namespace Blacksmiths.Utils.Wolf
 				async (commandDefinition) => await this.Connection.QueryMultipleAsync(commandDefinition), 
 				cancellationToken);
 
-			try
-			{
-				return await nextCommand.Reader.ReadAsync<T>(buffered: false);
-			}
-			catch(InvalidOperationException ioe) when ("No columns were selected".Equals(ioe.Message))
-			{
-				// The sproc not returning may be intentional behaviour.
-				return new List<T>();
-			}
+            return await this.StreamNextResultSetAsync(async () => await nextCommand.Reader.ReadAsync<T>(buffered: false));
         }
 
 		/// <summary>

@@ -104,6 +104,7 @@ namespace Blacksmiths.Utils.Wolf
 		/// </summary>
 		public void BindLastParameters()
 		{
+			// ?
 			this.Commands.LastOrDefault(c => c.isConsumed)?.Bind();
 		}
 

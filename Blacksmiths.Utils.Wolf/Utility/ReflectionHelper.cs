@@ -57,11 +57,16 @@ namespace Blacksmiths.Utils.Wolf.Utility
 
         public static Type GetMemberCollectionType(MemberInfo Member)
 		{
-			var mt = GetMemberType(Member);
-			if (mt.IsArray)
-				return mt.GetElementType();
-			else
-				return mt.GetInterfaces().FirstOrDefault(i => i.IsGenericType && typeof(ICollection<>).Equals(i.GetGenericTypeDefinition()))?.GetGenericArguments()[0];
+            var testInterfaces = (Type[] interfaces) => interfaces.FirstOrDefault(i => i.IsGenericType && typeof(IEnumerable<>).Equals(i.GetGenericTypeDefinition()))?.GetGenericArguments()[0]
+                    ?? interfaces.FirstOrDefault(i => i.IsGenericType && typeof(ICollection<>).Equals(i.GetGenericTypeDefinition()))?.GetGenericArguments()[0];
+
+            var mt = GetMemberType(Member);
+            if (mt.IsArray)
+                return mt.GetElementType();
+            else if (mt.IsInterface)
+                return testInterfaces([mt]);
+            else
+                return testInterfaces(mt.GetInterfaces());
 		}
 	}
 

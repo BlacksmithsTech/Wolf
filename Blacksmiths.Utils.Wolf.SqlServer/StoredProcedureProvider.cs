@@ -68,7 +68,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer
 
         public override object Value
         {
-            get { return this._tvpConverter.ToRecords((object[])this._property.GetValue(this._instance)).AsTableValuedParameter(this.TvpQualifiedName); }
+            get { return this._tvpConverter.ToRecords((IEnumerable<object>)this._property.GetValue(this._instance)).AsTableValuedParameter(this.TvpQualifiedName); }
 			set
 			{ 
 				// Intentionally blank. UDTs are read only.

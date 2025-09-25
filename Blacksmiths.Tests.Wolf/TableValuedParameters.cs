@@ -12,10 +12,24 @@ namespace Blacksmiths.Tests.Wolf
     public class TableValuedParameters
     {
         [Procedure(Name = "[dbo].[spEchoTVP]")]
-        private class spEchoTVP : StoredProcedure
+        private class spEchoTVPArray : StoredProcedure
         {
             [Parameter(Provider = typeof(BoundSpParameterSqlServerTvp))]
             public udtSample[] Input { get; set; }
+        }
+
+        [Procedure(Name = "[dbo].[spEchoTVP]")]
+        private class spEchoTVPEnumerable : StoredProcedure
+        {
+            [Parameter(Provider = typeof(BoundSpParameterSqlServerTvp))]
+            public IEnumerable<udtSample> Input { get; set; }
+        }
+
+        [Procedure(Name = "[dbo].[spEchoTVP]")]
+        private class spEchoTVPList : StoredProcedure
+        {
+            [Parameter(Provider = typeof(BoundSpParameterSqlServerTvp))]
+            public List<udtSample> Input { get; set; }
         }
 
         [UdtTable(Name = "[dbo].[udtSample]")]
@@ -71,11 +85,22 @@ namespace Blacksmiths.Tests.Wolf
             var udtData = GetSampleData();
 
             var result = await this.connection.NewRequest()
-                .Add(new spEchoTVP() { Input = udtData })
+                .Add(new spEchoTVPArray() { Input = udtData })
                 .QueryAsync<udtSample>();
 
-            // Test the echo is identical
             Assert.Equal(result.Count, udtData.Length);
+
+            var result2 = await this.connection.NewRequest()
+                .Add(new spEchoTVPEnumerable() { Input = udtData })
+                .QueryAsync<udtSample>();
+
+            Assert.Equal(result2.Count, udtData.Length);
+
+            var result3 = await this.connection.NewRequest()
+                .Add(new spEchoTVPList() { Input = new List<udtSample>(udtData) })
+                .QueryAsync<udtSample>();
+
+            Assert.Equal(result3.Count, udtData.Length);
         }
 
         private udtSample[] GetSampleData() => new udtSample[]

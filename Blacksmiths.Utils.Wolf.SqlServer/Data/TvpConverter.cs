@@ -34,7 +34,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
             this.Columns = this.InspectType(udtType);
         }
 
-        public IEnumerable<SqlDataRecord> ToRecords(object[] values)
+        public IEnumerable<SqlDataRecord> ToRecords(IEnumerable<object> values)
         {
             var metaData = this.Columns.Select(c => c.MetaData).ToArray();
 

@@ -4,6 +4,7 @@ using Blacksmiths.Utils.Wolf.SqlServer;
 using Blacksmiths.Utils.Wolf.SqlServer.Data;
 using Dapper;
 using Microsoft.Data.SqlClient.Server;
+using Microsoft.SqlServer.Types;
 using System.Data;
 
 namespace Blacksmiths.Tests.Wolf
@@ -43,6 +44,9 @@ namespace Blacksmiths.Tests.Wolf
 
             [UdtColumn(2)]
             public int? Age { get; set; }
+
+            [UdtColumn(3)]
+            public SqlGeography Location { get; set; }
         }
 
         private readonly IDataConnection connection;
@@ -59,14 +63,15 @@ namespace Blacksmiths.Tests.Wolf
                 new SqlMetaData("Id", System.Data.SqlDbType.UniqueIdentifier),
                 new SqlMetaData("Name", System.Data.SqlDbType.NVarChar, 100),
                 new SqlMetaData("Age", System.Data.SqlDbType.Int),
+                new SqlMetaData("Location", System.Data.SqlDbType.Udt, typeof(SqlGeography), "Geography"),
             };
 
             var udtData = new SqlDataRecord[]
             {
-                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Jacob", 30),
-                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Sarah", 40),
-                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Sophie", 24),
-                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "David", null),
+                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Jacob", 30, SqlGeography.Point(53.0707854,-1.2598312, 4326)),
+                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Sarah", 40, null),
+                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "Sophie", 24, SqlGeography.Point(53.0707854,-1.2598312, 4326)),
+                CreateSampleSqlDataRecord(udtMetaData, Guid.NewGuid(), "David", null, null),
             };
 
             var result = await this.connection.NewRequest()
@@ -105,21 +110,23 @@ namespace Blacksmiths.Tests.Wolf
 
         private udtSample[] GetSampleData() => new udtSample[]
         {
-            new udtSample() { Id = Guid.NewGuid(), Name = "Jacob", Age = 30 },
+            new udtSample() { Id = Guid.NewGuid(), Name = "Jacob", Age = 30, Location = SqlGeography.Point(53.0707854,-1.2598312, 4326) },
             new udtSample() { Id = Guid.NewGuid(), Name = "Sarah", Age = 40 },
-            new udtSample() { Id = Guid.NewGuid(), Name = "Sophie", Age = 24 },
+            new udtSample() { Id = Guid.NewGuid(), Name = "Sophie", Age = 24, Location = SqlGeography.Point(53.0707854,-1.2598312, 4326) },
             new udtSample() { Id = Guid.NewGuid(), Name = "David" },
         };
 
         private object NullSafe(object obj) => obj is DBNull ? null : obj;
 
-        private SqlDataRecord CreateSampleSqlDataRecord(SqlMetaData[] metaData, Guid id, string name, int? age)
+        private SqlDataRecord CreateSampleSqlDataRecord(SqlMetaData[] metaData, Guid id, string name, int? age, SqlGeography location)
         {
             var r = new SqlDataRecord(metaData);
             r.SetGuid(0, id);
             r.SetString(1, name);
             if (age.HasValue)
                 r.SetInt32(2, age.Value);
+            if (null != location)
+                r.SetValue(3, location);
             return r;
         }
     }

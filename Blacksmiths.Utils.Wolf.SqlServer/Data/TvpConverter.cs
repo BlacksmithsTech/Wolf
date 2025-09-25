@@ -1,6 +1,7 @@
 ﻿using Blacksmiths.Utils.Wolf.Utility;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient.Server;
+using Microsoft.SqlServer.Types;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -73,10 +74,15 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
 
         private SqlMetaData CreateSqlMetaData(PropertyInfo prop, UdtColumnAttribute attrColumn)
         {
+            var columnName = attrColumn.Name ?? prop.Name;
+
+            if (prop.PropertyType == typeof(SqlGeography))
+                return new SqlMetaData(columnName, SqlDbType.Udt, prop.PropertyType, "Geography");
+            else if(prop.PropertyType == typeof(SqlGeometry))
+                return new SqlMetaData(columnName, SqlDbType.Udt, prop.PropertyType, "Geometry");
+
             //var dbType = attrColumn.SqlDbType.HasValue ? attrColumn.SqlDbType.Value : this.MapSqlDbType(StoredProcedure.SpParameter.InferValueType(prop.PropertyType));
             var dbType = this.MapSqlDbType(StoredProcedure.SpParameter.InferValueType(prop.PropertyType));
-
-            var columnName = attrColumn.Name ?? prop.Name;
 
             switch (dbType)
             {

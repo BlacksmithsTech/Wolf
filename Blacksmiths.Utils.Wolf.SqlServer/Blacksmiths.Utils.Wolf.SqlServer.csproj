@@ -25,6 +25,7 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions " Version="5.0.0" />
+		<PackageReference Include="Microsoft.SqlServer.Types" Version="160.1000.6" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -41,7 +41,7 @@ namespace Blacksmiths.Utils.Wolf.SqlServer.Data
 
             foreach(var value in values)
             {
-                if (value.GetType() != this.Type)
+                if (!value.GetType().IsAssignableTo(this.Type))
                     throw new ArgumentException($"All objects converting to TVP records must be of type '{this.Type}'");
 
                 var record = new SqlDataRecord(metaData);
